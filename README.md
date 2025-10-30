@@ -125,27 +125,27 @@ EverMemOS operates along two main tracks: **memory construction** and **memory p
 
 Memory construction layer: builds structured, retrievable long-term memory from raw conversation data.
 
-- Core elements
-  - ⚛️ Atomic memory unit MemCell: the core structured unit distilled from conversations for downstream organization and reference
-  - 🗂️ Multi-level memory: integrate related fragments by theme and storyline to form reusable, hierarchical memories
-  - 🏷️ Multiple memory types: covering episodes, profiles, preferences, relationships, semantic knowledge, basic facts, and core memories
+- **Core elements**
+  - ⚛️ **Atomic memory unit MemCell**: the core structured unit distilled from conversations for downstream organization and reference
+  - 🗂️ **Multi-level memory**: integrate related fragments by theme and storyline to form reusable, hierarchical memories
+  - 🏷️ **Multiple memory types**: covering episodes, profiles, preferences, relationships, semantic knowledge, basic facts, and core memories
 
-- Workflow
-  1. MemCell extraction: identify key information in conversations to generate atomic memories
-  2. Memory construction: integrate by theme and participants to form episodes and profiles
-  3. Storage and indexing: persist data and build keyword and semantic indexes to support fast recall
+- **Workflow**
+  1. **MemCell extraction**: identify key information in conversations to generate atomic memories
+  2. **Memory construction**: integrate by theme and participants to form episodes and profiles
+  3. **Storage and indexing**: persist data and build keyword and semantic indexes to support fast recall
 
 ### 🔎 Memory Perception
 
 Memory perception layer: quickly recalls relevant memories for a query and reasons over them.
 
-- Retrieval strategies
-  - 🔎 Keyword retrieval: exact matching for explicit terms and short phrases
-  - 🧭 Semantic retrieval: recall paraphrases and semantically similar expressions
-  - 🧪 Hybrid retrieval: parallel multi-channel recall with fusion and deduplication for both stability and coverage
-  - 📊 Reranking: a lightweight model reorders candidates by relevance to further improve the top results
+- **Retrieval strategies**
+  - 🔎 **Keyword retrieval**: exact matching for explicit terms and short phrases
+  - 🧭 **Semantic retrieval**: recall paraphrases and semantically similar expressions
+  - 🧪 **Hybrid retrieval**: parallel multi-channel recall with fusion and deduplication for both stability and coverage
+  - 📊 **Reranking**: a lightweight model reorders candidates by relevance to further improve the top results
 
-- Reasoning fusion
+- **Reasoning fusion**
   - 🧠 Feed the recalled memories together with the current context into the model to produce more coherent and traceable responses
 
 💡 Through the loop of "Memory Construction → Retrieval/Reranking → Reasoning Fusion", the system always "thinks with memory".
@@ -250,6 +250,20 @@ python demo/chat_with_memory.py
 ```
 
 This will launch a command-line interface where you can converse with an agent that utilizes the just-extracted memories. For more details on chat features, tips, and suggested questions, please see the [Demo Guide](demo/README.md).
+
+**Interactive Workflow:**
+1. **Select Language**: Choose between Chinese (中文) or English interface.
+2. **Select Scenario Mode**:
+   - **Assistant Mode**: One-on-one conversation with personal memory-based AI assistant.
+   - **Group Chat Mode**: Multi-person chat with group memory-based conversation analysis.
+3. **Select Conversation Group**: Choose from available groups in your database.
+4. **Start Chatting**: Interact with the memory-enhanced AI agent.
+
+**New Features:**
+- ✨ **Internationalization (i18n)**: Full support for Chinese and English interfaces.
+- 🎯 **Runtime Scenario Selection**: Choose between Assistant Mode and Group Chat Mode at startup.
+- 🌍 **Enhanced User Experience**: All UI elements, prompts, and error messages are displayed in your selected language.
+- 📝 **Smart Context**: The agent automatically adjusts its behavior and prompts based on the selected scenario mode.
 
 #### 2. Run Evaluation: Performance Testing
 
