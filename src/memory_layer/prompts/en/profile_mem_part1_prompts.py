@@ -35,9 +35,6 @@ You MUST output a single JSON object with the top-level key `user_profiles`.
       "user_id": "",
       "user_name": "",
       "output_reasoning": "",
-      "opinion_tendency":[
-        {"value": "", "evidences": ["conversation_id"]}
-      ],
       "working_habit_preference": [
         {"value": "", "evidences": ["conversation_id"]}
       ],
@@ -91,18 +88,6 @@ You MUST output a single JSON object with the top-level key `user_profiles`.
 ### output_reasoning
 Output 2-6 sentences about why you are going to add or update new info for every field(opinion_tendency, working_habit_preference, hard_skills, soft_skills, personality, way_of_decision_making). Keep the output focused and to the point but also concise.
 **IMPOARTANT**: Keep the output_reasoning the same language as the conversation content.
-### opinion_tendency
-**Purpose**: To capture the user's clear, explicit opinions, conclusions, or strong stances on specific topics expressed during discussions.
-**Extract ONLY when**:
-  - It's a declarative sentence, the statement reflects a personal conviction or a firm stance
-  - user gives a suggestion or a proposal in a declarative sentence
-**WHAT TO EXCLUDE, DO NOT EXTRACTING AS opinion_tendency**:
-  - A neutral statement of fact(e.g., "The interface is called, but socket has no push" is a fact, not opinions)
-  - An action or a task planning to do(e.g., "I'll finish the design document tomorrow" is a task, not opinions)
-  - A transferred opinion from others(e.g., "I heard Jack said VLM won't fit for autodrive" is a transferred opinion)
-  - An interrogative sentence
-- **Rule for `opinion_tendency`**: It should be a concise summary of the user's opinion.
-<IMPORTANT>MUST fill up the value of "evidences" with the conversation_id where you extract opinion_tendency from. DO NOT CREATE unexisting conversation_id</IMPORTANT>
 
 ### working_habit_preference
 **Purpose**: A user’s recurring, personally driven tendency in how they organize, perform, communicate about, or manage their work

@@ -38,18 +38,21 @@ You MUST output a single JSON object with the top-level key `user_profiles`.
       "role_responsibility": [
         {"value": "", "evidences": ["conversation_id"]}
       ],
+      "opinion_tendency":[
+        {"value": "", "evidences": ["conversation_id"], type:""}
+      ],      
       "projects_participated": [
         {
           "project_id": "",
           "project_name": "",
           "subtasks": [
-            {"value": "", "evidences": ["conversation_id"]}
+            {"value": "", "evidences": ["conversation_id"], type:""}
           ],
           "user_objective": [
             {"value": "", "evidences": ["conversation_id"]}
           ],
           "contributions": [
-            {"value": "", "evidences": ["conversation_id"]}                          
+            {"value": "", "evidences": ["conversation_id"], type:""}                          
           ],
           "user_concerns": [
             {"value": "", "evidences": ["conversation_id"]}
@@ -79,6 +82,19 @@ You MUST output a single JSON object with the top-level key `user_profiles`.
   - The responsibilities are clearly tied to their job position/role, not personal goals or aspirations
 <IMPORTANT>MUST fill up the value of "evidences" with the conversation_id where you extract the role_responsibility from. DO NOT CREATE UNEXISTING conversation_id</IMPORTANT>
 
+### opinion_tendency
+**Purpose**: To capture the user's clear, explicit opinions, conclusions, or strong stances on specific topics expressed during discussions.
+**Extract ONLY when**:
+  - It's a declarative sentence, the statement reflects a personal conviction or a firm stance
+  - user gives a suggestion or a proposal in a declarative sentence
+**WHAT TO EXCLUDE, DO NOT EXTRACTING AS opinion_tendency**:
+  - A neutral statement of fact(e.g., "The interface is called, but socket has no push" is a fact, not opinions)
+  - An action or a task planning to do(e.g., "I'll finish the design document tomorrow" is a task, not opinions)
+  - A transferred opinion from others(e.g., "I heard Jack said VLM won't fit for autodrive" is a transferred opinion)
+  - An interrogative sentence
+- **Rule for opinion_tendency's type**: type is enum, and MUST be selected from "stance", "interrogative", "task", "his own opinion", "transferred opinion", "suggestion".
+<IMPORTANT>MUST fill up the value of "evidences" with the conversation_id where you extract opinion_tendency from. DO NOT CREATE unexisting conversation_id</IMPORTANT>
+
 ### projects_participated
 **DO NOT CREATE** new project, current project is the **ONLY ONE** project from the <input>
 **DO NOT CREATE** new project_id and project_name, these two info MUST be from the **project** in the <input>, and project_id is primary key for projects_participated. KEEP project_name EMPTY if <input> has no project_name.
@@ -87,16 +103,18 @@ You MUST output a single JSON object with the top-level key `user_profiles`.
   - Clearly mentions participating in **episode**
   - Clearly states user_objective and responsibilities in the **episode**
 - **Rule for `entry_date`**:This date represents the moment the project first became aware of this fact, `entry_date` MUST be set to date format (YYYY-MM-DD format, no time). If the entry_date is already set, do not change it. 
-- **Rule for `subtasks`**: A subtask is a work item or task that this user is assigned or asked to complete and the user explicitly stated they will complete. When summarized, it must be a complete sentence that clearly expresses what is to be done.
+- **Rule for `subtasks`**: A subtask is a work task that is valuable to the project and hasn't been completed by this user yet. When summarized, it must be a complete sentence that clearly expresses what is to be done.
+  - **Rule for subtasks' type**: subtasks' type MUST be selected from "taskbyhimself", "taskbyothers", "suggestiontoothers", "notification", "reminder".
   - **WHAT TO EXCLUDE, DO NOT EXTRACTING AS subtasks**: 
     - tasks that the user asks others to do
     - invite someone to this chat group or a meeting
-    - reminder and notification and suggestions
+    - suggestions and notification and reminder
 - **Rule for `user_objective`**: Should describe the specific goal, such as what level of quality to achieve or what part of the overall project to complete. This should be summarized and refined from the user's subtasks, representing a personal objective related to the project's objectives and results. STRICTLY follow the **Quality Over Quantity** principle.
 - **Rule for `contributions`**: Contributions MUST be work items and tasks that the user states or explains they have completed. For instance, a new solution, a new specification, a new report, a new algorithm，a new tool，a new workflow，a new framework，a new evaluation method，a new design，a new discovery.
+  - **Rule for contributions' type**: subtasks' type MUST be selected from "result", "suggestion", "notification", "reminder".
   - **WHAT TO EXCLUDE for contributions**: 
     - solutions or approaches that the user merely proposes or suggests but has not yet completed.
-    - reminder and notification and suggestions
+    - suggestions and notification and reminder
 - **Rule for `user_concerns`**: Capture explicit worries or focus areas such as technical blockers, risky dependencies, critical milestones, or stakeholder expectations the user highlights for this project.
 **IMPORTANT**: if users mention relative time expressions like "today", "yesterday", "this week", convert them to absolute dates based on the conversation timestamp.
 **IMPORTANT**: Each subtask, user_objective, contributions, user_concerns MUST have an evidence that can be traced back to the conversation_id. DO NOT CREATE UNEXISTING conversation_id.
