@@ -49,19 +49,19 @@ Build AI memory that never forgets, making every conversation built on previous 
 
 ## 💡 Unique Advantages
 
-### 🧠 Evidence-Based Perception  
-Beyond "retrieval," intelligent "perception": Proactively capturing deep connections between memories and tasks, enabling AI to "think thoroughly" at critical moments.
-
-> Imagine: When a user asks for "food recommendations," the AI proactively recalls "you had dental surgery two days ago" as a key piece of information, automatically adjusting suggestions to avoid unsuitable options.  
-> This is **Contextual Awareness** — enabling AI thinking to be truly built on understanding rather than isolated responses.
-
----
-
 ### 🔗 Coherent Narrative  
 Beyond "fragments," connecting "stories": Automatically linking conversation pieces to build clear thematic context, enabling AI to "truly understand."
 
 > When facing multi-threaded conversations, it naturally distinguishes between "Project A progress discussion" and "Team B strategy planning," maintaining coherent contextual logic within each theme.  
 > From scattered phrases to complete narratives, AI no longer just "understands one sentence" but "understands the whole story."
+
+---
+
+### 🧠 Evidence-Based Perception  
+Beyond "retrieval," intelligent "perception": Proactively capturing deep connections between memories and tasks, enabling AI to "think thoroughly" at critical moments.
+
+> Imagine: When a user asks for "food recommendations," the AI proactively recalls "you had dental surgery two days ago" as a key piece of information, automatically adjusting suggestions to avoid unsuitable options.  
+> This is **Contextual Awareness** — enabling AI thinking to be truly built on understanding rather than isolated responses.
 
 ---
 
@@ -81,9 +81,9 @@ Beyond "records," dynamic "growth": Real-time user profile updates that get to k
 <tr>
 <td width="50%" valign="top">
 
-- [📖 Project Introduction](#-project-introduction)
-- [🎯 Core Concepts](#-core-concepts)
-- [📁 Project Structure](#-project-structure)
+ - [📖 Project Introduction](#-project-introduction)
+ - [🎯 System Framework](#-system-framework)
+ - [📁 Project Structure](#-project-structure)
 - [🚀 Quick Start](#-quick-start)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
@@ -113,12 +113,42 @@ Beyond "records," dynamic "growth": Real-time user profile updates that get to k
 
 **EverMemOS** is an open-source project designed to provide long-term memory capabilities to conversational AI agents. This codebase is the official implementation of the paper "EverMemOS". It extracts, structures, and retrieves information from conversations, enabling agents to maintain context, recall past interactions, and progressively build user profiles. This results in more personalized, coherent, and intelligent conversations.
 
-## 🎯 Core Concepts
+## 🎯 System Framework
 
-- **MemCell (Memory Cell):** An atomic unit of memory extracted from conversations. It represents a single piece of information, such as a fact, an event, or a user preference.
-- **User Profile:** A structured summary of a user's characteristics, preferences, and history, aggregated from multiple MemCells.
-- **Memory Extraction:** A pipeline that processes raw conversation logs, identifies meaningful segments, and converts them into structured MemCells and User Profiles.
-- **Memory-Enhanced Conversation:** The process of leveraging extracted memories to provide relevant context to Large Language Models (LLMs), enabling them to generate more informed and personalized responses.
+EverMemOS operates along two main tracks: **memory construction** and **memory perception**. Together they form a cognitive loop that continuously absorbs, consolidates, and applies past information, so every response is grounded in real context and long-term memory.
+
+<p align="center">
+  <img src="figs/overview.png" alt="Overview" />
+</p>
+
+### 🧩 Memory Construction
+
+Memory construction layer: builds structured, retrievable long-term memory from raw conversation data.
+
+- Core elements
+  - ⚛️ Atomic memory unit MemCell: the core structured unit distilled from conversations for downstream organization and reference
+  - 🗂️ Multi-level memory: integrate related fragments by theme and storyline to form reusable, hierarchical memories
+  - 🏷️ Multiple memory types: covering episodes, profiles, preferences, relationships, semantic knowledge, basic facts, and core memories
+
+- Workflow
+  1. MemCell extraction: identify key information in conversations to generate atomic memories
+  2. Memory construction: integrate by theme and participants to form episodes and profiles
+  3. Storage and indexing: persist data and build keyword and semantic indexes to support fast recall
+
+### 🔎 Memory Perception
+
+Memory perception layer: quickly recalls relevant memories for a query and reasons over them.
+
+- Retrieval strategies
+  - 🔎 Keyword retrieval: exact matching for explicit terms and short phrases
+  - 🧭 Semantic retrieval: recall paraphrases and semantically similar expressions
+  - 🧪 Hybrid retrieval: parallel multi-channel recall with fusion and deduplication for both stability and coverage
+  - 📊 Reranking: a lightweight model reorders candidates by relevance to further improve the top results
+
+- Reasoning fusion
+  - 🧠 Feed the recalled memories together with the current context into the model to produce more coherent and traceable responses
+
+💡 Through the loop of "Memory Construction → Retrieval/Reranking → Reasoning Fusion", the system always "thinks with memory".
 
 ## 📁 Project Structure
 
