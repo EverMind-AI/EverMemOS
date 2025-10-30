@@ -2,7 +2,7 @@
 
 <h1>EverMemOS 🧠</h1>
 
-<p><strong>Make Every Conversation Built on Understanding</strong> · Enterprise-Grade Intelligent Memory System</p>
+<p><strong>Let every interaction be driven by understanding.</strong> · Enterprise-Grade Intelligent Memory System</p>
 
 <p>
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-blue.svg" />
@@ -21,9 +21,7 @@
 > 💬 **More than memory — it's foresight.**
 
 **EverMemOS** is a forward-thinking intelligent system.  
-While traditional AI memory serves merely as a "look-back" database, EverMemOS enables AI not only to "remember" what happened, but also to "understand" the meaning behind these memories and use them to guide current actions and decisions.
-
-On the **LoCoMo** benchmark, our approach built upon EverMemOS achieved a reasoning accuracy of **92.3%** (evaluated by LLM-Judge), outperforming comparable methods in our evaluation.
+While traditional AI memory serves merely as a "look-back" database, EverMemOS enables AI not only to "remember" what happened, but also to "understand" the meaning behind these memories and use them to guide current actions and decisions. On the **LoCoMo** benchmark, our approach built upon EverMemOS achieved a reasoning accuracy of **92.3%** (evaluated by LLM-Judge), outperforming comparable methods in our evaluation.
 
 ---
 
