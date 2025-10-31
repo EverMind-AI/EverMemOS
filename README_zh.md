@@ -218,7 +218,11 @@ cp env.template .env
 
 ### 如何使用
 
-#### 1. 运行演示：记忆提取和交互式聊天
+EverMemOS 提供多种使用方式，您可以根据需求选择合适的方法：
+
+---
+
+#### 🎯 运行演示：记忆提取和交互式聊天
 
 演示部分展示了 EverMemOS 的端到端功能。
 
@@ -262,13 +266,9 @@ python demo/chat_with_memory.py
 3. **选择对话群组**：从数据库中可用的群组中选择。
 4. **开始聊天**：与记忆增强的 AI 智能体互动。
 
-**新功能：**
-- ✨ **国际化 (i18n)**：完整支持中文和英文界面。
-- 🎯 **运行时场景选择**：启动时可选择助手模式或群聊模式。
-- 🌍 **增强用户体验**：所有 UI 元素、提示和错误消息都以您选择的语言显示。
-- 📝 **智能上下文**：智能体会根据所选场景模式自动调整行为和提示词。
+---
 
-#### 2. 运行评估：性能测试
+#### 📊 运行评估：性能测试
 
 评估框架提供了一种系统化的方法来衡量记忆系统的性能，基于 LoCoMo 评估数据集。
 
@@ -294,10 +294,12 @@ python evaluation/locomo_evaluation/stage5_eval.py
 > **⚙️ 评估配置**:
 > 在运行评估前，您可以修改 `evaluation/locomo_evaluation/config.py` 文件来调整实验设置：
 > - **`ExperimentConfig.experiment_name`**: 修改此变量可以更改实验结果的保存目录。
-> - **`ExperimentConfig.llm_service`**: 选择要使用的 LLM 服务 (例如, `"openai"` 或 `"vllm"`)。
+> - **`ExperimentConfig.llm_service`**: 选择要使用的 LLM 服务，并设置相应参数 (例如, `"openai"` 或 `"vllm"`)。
 > - **`ExperimentConfig.llm_config`**: 在此字典中配置所选 LLM 服务的具体参数，如模型、API 地址 (`base_url`) 和密钥 (`api_key`)。
 
-#### 3. 调用 API 接口
+---
+
+#### 🔌 调用 API 接口
 
 使用 V3 API 存储单条消息记忆：
 
@@ -315,7 +317,9 @@ curl -X POST http://localhost:1995/api/v3/agentic/memorize \
   }'
 ```
 
-#### 4. 批量存储群聊记忆
+---
+
+#### 📦 批量存储群聊记忆
 
 EverMemOS 支持标准化的群聊数据格式（[GroupChatFormat](data_format/group_chat/group_chat_format.md)），可以使用脚本批量存储：
 

@@ -214,7 +214,11 @@ cp env.template .env
 
 ### How to Use
 
-#### 1. Run Demo: Memory Extraction and Interactive Chat
+EverMemOS offers multiple usage methods. Choose the one that best suits your needs:
+
+---
+
+#### 🎯 Run Demo: Memory Extraction and Interactive Chat
 
 The demo showcases the end-to-end functionality of EverMemOS.
 
@@ -258,13 +262,9 @@ This will launch a command-line interface where you can converse with an agent t
 3. **Select Conversation Group**: Choose from available groups in your database.
 4. **Start Chatting**: Interact with the memory-enhanced AI agent.
 
-**New Features:**
-- ✨ **Internationalization (i18n)**: Full support for Chinese and English interfaces.
-- 🎯 **Runtime Scenario Selection**: Choose between Assistant Mode and Group Chat Mode at startup.
-- 🌍 **Enhanced User Experience**: All UI elements, prompts, and error messages are displayed in your selected language.
-- 📝 **Smart Context**: The agent automatically adjusts its behavior and prompts based on the selected scenario mode.
+---
 
-#### 2. Run Evaluation: Performance Testing
+#### 📊 Run Evaluation: Performance Testing
 
 The evaluation framework provides a systematic way to measure the performance of the memory system, based on the LoCoMo evaluation dataset.
 
@@ -290,10 +290,12 @@ Each script corresponds to a stage in the evaluation pipeline, from data process
 > **⚙️ Evaluation Configuration**:
 > Before running the evaluation, you can modify the `evaluation/locomo_evaluation/config.py` file to adjust the experiment settings:
 > - **`ExperimentConfig.experiment_name`**: Change this to alter the save directory for the results.
-> - **`ExperimentConfig.llm_service`**: Select the LLM service to use (e.g., `"openai"` or `"vllm"`).
+> - **`ExperimentConfig.llm_service`**: Select the LLM service to use and configure its parameters (e.g., `"openai"` or `"vllm"`).
 > - **`ExperimentConfig.llm_config`**: Configure parameters for the selected LLM service in this dictionary, such as the model, `base_url`, and `api_key`.
 
-#### 3. Call API Endpoints
+---
+
+#### 🔌 Call API Endpoints
 
 Use V3 API to store single message memory:
 
@@ -311,7 +313,9 @@ curl -X POST http://localhost:1995/api/v3/agentic/memorize \
   }'
 ```
 
-#### 4. Batch Store Group Chat Memory
+---
+
+#### 📦 Batch Store Group Chat Memory
 
 EverMemOS supports a standardized group chat data format ([GroupChatFormat](data_format/group_chat/group_chat_format.md)). You can use scripts for batch storage:
 
