@@ -29,7 +29,7 @@ dependencies = [
     # OpenAI API
     "openai>=1.0.0",
     # 数据验证和配置 - Data Validation & Configuration
-    "pydantic[email]==2.11.9",
+    "pydantic[email]>=2.7.1",
     "pydantic-settings>=2.0.0",
     "python-dotenv>=1.0.1",
     "pyyaml>=6.0.0",

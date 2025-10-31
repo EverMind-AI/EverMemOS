@@ -548,8 +548,6 @@ async def _save_memcell_to_mongodb(memcell) -> None:
         )
         await doc.insert()
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         print(f"[MongoDB] ⚠️ 保存 MemCell 失败: {e}")
 
 

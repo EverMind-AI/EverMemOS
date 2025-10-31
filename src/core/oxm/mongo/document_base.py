@@ -71,15 +71,15 @@ if BEANIE_AVAILABLE:
                     return obj
 
             # # 情况二：对象是BaseModel
-            # if isinstance(obj, BaseModel):
-            #     for field_name, value in obj:
-            #         new_path = f"{path}.{field_name}" if path else field_name
-            #         new_value = self._recursive_datetime_check(
-            #             value, new_path, depth + 1
-            #         )
-            #         # 使用 __dict__ 直接更新值，避免触发验证器
-            #         obj.__dict__[field_name] = new_value
-            #     return obj
+            if isinstance(obj, BaseModel):
+                for field_name, value in obj:
+                    new_path = f"{path}.{field_name}" if path else field_name
+                    new_value = self._recursive_datetime_check(
+                        value, new_path, depth + 1
+                    )
+                    # 使用 __dict__ 直接更新值，避免触发验证器
+                    obj.__dict__[field_name] = new_value
+                return obj
 
             # 情况三：对象是列表、元组或集合
             if isinstance(obj, (list, tuple, set)):
