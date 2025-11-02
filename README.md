@@ -140,18 +140,44 @@ Memory construction layer: builds structured, retrievable long-term memory from 
 
 ### 🔎 Memory Perception
 
-Memory perception layer: quickly recalls relevant memories for a query and reasons over them.
+Memory perception layer: quickly recalls relevant memories through multi-round reasoning and intelligent fusion, achieving precise contextual awareness.
 
-- **Retrieval strategies**
-  - 🔎 **Keyword retrieval**: exact matching for explicit terms and short phrases
-  - 🧭 **Semantic retrieval**: recall paraphrases and semantically similar expressions
-  - 🧪 **Hybrid retrieval**: parallel multi-channel recall with fusion and deduplication for both stability and coverage
-  - 📊 **Reranking**: a lightweight model reorders candidates by relevance to further improve the top results
+#### 🎯 Intelligent Retrieval Tools
 
-- **Reasoning fusion**
-  - 🧠 Feed the recalled memories together with the current context into the model to produce more coherent and traceable responses
+- **🔎 Keyword Retrieval (BM25)**  
+  Precision matching based on term frequency and inverse document frequency
+  
+- **🧭 Semantic Retrieval (MaxSim)**  
+  Atomic fact-level semantic similarity matching  
 
-💡 Through the loop of "Memory Construction → Retrieval/Reranking → Reasoning Fusion", the system always "thinks with memory".
+- **🧪 Hybrid Retrieval (RRF Fusion)**  
+  Parallel execution of semantic and keyword retrieval, seamlessly fused using Reciprocal Rank Fusion algorithm
+
+- **📊 Intelligent Reranking (Reranker)**  
+  Batch concurrent processing with exponential backoff retry, maintaining stability under high throughput  
+  Reorders candidate memories by deep relevance, prioritizing the most critical information
+
+#### 🤖 Agentic Intelligent Retrieval
+
+- **🎓 LLM-Guided Multi-Round Recall**  
+  - **Round 1**: Hybrid retrieval filtering → Rerank refinement → LLM sufficiency judgment
+  - **Round 2**: For insufficient cases, generate 2-3 complementary queries, retrieve and fuse in parallel
+  - Automatically identifies missing information, proactively filling retrieval blind spots
+
+- **🔀 Multi-Query Parallel Strategy**  
+  When a single query cannot fully express intent, generate multiple complementary perspective queries  
+  Enhance coverage of complex intents through multi-path RRF fusion
+
+- **⚡ Lightweight Fast Mode**  
+  For latency-sensitive scenarios, skip LLM calls and use RRF-fused hybrid retrieval  
+  Flexibly balance between speed and quality
+
+#### 🧠 Reasoning Fusion
+
+- **Context Integration**: Concatenate recalled multi-level memories (episodes, profiles, preferences) with current conversation
+- **Traceable Reasoning**: Model generates responses based on explicit memory evidence, avoiding hallucination
+
+💡 Through the cognitive loop of **"Structured Memory → Multi-Strategy Recall → Intelligent Retrieval → Contextual Reasoning"**, the AI always "thinks with memory", achieving true contextual awareness.
 
 ## 📁 Project Structure
 
