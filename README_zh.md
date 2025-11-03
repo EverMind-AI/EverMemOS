@@ -5,14 +5,13 @@
 <p><strong>每次交流，都由理解驱动</strong> · 企业级智能记忆系统</p>
 
 <p>
-  <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-blue.svg" />
-  <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-green.svg" />
-  <img alt="Status" src="https://img.shields.io/badge/Status-Production-brightgreen.svg" />
-  <img alt="Code Size" src="https://img.shields.io/github/languages/code-size/EverMind-AI/EverMemOS" />
-<a href="https://github.com/EverMind-AI/EverMemOS/releases">
-  <img alt="Release" src="https://img.shields.io/badge/release-v1.0.0-blue" />
-</a>
-
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-0A9CF3?style=flat-square" />
+  <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-00BFA6?style=flat-square" />
+  <img alt="Status" src="https://img.shields.io/badge/Status-Production-00C49A?style=flat-square" />
+  <img alt="Code Size" src="https://img.shields.io/github/languages/code-size/EverMind-AI/EverMemOS?color=0097A7&style=flat-square" />
+  <a href="https://github.com/EverMind-AI/EverMemOS/releases">
+    <img alt="Release" src="https://img.shields.io/badge/release-v1.0.0-0088CC?style=flat-square" />
+  </a>
 <!-- 
   <a href="https://github.com/EverMind-AI/EverMemOS/releases"><img alt="Latest Release" src="https://img.shields.io/github/v/release/EverMind-AI/EverMemOS" /></a> -->
   <!-- <a href="https://github.com/EverMind-AI/EverMemOS/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/EverMind-AI/EverMemOS?style=social" /></a> -->
