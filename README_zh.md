@@ -8,6 +8,18 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-blue.svg" />
   <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-green.svg" />
   <img alt="Status" src="https://img.shields.io/badge/Status-Production-brightgreen.svg" />
+  <img alt="Code Size" src="https://img.shields.io/github/languages/code-size/EverMind-AI/EverMemOS" />
+<a href="https://github.com/EverMind-AI/EverMemOS/releases">
+  <img alt="Release" src="https://img.shields.io/badge/release-v1.0.0-blue" />
+</a>
+
+<!-- 
+  <a href="https://github.com/EverMind-AI/EverMemOS/releases"><img alt="Latest Release" src="https://img.shields.io/github/v/release/EverMind-AI/EverMemOS" /></a> -->
+  <!-- <a href="https://github.com/EverMind-AI/EverMemOS/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/EverMind-AI/EverMemOS?style=social" /></a> -->
+  <!-- <a href="https://github.com/EverMind-AI/EverMemOS/network/members"><img alt="GitHub forks" src="https://img.shields.io/github/forks/EverMind-AI/EverMemOS?style=social" /></a> -->
+  <!-- <a href="https://github.com/EverMind-AI/EverMemOS/pulls"><img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/EverMind-AI/EverMemOS" /></a> -->
+  <!-- <a href="https://github.com/EverMind-AI/EverMemOS/actions"><img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/EverMind-AI/EverMemOS/main.yml?branch=main" /></a> -->
+  <!-- <a href="https://github.com/EverMind-AI/EverMemOS/issues"><img alt="Issues" src="https://img.shields.io/github/issues/EverMind-AI/EverMemOS" /></a> -->
 </p>
 
 <p>
@@ -176,9 +188,8 @@ EverMemOS 围绕两条主线运行：**记忆构筑**与**记忆感知**。它�
 
 - **上下文整合**：将召回的多层次记忆（情节、画像、偏好）与当前对话拼接
 - **可追溯推理**：模型基于明确的记忆证据生成回复，避免幻觉
-- **Top-K 控制**：通过配置参数限制记忆数量，确保在上下文窗口内高效推理
 
-💡 通过 **"结构化记忆 → 多策略召回 → 智能重排 → 上下文推理"** 的认知闭环，让 AI 始终"带着记忆思考"，实现真正的上下文自觉。
+💡 通过 **"结构化记忆 → 多策略召回 → 智能检索 → 上下文推理"** 的认知闭环，让 AI 始终"带着记忆思考"，实现真正的上下文自觉。
 
 
 ## 📁 项目结构

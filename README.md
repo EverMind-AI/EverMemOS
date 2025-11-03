@@ -5,9 +5,20 @@
 <p><strong>Let every interaction be driven by understanding.</strong> · Enterprise-Grade Intelligent Memory System</p>
 
 <p>
-  <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-blue.svg" />
-  <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-green.svg" />
-  <img alt="Status" src="https://img.shields.io/badge/Status-Production-brightgreen.svg" />
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-0A9CF3?style=flat-square" />
+  <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-00BFA6?style=flat-square" />
+  <img alt="Status" src="https://img.shields.io/badge/Status-Production-00C49A?style=flat-square" />
+  <img alt="Code Size" src="https://img.shields.io/github/languages/code-size/EverMind-AI/EverMemOS?color=0097A7&style=flat-square" />
+  <a href="https://github.com/EverMind-AI/EverMemOS/releases">
+    <img alt="Release" src="https://img.shields.io/badge/release-v1.0.0-0088CC?style=flat-square" />
+  </a>
+<!-- 
+  <a href="https://github.com/EverMind-AI/EverMemOS/releases"><img alt="Latest Release" src="https://img.shields.io/github/v/release/EverMind-AI/EverMemOS" /></a> -->
+  <!-- <a href="https://github.com/EverMind-AI/EverMemOS/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/EverMind-AI/EverMemOS?style=social" /></a> -->
+  <!-- <a href="https://github.com/EverMind-AI/EverMemOS/network/members"><img alt="GitHub forks" src="https://img.shields.io/github/forks/EverMind-AI/EverMemOS?style=social" /></a> -->
+  <!-- <a href="https://github.com/EverMind-AI/EverMemOS/pulls"><img alt="Pull Requests" src="https://img.shields.io/github/issues-pr/EverMind-AI/EverMemOS" /></a> -->
+  <!-- <a href="https://github.com/EverMind-AI/EverMemOS/actions"><img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/EverMind-AI/EverMemOS/main.yml?branch=main" /></a> -->
+  <!-- <a href="https://github.com/EverMind-AI/EverMemOS/issues"><img alt="Issues" src="https://img.shields.io/github/issues/EverMind-AI/EverMemOS" /></a> -->
 </p>
 
 <p>
