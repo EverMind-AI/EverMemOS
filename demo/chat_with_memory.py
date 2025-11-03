@@ -592,6 +592,34 @@ class ChatSession:
         except Exception as e:
             print(f"[{self.texts.get('error_label')}] {e}")
 
+    def _convert_results_to_dict(self, results_tuples: List[Tuple[Any, float]]) -> List[Dict[str, Any]]:
+        """将检索结果元组列表转换为标准字典格式
+        
+        Args:
+            results_tuples: (MemCell, score) 元组列表
+            
+        Returns:
+            标准格式的字典列表
+        """
+        results = []
+        for mem, score in results_tuples:
+            item = {
+                "event_id": str(getattr(mem, "event_id", getattr(mem, "id", ""))),
+                "timestamp": (
+                    getattr(mem, "timestamp", None).isoformat()
+                    if getattr(mem, "timestamp", None)
+                    else None
+                ),
+                "group_id": getattr(mem, "group_id", None),
+                "subject": getattr(mem, "subject", None),
+                "summary": getattr(mem, "summary", None),
+                "episode": getattr(mem, "episode", None),
+                "participants": getattr(mem, "participants", []),
+                "score": round(score, 4),
+            }
+            results.append(item)
+        return results
+
     async def retrieve_memories(self, query: str) -> List[Dict[str, Any]]:
         """检索相关记忆（支持多种检索模式）
 
@@ -612,16 +640,6 @@ class ChatSession:
         if not candidates:
             self.last_retrieval_metadata = {"retrieval_mode": self.retrieval_mode, "total_latency_ms": 0.0}
             return []
-<<<<<<< HEAD
-
-        # 使用检索策略排序
-        results = await self.retrieval_strategy.retrieve(
-            query=query, candidates=candidates, top_k=self.config.top_k_memories
-        )
-
-        if self.scenario_type == ScenarioType.ASSISTANT:
-            results_semantic = await self.retrieval_strategy.retrieve_semantic(
-=======
         
         # 🔥 根据检索模式执行不同的检索逻辑
         if self.retrieval_mode == "lightweight":
@@ -629,7 +647,6 @@ class ChatSession:
             from demo.memory_utils import lightweight_retrieval
             
             results_tuples, metadata = await lightweight_retrieval(
->>>>>>> 5e9b269915a57a1215c75cc89bc6f2e325eeac88
                 query=query,
                 candidates=candidates,
                 embedding_config=self.embedding_config,
@@ -642,25 +659,7 @@ class ChatSession:
             self.last_retrieval_metadata = metadata
             
             # 转换为标准格式
-            results = []
-            for mem, score in results_tuples:
-                item = {
-                    "event_id": str(getattr(mem, "event_id", getattr(mem, "id", ""))),
-                    "timestamp": (
-                        getattr(mem, "timestamp", None).isoformat()
-                        if getattr(mem, "timestamp", None)
-                        else None
-                    ),
-                    "group_id": getattr(mem, "group_id", None),
-                    "subject": getattr(mem, "subject", None),
-                    "summary": getattr(mem, "summary", None),
-                    "episode": getattr(mem, "episode", None),
-                    "participants": getattr(mem, "participants", []),
-                    "score": round(score, 4),
-                }
-                results.append(item)
-            
-            return results
+            return self._convert_results_to_dict(results_tuples)
         
         elif self.retrieval_mode == "agentic":
             # Agentic 检索：LLM 引导的多轮检索
@@ -678,25 +677,7 @@ class ChatSession:
             self.last_retrieval_metadata = metadata
             
             # 转换为标准格式
-            results = []
-            for mem, score in results_tuples:
-                item = {
-                    "event_id": str(getattr(mem, "event_id", getattr(mem, "id", ""))),
-                    "timestamp": (
-                        getattr(mem, "timestamp", None).isoformat()
-                        if getattr(mem, "timestamp", None)
-                        else None
-                    ),
-                    "group_id": getattr(mem, "group_id", None),
-                    "subject": getattr(mem, "subject", None),
-                    "summary": getattr(mem, "summary", None),
-                    "episode": getattr(mem, "episode", None),
-                    "participants": getattr(mem, "participants", []),
-                    "score": round(score, 4),
-                }
-                results.append(item)
-            
-            return results
+            return self._convert_results_to_dict(results_tuples)
         
         else:
             # 回退到默认检索（保持向后兼容）
