@@ -39,7 +39,7 @@ class AgenticV3Controller(BaseController):
     - memorize: 逐条接收简单直接的单条消息并存储为记忆
     """
 
-    def __init__(self):
+    def __init__(self,conversation_meta_repository: ConversationMetaRawRepository):
         """初始化控制器"""
         super().__init__(
             prefix="/api/v3/agentic",
@@ -47,8 +47,7 @@ class AgenticV3Controller(BaseController):
             default_auth="none",  # 根据实际需求调整认证策略
         )
         self.memory_manager = MemoryManager()
-        # 通过依赖注入获取 Repository
-        self.conversation_meta_repository = get_bean_by_type(ConversationMetaRawRepository)
+        self.conversation_meta_repository = conversation_meta_repository
         logger.info("AgenticV3Controller initialized with MemoryManager and ConversationMetaRepository")
 
     @post(
