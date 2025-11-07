@@ -9,7 +9,8 @@ import logging
 from typing import Any, Dict
 from fastapi import HTTPException, Request as FastAPIRequest
 
-from core.di.decorators import controller, inject
+from core.di.decorators import controller
+from core.di import get_bean_by_type
 from core.interface.controller.base_controller import BaseController, post
 from core.constants.errors import ErrorCode, ErrorStatus
 from agentic_layer.memory_manager import MemoryManager
@@ -38,15 +39,8 @@ class AgenticV3Controller(BaseController):
     - memorize: 逐条接收简单直接的单条消息并存储为记忆
     """
 
-    @inject("conversation_meta_raw_repository")
-    def __init__(
-        self, conversation_meta_repository: ConversationMetaRawRepository = None
-    ):
-        """初始化控制器
-        
-        Args:
-            conversation_meta_repository: 对话元数据仓储，通过依赖注入提供
-        """
+    def __init__(self,conversation_meta_repository: ConversationMetaRawRepository):
+        """初始化控制器"""
         super().__init__(
             prefix="/api/v3/agentic",
             tags=["Agentic Layer V3"],
