@@ -79,3 +79,32 @@ class RetrieveMemResponse:
     has_more: bool = False
     query_metadata: Metadata = field(default_factory=Metadata)
     metadata: Metadata = field(default_factory=Metadata)
+
+
+@dataclass
+class UserDetail:
+    """用户详情
+    
+    用于 ConversationMetaRequest.user_details 的值结构
+    """
+
+    full_name: str  # 用户全名
+    role: Optional[str] = None  # 用户角色
+    extra: Optional[Dict[str, Any]] = None  # 额外信息，schema是动态的
+
+
+@dataclass
+class ConversationMetaRequest:
+    """对话元数据请求
+    """
+
+    version: str  # 版本号
+    scene: str  # 场景标识
+    scene_desc: Dict[str, Any]  # 场景描述，通常包含bot_ids等字段
+    name: str  # 对话名称
+    group_id: str  # 群组ID
+    created_at: str  # 创建时间，ISO格式字符串
+    description: Optional[str] = None  # 对话描述
+    default_timezone: Optional[str] = "Asia/Shanghai"  # 默认时区
+    user_details: Dict[str, UserDetail] = field(default_factory=dict)  # 用户详情，key是动态的（如user_001, robot_001），value结构固定
+    tags: List[str] = field(default_factory=list)  # 标签列表

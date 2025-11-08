@@ -9,13 +9,27 @@ import logging
 from typing import Any, Dict
 from fastapi import HTTPException, Request as FastAPIRequest
 
+from agentic_layer.schemas import RetrieveMethod
 from core.di.decorators import controller
+from core.di import get_bean_by_type
 from core.interface.controller.base_controller import BaseController, post
 from core.constants.errors import ErrorCode, ErrorStatus
 from agentic_layer.memory_manager import MemoryManager
-from agentic_layer.converter import _handle_conversation_format
+from agentic_layer.converter import (
+    _handle_conversation_format,
+    convert_dict_to_fetch_mem_request,
+    convert_dict_to_retrieve_mem_request,
+)
+from agentic_layer.dtos.memory_query import ConversationMetaRequest, UserDetail
 from infra_layer.adapters.input.api.mapper.group_chat_converter import (
     convert_simple_message_to_memorize_input,
+)
+from infra_layer.adapters.out.persistence.document.memory.conversation_meta import (
+    ConversationMeta,
+    UserDetailModel,
+)
+from infra_layer.adapters.out.persistence.repository.conversation_meta_raw_repository import (
+    ConversationMetaRawRepository,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,7 +45,7 @@ class AgenticV3Controller(BaseController):
     - retrieve_lightweight: 轻量级检索（Embedding + BM25 + RRF）
     """
 
-    def __init__(self):
+    def __init__(self, conversation_meta_repository: ConversationMetaRawRepository):
         """初始化控制器"""
         super().__init__(
             prefix="/api/v3/agentic",
@@ -39,7 +53,8 @@ class AgenticV3Controller(BaseController):
             default_auth="none",  # 根据实际需求调整认证策略
         )
         self.memory_manager = MemoryManager()
-        logger.info("AgenticV3Controller initialized with MemoryManager")
+        self.conversation_meta_repository = conversation_meta_repository
+        logger.info("AgenticV3Controller initialized with MemoryManager and ConversationMetaRepository")
 
     @post(
         "/memorize",
