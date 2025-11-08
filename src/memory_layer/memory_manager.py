@@ -42,6 +42,9 @@ class MemorizeRequest:
     # 可选的提取控制参数
     enable_semantic_extraction: bool = True  # 是否提取语义记忆
     enable_event_log_extraction: bool = True  # 是否提取事件日志
+    # 对话元数据字段（对应 ConversationMeta）
+    scene: Optional[str] = None  # 场景标识符，如 "company"、"work" 等
+    scene_desc: Optional[dict] = None  # 场景描述信息，如 {"bot_ids": ["aaa", "bbb"]}
 
 
 @dataclass

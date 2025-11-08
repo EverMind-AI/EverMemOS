@@ -149,6 +149,8 @@ def _create_memorize_request(
     group_id: str = None,
     group_name: str = None,
     current_time: datetime = None,
+    scene: str = None,
+    scene_desc: Dict[str, Any] = None,
 ) -> MemorizeRequest:
     """
     创建 MemorizeRequest 对象的公共函数
@@ -161,6 +163,8 @@ def _create_memorize_request(
         group_id: 群组ID
         group_name: 群组名称
         current_time: 当前时间
+        scene: 场景标识符（新增，兼容性处理）
+        scene_desc: 场景描述信息（新增，兼容性处理）
 
     Returns:
         MemorizeRequest 对象
@@ -187,6 +191,8 @@ def _create_memorize_request(
         group_id=group_id,
         group_name=group_name,
         current_time=current_time,
+        scene=scene,
+        scene_desc=scene_desc,
     )
 
 
@@ -207,6 +213,9 @@ async def _handle_conversation_format(data: Dict[str, Any]) -> MemorizeRequest:
 
     # 提取群组级别信息
     group_name = data.get("group_name")
+    # 提取场景信息（新增字段，兼容性处理）
+    scene = data.get("scene")
+    scene_desc = data.get("scene_desc")
 
     # 转换为 RawData 格式，传递群组名称
     raw_data_list = await convert_conversation_to_raw_data_list(
@@ -239,4 +248,6 @@ async def _handle_conversation_format(data: Dict[str, Any]) -> MemorizeRequest:
         group_id=data.get(DataFields.GROUP_ID),
         group_name=data.get("group_name"),
         current_time=current_time,
+        scene=scene,
+        scene_desc=scene_desc,
     )

@@ -7,8 +7,12 @@
 
 import asyncio
 
+from core.di import get_bean_by_type
 from infra_layer.adapters.input.api.v3.agentic_v3_controller import (
     AgenticV3Controller,
+)
+from infra_layer.adapters.out.persistence.repository.conversation_meta_raw_repository import (
+    ConversationMetaRawRepository,
 )
 
 
@@ -26,7 +30,9 @@ async def test_all_modes():
     print("测试不同的检索模式和数据源")
     print("=" * 80)
     
-    controller = AgenticV3Controller()
+    # 通过依赖注入获取 ConversationMetaRawRepository
+    repository = get_bean_by_type(ConversationMetaRawRepository)
+    controller = AgenticV3Controller(repository)
     query = "北京旅游美食"
     group_id = "assistant"
     

@@ -71,6 +71,9 @@ def convert_group_chat_format_to_memorize_input(
     group_name = conversation_meta.get("name")  # 从 conversation_meta 中提取群组名称
     user_details = conversation_meta.get("user_details", {})
     default_timezone = conversation_meta.get("default_timezone", "UTC")
+    # 提取场景信息（新增字段，兼容性处理）
+    scene = conversation_meta.get("scene")
+    scene_desc = conversation_meta.get("scene_desc", {})
 
     # 提取所有用户ID列表
     user_id_list = list(user_details.keys())
@@ -107,6 +110,11 @@ def convert_group_chat_format_to_memorize_input(
         result["group_name"] = group_name
     if current_time:
         result["current_time"] = current_time.isoformat()
+    # 添加场景信息（新增字段，兼容性处理）
+    if scene:
+        result["scene"] = scene
+    if scene_desc:
+        result["scene_desc"] = scene_desc
 
     return result
 
@@ -262,6 +270,9 @@ def convert_simple_message_to_memorize_input(
     sender_name = message_data.get("sender_name", sender)
     content = message_data.get("content", "")
     refer_list = message_data.get("refer_list", [])
+    # 提取场景信息（新增字段，兼容性处理）
+    scene = message_data.get("scene")
+    scene_desc = message_data.get("scene_desc")
 
     # 验证必需字段
     if not message_id:
@@ -303,6 +314,11 @@ def convert_simple_message_to_memorize_input(
         result["group_name"] = group_name
     if create_time:
         result["current_time"] = create_time
+    # 添加场景信息（新增字段，兼容性处理）
+    if scene:
+        result["scene"] = scene
+    if scene_desc:
+        result["scene_desc"] = scene_desc
 
     return result
 
