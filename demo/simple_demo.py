@@ -1,47 +1,65 @@
-"""MemSys 简单示例 - 最简洁的使用方式
+"""MemSys Simple Demo - Easy to Understand!
 
-使用方法：
+Demonstrates how to use the memory system:
+1. Store conversations
+2. Search memories
+
+Prerequisites:
+    Start the API server first (in another terminal):
+    uv run python src/bootstrap.py start_server.py
+
+Run the demo:
     uv run python src/bootstrap.py demo/simple_demo.py
 """
 
 import asyncio
-from dotenv import load_dotenv
 from demo.simple_memory_manager import SimpleMemoryManager
-
-load_dotenv()
 
 
 async def main():
-    # 创建记忆管理器
+    """Super simple usage example - just 3 steps!"""
+    
+    # Create memory manager
     memory = SimpleMemoryManager()
     
-    # 添加记忆
-    await memory.add_memory(
-        messages=[
-            {"role": "user", "content": "我喜欢踢足球，周末经常去球场"},
-            {"role": "assistant", "content": "足球是很好的运动！你最喜欢哪个球队？"},
-            {"role": "user", "content": "我最喜欢巴塞罗那队，梅西是我的偶像"},
-        ],
-        group_id="sports_chat",
-    )
+    memory.print_separator("🧠  MemSys Simple Demo")
     
-    print("✅ 记忆已添加\n")
+    # ========== Step 1: Store Conversations ==========
+    print("\n📝 Step 1: Store Conversations")
+    memory.print_separator()
     
-    # 等待数据写入和索引构建（MongoDB + ES + Milvus）
-    print("⏳ 等待 10 秒，确保数据写入和索引构建...")
-    await asyncio.sleep(10)
+    await memory.store("I love playing soccer, often go to the field on weekends")
+    await asyncio.sleep(2)
     
-    # 验证数据是否已存储
-    count = await memory.check_memory_count(group_id="sports_chat")
-    print(f"📊 已存储的记忆数量: {count}\n")
+    await memory.store("Soccer is a great sport! Which team do you like?", sender="Assistant")
+    await asyncio.sleep(2)
     
-    # 搜索记忆
-    results = await memory.search_memory(
-        query="用户喜欢什么运动？",
-        group_id="sports_chat",
-    )
+    await memory.store("I love Barcelona the most, Messi is my idol")
+    await asyncio.sleep(2)
     
-    print(f"🔍 搜索结果: {results}\n")
+    await memory.store("I also enjoy watching basketball, NBA is my favorite")
+    await asyncio.sleep(2)
+    
+    # ========== Step 2: Wait for Indexing ==========
+    print("\n⏳ Step 2: Wait for Index Building")
+    memory.print_separator()
+    await memory.wait_for_index(seconds=10)
+    
+    # ========== Step 3: Search Memories ==========
+    print("\n🔍 Step 3: Search Memories")
+    memory.print_separator()
+    
+    print("\n💬 Query 1: What sports does the user like?")
+    await memory.search("What sports does the user like?")
+    
+    print("\n💬 Query 2: What is the user's favorite team?")
+    await memory.search("What is the user's favorite team?")
+    
+    print("\n💬 Query 3: What are the user's sports hobbies?")
+    await memory.search("What are the user's sports hobbies?")
+    
+    # ========== Done ==========
+    memory.print_summary()
 
 
 if __name__ == "__main__":

@@ -1,200 +1,202 @@
-"""Simple Memory Manager - 简化的记忆管理器
+"""Simple Memory Manager - Simplified Memory Manager (HTTP API Version)
 
-封装复杂的初始化和转换逻辑，提供简单易用的 API。
+Encapsulates all HTTP API call details and provides the simplest interface.
 """
 
-from typing import List, Dict, Any, Optional
-from pathlib import Path
-
-from agentic_layer.memory_manager import MemoryManager
-from memory_layer.memory_manager import MemorizeRequest
-from memory_layer.types import RawDataType
-from memory_layer.memcell_extractor.base_memcell_extractor import RawData
-from common_utils.datetime_utils import get_now_with_timezone
-from demo.memory_config import MongoDBConfig
-from demo.memory_utils import ensure_mongo_beanie_ready
+import asyncio
+import httpx
+from typing import List, Dict, Any
+from common_utils.datetime_utils import get_now_with_timezone, to_iso_format
 
 
 class SimpleMemoryManager:
-    """简化的记忆管理器
+    """Super Simple Memory Manager
     
-    提供简单的 API：
-    - add_memory(): 添加对话记忆
-    - search_memory(): 搜索记忆
+    Uses HTTP API, no need to worry about internal implementation.
+    
+    Usage:
+        memory = SimpleMemoryManager()
+        await memory.store("I love playing soccer")
+        results = await memory.search("What sports does the user like?")
     """
     
-    def __init__(self):
-        """初始化管理器"""
-        self.manager: Optional[MemoryManager] = None
-        self._initialized = False
+    def __init__(self, base_url: str = "http://localhost:8001", group_id: str = "default_group"):
+        """Initialize the manager
+        
+        Args:
+            base_url: API server address (default: localhost:8001)
+            group_id: Group ID (default: default_group)
+        """
+        self.base_url = base_url
+        self.group_id = group_id
+        self.group_name = "Simple Demo Group"
+        self.memorize_url = f"{base_url}/api/v3/agentic/memorize"
+        self.retrieve_url = f"{base_url}/api/v3/agentic/retrieve_lightweight"
         self._message_counter = 0
     
-    async def initialize(self) -> None:
-        """初始化 MongoDB 和 MemoryManager"""
-        if self._initialized:
-            return
-        
-        # 初始化 MongoDB
-        mongo_config = MongoDBConfig()
-        await ensure_mongo_beanie_ready(mongo_config)
-        
-        # 创建 MemoryManager
-        self.manager = MemoryManager()
-        self._initialized = True
-    
-    async def add_memory(
-        self,
-        messages: List[Dict[str, str]],
-        group_id: str = "default",
-        group_name: str = "Default Group",
-        user_id: str = "default_user",
-    ) -> Dict[str, Any]:
-        """添加对话记忆
+    async def store(self, content: str, sender: str = "User") -> bool:
+        """Store a message
         
         Args:
-            messages: 消息列表，格式：
-                [
-                    {"role": "user", "content": "消息内容"},
-                    {"role": "assistant", "content": "回复内容"},
-                ]
-            group_id: 群组 ID（可选）
-            group_name: 群组名称（可选）
-            user_id: 用户 ID（可选）
+            content: Message content
+            sender: Sender name (default: "User")
         
         Returns:
-            结果字典，包含 success 和 memories 字段
+            Success status
         """
-        # 自动初始化
-        if not self._initialized:
-            await self.initialize()
+        # Generate unique message ID
+        self._message_counter += 1
+        now = get_now_with_timezone()  # Use project's unified time utility (with timezone)
+        message_id = f"msg_{self._message_counter}_{int(now.timestamp() * 1000)}"
         
-        # 转换消息格式
-        raw_data_list = []
-        for msg in messages:
-            # 构建消息内容
-            content = {
-                "speaker_id": user_id if msg["role"] == "user" else "assistant",
-                "speaker_name": msg["role"],
-                "content": msg["content"],
-                "timestamp": get_now_with_timezone(),
-            }
-            
-            # 创建 RawData
-            raw_data = RawData(
-                content=content,
-                data_id=f"msg_{self._message_counter}",
-                data_type=RawDataType.CONVERSATION,
-            )
-            raw_data_list.append(raw_data)
-            self._message_counter += 1
+        # Build message data (completely consistent with test_v3_api_http.py format)
+        message_data = {
+            "message_id": message_id,
+            "create_time": to_iso_format(now),  # Use project's unified time formatting (with timezone)
+            "sender": sender,
+            "sender_name": sender,  # Consistent with JSON data format
+            "type": "text",  # Message type
+            "content": content,
+            "group_id": self.group_id,
+            "group_name": self.group_name,
+        }
         
-        # 构建请求（第一条作为历史，其余作为新消息）
-        history_data = raw_data_list[:1] if len(raw_data_list) > 1 else []
-        new_data = raw_data_list[1:] if len(raw_data_list) > 1 else raw_data_list
-        
-        request = MemorizeRequest(
-            history_raw_data_list=history_data,
-            new_raw_data_list=new_data,
-            raw_data_type=RawDataType.CONVERSATION,
-            user_id_list=[user_id],
-            group_id=group_id,
-            group_name=group_name,
-            enable_semantic_extraction=True,
-            enable_event_log_extraction=True,
-        )
-        
-        # 存储记忆
         try:
-            result = await self.manager.memorize(request)
-            
-            # 返回结果和提示
-            if result and len(result) > 0:
-                print(f"💾 已提取 {len(result)} 条记忆")
-            else:
-                print("📝 消息已记录（需要更多上下文才能提取记忆）")
-            
-            return {
-                "success": True,
-                "memories": result if result else [],
-                "count": len(result) if result else 0,
-            }
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(self.memorize_url, json=message_data)
+                response.raise_for_status()
+                result = response.json()
+                
+                if result.get("status") == "ok":
+                    count = result.get("result", {}).get("count", 0)
+                    if count > 0:
+                        print(f"  ✅ Stored: {content[:40]}... (Extracted {count} memories)")
+                    else:
+                        print(f"  📝 Recorded: {content[:40]}... (Waiting for more context to extract memories)")
+                    return True
+                else:
+                    print(f"  ❌ Storage failed: {result.get('message')}")
+                    return False
+                    
+        except httpx.ConnectError:
+            print(f"  ❌ Cannot connect to API server ({self.base_url})")
+            print(f"     Please start first: uv run python src/bootstrap.py start_server.py")
+            return False
         except Exception as e:
-            print(f"❌ 存储失败: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "memories": [],
-                "count": 0,
-            }
+            print(f"  ❌ Storage failed: {e}")
+            return False
     
-    async def search_memory(
-        self,
-        query: str,
-        group_id: str = "default",
-        user_id: str = "default_user",
-        top_k: int = 5,
+    async def search(
+        self, 
+        query: str, 
+        top_k: int = 3,
         mode: str = "rrf",
-    ) -> List[str]:
-        """搜索记忆
+        show_details: bool = True
+    ) -> List[Dict[str, Any]]:
+        """Search memories
         
         Args:
-            query: 查询文本
-            group_id: 群组 ID（可选）
-            user_id: 用户 ID（可选）
-            top_k: 返回结果数量（默认 5）
-            mode: 检索模式（默认 "rrf"）
-                - "rrf": RRF 混合检索（推荐）
-                - "embedding": 纯向量检索
-                - "bm25": 纯关键词检索
+            query: Query text
+            top_k: Number of results to return (default: 3)
+            mode: Retrieval mode (default: "rrf")
+                - "rrf": RRF fusion (recommended)
+                - "embedding": Vector retrieval
+                - "bm25": Keyword retrieval
+            show_details: Whether to show detailed information (default: True)
         
         Returns:
-            记忆内容列表 ["记忆1", "记忆2", ...]
+            List of memories
         """
-        # 自动初始化
-        if not self._initialized:
-            await self.initialize()
+        payload = {
+            "query": query,
+            "user_id": "demo_user",
+            "top_k": top_k,
+            "data_source": "memcell",
+            "retrieval_mode": mode,
+            "memory_scope": "all",
+        }
         
         try:
-            # 调用检索 API
-            result = await self.manager.retrieve_lightweight(
-                query=query,
-                user_id=user_id,
-                group_id=group_id,
-                time_range_days=365,
-                top_k=top_k,
-                retrieval_mode=mode,
-                data_source="memcell",
-            )
-            
-            # 提取记忆内容
-            memories = result.get("memories", [])
-            return [m.get("content", "") for m in memories]
-        
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(self.retrieve_url, json=payload)
+                response.raise_for_status()
+                result = response.json()
+                
+                if result.get("status") == "ok":
+                    memories = result.get("result", {}).get("memories", [])
+                    metadata = result.get("result", {}).get("metadata", {})
+                    latency = metadata.get("total_latency_ms", 0)
+                    
+                    if show_details:
+                        print(f"  🔍 Found {len(memories)} memories (took {latency:.2f}ms)")
+                        self._print_memories(memories)
+                    
+                    return memories
+                else:
+                    print(f"  ❌ Search failed: {result.get('message')}")
+                    return []
+                    
+        except httpx.ConnectError:
+            print(f"  ❌ Cannot connect to API server ({self.base_url})")
+            return []
         except Exception as e:
-            print(f"搜索失败: {e}")
+            print(f"  ❌ Search failed: {e}")
             return []
     
-    async def check_memory_count(self, group_id: str = "default") -> int:
-        """检查指定群组的记忆数量（用于调试）
+    def _print_memories(self, memories: List[Dict[str, Any]]):
+        """Print memory details (internal method)"""
+        if not memories:
+            print("     💡 Tip: No related memories found")
+            print("         Possible reasons:")
+            print("         - Too little conversation input, system hasn't generated memories yet")
+            print("           (This simple demo only demonstrates retrieval, not full memory generation)")
+            return
+        
+        for i, mem in enumerate(memories, 1):
+            score = mem.get('score', 0)
+            timestamp = mem.get('timestamp', '')[:10]
+            subject = mem.get('subject', '')
+            summary = mem.get('summary', '')
+            episode = mem.get('episode', '')
+            
+            print(f"\n     [{i}] Relevance: {score:.4f} | Time: {timestamp}")
+            if subject:
+                print(f"         Subject: {subject}")
+            if summary:
+                print(f"         Summary: {summary[:60]}...")
+            if episode:
+                print(f"         Details: {episode[:80]}...")
+    
+    async def wait_for_index(self, seconds: int = 10):
+        """Wait for index building
         
         Args:
-            group_id: 群组 ID
-            
-        Returns:
-            记忆数量
+            seconds: Wait time in seconds (default: 10)
         """
-        # 自动初始化
-        if not self._initialized:
-            await self.initialize()
-        
-        try:
-            from infra_layer.adapters.out.persistence.document.memory.memcell import MemCell as DocMemCell
-            
-            # 查询 MongoDB 中的 MemCell 数量
-            count = await DocMemCell.find({"group_id": group_id}).count()
-            return count
-        except Exception as e:
-            print(f"检查失败: {e}")
-            return 0
-
-
+        print("  💡 Tip: Memory extraction requires sufficient context")
+        print("     - Short conversations may only record messages, not generate memories immediately")
+        print("     - Multi-turn conversations with specific information are easier to extract memories from")
+        print("     - System extracts memories at conversation boundaries (topic changes, time gaps)")
+        print(f"  ⏳ Waiting {seconds} seconds to ensure data is written...")
+        await asyncio.sleep(seconds)
+        print(f"  ✅ Index building completed")
+    
+    def print_separator(self, text: str = ""):
+        """Print separator line"""
+        if text:
+            print(f"\n{'='*60}")
+            print(f"{text}")
+            print('='*60)
+        else:
+            print('-'*60)
+    
+    def print_summary(self):
+        """Print usage summary and tips"""
+        print("\n" + "="*60)
+        print("✅ Demo completed!")
+        print("="*60)
+        print("\n📚 About Memory Extraction:")
+        print("   The memory system uses intelligent extraction strategy, not recording all conversations:")
+        print("   - ✅ Will extract: Conversations with specific info, opinions, preferences, events")
+        print("   - ❌ Won't extract: Too brief, low-information small talk")
+        print("   - 🎯 Best practice: Multi-turn conversations, rich context, specific details")
