@@ -62,14 +62,10 @@ def get_default_kafka_config() -> Dict[str, Any]:
         Dict[str, Any]: 配置字典
     """
     # 获取环境变量，提供默认值
-    kafka_servers_str = os.getenv(
-        "KAFKA_SERVERS",
-        "b-1.devaiohkafka.9v74o7.c2.kafka.us-east-2.amazonaws.com:9094,"
-        "b-2.devaiohkafka.9v74o7.c2.kafka.us-east-2.amazonaws.com:9094",
-    )
+    kafka_servers_str = os.getenv("KAFKA_SERVERS", "")
     kafka_servers = [server.strip() for server in kafka_servers_str.split(",")]
 
-    kafka_topic = os.getenv("KAFKA_TOPIC", "test_mongo_cdc_habitat_im_message")
+    kafka_topic = os.getenv("KAFKA_TOPIC", "")
     kafka_group_id = os.getenv("KAFKA_GROUP_ID", "aic_test_0908")
     max_poll_interval_ms = int(os.getenv("MAX_POLL_INTERVAL_MS", "3600000"))
     session_timeout_ms = int(os.getenv("SESSION_TIMEOUT_MS", "10000"))
