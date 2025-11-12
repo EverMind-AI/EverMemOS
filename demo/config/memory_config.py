@@ -34,7 +34,6 @@ class MongoDBConfig:
     database: str = field(default_factory=lambda: os.getenv("MONGODB_DATABASE", "memsys"))
     
     def __post_init__(self):
-        """追加 URI 参数（如 authSource、socketTimeoutMS 等）"""
         uri_params = os.getenv("MONGODB_URI_PARAMS", "").strip()
         if uri_params:
             separator = '&' if '?' in self.uri else '?'
