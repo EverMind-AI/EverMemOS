@@ -23,8 +23,7 @@ logger = get_logger(__name__)
 class OpenAICompatibleClient:
     """
     OpenAI兼容API客户端。
-    该客户端作为一个外观（Facade），管理多个LLM后端适配器，
-    并根据配置提供统一的聊天完成服务。
+    该客户端作为一个外观（Facade），管理多个LLM后端适配器。
     """
 
     def __init__(self, config_provider: ConfigProvider):
