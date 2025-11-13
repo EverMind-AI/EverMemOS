@@ -63,6 +63,7 @@ class RetrieveMemRequest:
     memory_sub_type: Optional[str] = None  # 记忆子类型过滤：episode/semantic_memory/event_log
     semantic_start_time: Optional[str] = None  # 语义记忆开始时间过滤
     semantic_end_time: Optional[str] = None  # 语义记忆结束时间过滤
+    radius: Optional[float] = None  # COSINE 相似度阈值（None 时使用默认值 0.6）
 
 
 @dataclass

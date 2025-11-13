@@ -601,11 +601,13 @@ if __name__ == "__main__":
         )
         _INDEX_CONFIGS = [
             IndexConfig(
-                field_name="embedding",
-                index_type="IVF_FLAT",
-                metric_type="L2",
-                params={"nlist": 1024},
-            )
+                field_name="vector",
+                index_type="HNSW",  # 高效的近似最近邻搜索
+                metric_type="COSINE",  # 欧氏距离
+            params={
+                "M": 16,  # 每个节点的最大边数
+                "efConstruction": 200,  # 构建时的搜索宽度
+            })
         ]
         _DB_USING = "default"
 
@@ -627,11 +629,13 @@ if __name__ == "__main__":
         )
         _INDEX_CONFIGS = [
             IndexConfig(
-                field_name="embedding",
-                index_type="IVF_FLAT",
-                metric_type="L2",
-                params={"nlist": 1024},
-            )
+                field_name="vector",
+                index_type="HNSW",  # 高效的近似最近邻搜索
+                metric_type="COSINE",  # 欧氏距离
+                params={
+                  "M": 16,  # 每个节点的最大边数
+                  "efConstruction": 200,  # 构建时的搜索宽度
+                })
         ]
         _DB_USING = "default"
 

@@ -122,7 +122,7 @@ class EpisodicMemoryCollection(MilvusCollectionWithSuffix):
         IndexConfig(
             field_name="vector",
             index_type="HNSW",  # 高效的近似最近邻搜索
-            metric_type="L2",  # 欧氏距离
+            metric_type="COSINE",  # 余弦相似度
             params={
                 "M": 16,  # 每个节点的最大边数
                 "efConstruction": 200,  # 构建时的搜索宽度

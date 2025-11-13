@@ -275,6 +275,9 @@ class AgenticV3Controller(BaseController):
           * "all": 所有记忆（默认，包含个人和群组）
           * "personal": 仅个人记忆（personal_episode/personal_event_log/personal_semantic_memory）
           * "group": 仅群组记忆（episode/event_log/semantic_memory）
+        - **radius** (可选): COSINE 相似度阈值，范围 [-1, 1]，默认 0.6
+          * 只返回相似度 >= radius 的结果
+          * 影响向量检索部分（embedding/rrf 模式）的结果质量
         
         ## 返回格式：
         ```json
@@ -319,6 +322,7 @@ class AgenticV3Controller(BaseController):
             retrieval_mode = request_data.get("retrieval_mode", "rrf")
             data_source = request_data.get("data_source", "memcell")
             memory_scope = request_data.get("memory_scope", "all")  # 新增参数
+            radius = request_data.get("radius")  # COSINE 相似度阈值（可选）
             
             if not query:
                 raise ValueError("缺少必需参数：query")
@@ -338,6 +342,7 @@ class AgenticV3Controller(BaseController):
                 retrieval_mode=retrieval_mode,
                 data_source=data_source,
                 memory_scope=memory_scope,
+                radius=radius,
             )
             
             # 3. 返回统一格式

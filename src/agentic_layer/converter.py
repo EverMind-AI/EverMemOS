@@ -107,6 +107,7 @@ def convert_dict_to_retrieve_mem_request(
             include_metadata=data.get("include_metadata", True),
             start_time=data.get("start_time", None),
             end_time=data.get("end_time", None),
+            radius=data.get("radius", None),  # COSINE 相似度阈值
         )
     except Exception as e:
         raise ValueError(f"RetrieveMemRequest 转换失败: {e}")

@@ -420,6 +420,7 @@ class MemoryManager:
                 semantic_end_time=semantic_end_dt,
                 limit=top_k,
                 score_threshold=0.0,
+                radius=retrieve_mem_request.radius,  # 从请求对象中获取相似度阈值参数
             )
 
             logger.debug(f"Milvus向量搜索返回 {len(search_results)} 条结果")
@@ -541,6 +542,7 @@ class MemoryManager:
                 end_time=end_time_dt,
                 limit=top_k,
                 score_threshold=0.0,
+                radius=retrieve_mem_request.radius,  # 从请求对象中获取相似度阈值参数
             )
             return search_results
         except Exception as e:
@@ -1017,6 +1019,7 @@ class MemoryManager:
         retrieval_mode: str = "rrf",  # "embedding" | "bm25" | "rrf"
         data_source: str = "memcell",  # "memcell" | "event_log" | "semantic_memory"
         memory_scope: str = "all",  # "all" | "personal" | "group"
+        radius: Optional[float] = None,  # COSINE 相似度阈值
     ) -> Dict[str, Any]:
         """
         轻量级记忆检索（统一使用 Milvus/ES 检索）
@@ -1076,6 +1079,7 @@ class MemoryManager:
             data_source=data_source,
             start_time=start_time,
             memory_scope=memory_scope,
+            radius=radius,
         )
     
     async def _retrieve_from_vector_stores(
@@ -1089,6 +1093,7 @@ class MemoryManager:
         data_source: str = "memcell",
         start_time: float = None,
         memory_scope: str = "all",
+        radius: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
         统一的向量存储检索方法（支持 embedding、bm25、rrf 三种模式）
@@ -1137,6 +1142,7 @@ class MemoryManager:
                     group_id=group_id,
                     memory_sub_type=milvus_memory_sub_type,
                     limit=retrieval_limit,
+                    radius=radius,  # 传递相似度阈值参数
                 )
                 
                 # 过滤指定类型的结果

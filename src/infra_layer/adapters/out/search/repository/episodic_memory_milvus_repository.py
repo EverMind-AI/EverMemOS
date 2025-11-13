@@ -18,6 +18,9 @@ from core.di.decorators import repository
 
 logger = get_logger(__name__)
 
+# Milvus 检索配置
+MILVUS_SIMILARITY_RADIUS = 0.6  # COSINE 相似度阈值，范围 [-1, 1]，1 表示完全相同
+
 
 @repository("episodic_memory_milvus_repository", primary=False)
 class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollection]):
@@ -172,6 +175,7 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
         semantic_end_time: Optional[datetime] = None,
         limit: int = 10,
         score_threshold: float = 0.0,
+        radius: Optional[float] = None,
     ) -> List[Dict[str, Any]]:
         """
         向量相似性搜索
@@ -186,6 +190,7 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
             end_time: 事件时间戳结束过滤
             semantic_start_time: 语义记忆有效期开始时间过滤（仅对 semantic_memory 有效）
             semantic_end_time: 语义记忆有效期结束时间过滤（仅对 semantic_memory 有效）
+            radius: COSINE 相似度阈值（可选，默认使用 MILVUS_SIMILARITY_RADIUS）
             limit: 返回结果数量
             score_threshold: 相似度阈值
 
@@ -229,7 +234,16 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
             # 执行搜索
             # 动态调整 ef 参数：必须 >= limit，通常设为 limit 的 1.5-2 倍
             ef_value = max(128, limit * 2)  # 确保 ef >= limit，至少 128
-            search_params = {"metric_type": "L2", "params": {"ef": ef_value}}
+            # 使用 COSINE 相似度，radius 表示只返回相似度 >= 阈值的结果
+            # 优先使用传入的 radius 参数，否则使用默认配置
+            similarity_radius = radius if radius is not None else MILVUS_SIMILARITY_RADIUS
+            search_params = {
+                "metric_type": "COSINE",
+                "params": {
+                    "ef": ef_value,
+                    "radius": similarity_radius,  # 相似度阈值（COSINE 范围 -1 到 1，1 表示完全相同）
+                }
+            }
 
             results = await self.collection.search(
                 data=[query_vector],
