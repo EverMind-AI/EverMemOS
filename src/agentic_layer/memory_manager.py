@@ -35,9 +35,6 @@ from infra_layer.adapters.out.persistence.repository.memcell_raw_repository impo
 from infra_layer.adapters.out.persistence.document.memory.user_profile import (
     UserProfile,
 )
-from infra_layer.adapters.out.persistence.repository.group_user_profile_memory_raw_repository import (  # noqa: E501
-    GroupUserProfileMemoryRawRepository,
-)
 from infra_layer.adapters.out.search.repository.episodic_memory_milvus_repository import (
     EpisodicMemoryMilvusRepository,
 )
@@ -953,43 +950,39 @@ class MemoryManager:
                 memory.extend = {}
             memory.extend['_search_source'] = search_source
 
-            # 读取group_user_profile_memory获取group_importance_evidence
+            # 从 user_profiles 中读取 group_importance_evidence
             group_importance_evidence = None
             if user_id and group_id:
                 try:
-                    group_user_profile_repo = get_bean_by_type(
-                        GroupUserProfileMemoryRawRepository
-                    )
-                    group_user_profile = (
-                        await group_user_profile_repo.get_by_user_group(
-                            user_id, group_id
-                        )
+                    user_profile = await UserProfile.find_one(
+                        UserProfile.user_id == user_id,
+                        UserProfile.group_id == group_id,
+                        sort=[("version", -1)],
                     )
 
-                    if (
-                        group_user_profile
-                        and hasattr(group_user_profile, 'group_importance_evidence')
-                        and group_user_profile.group_importance_evidence
-                    ):
+                    if user_profile:
                         group_importance_evidence = (
-                            group_user_profile.group_importance_evidence
+                            user_profile.profile_data.get("group_importance_evidence")
+                            if isinstance(user_profile.profile_data, dict)
+                            else None
                         )
-                        # 将group_importance_evidence添加到memory的extend字段中
-                        if not hasattr(memory, 'extend') or memory.extend is None:
-                            memory.extend = {}
-                        memory.extend['group_importance_evidence'] = (
-                            group_importance_evidence
-                        )
-                        logger.debug(
-                            f"为memory添加group_importance_evidence: user_id={user_id}, group_id={group_id}"
-                        )
-                    else:
-                        logger.debug(
-                            f"未找到group_importance_evidence: user_id={user_id}, group_id={group_id}"
-                        )
+                        if group_importance_evidence:
+                            if not hasattr(memory, 'extend') or memory.extend is None:
+                                memory.extend = {}
+                            memory.extend['group_importance_evidence'] = (
+                                group_importance_evidence
+                            )
+                            logger.debug(
+                                "为memory添加group_importance_evidence: user_id=%s, group_id=%s",
+                                user_id,
+                                group_id,
+                            )
                 except Exception as e:
                     logger.warning(
-                        f"读取group_user_profile_memory失败: user_id={user_id}, group_id={group_id}, error={e}"
+                        "读取 user_profiles 失败: user_id=%s, group_id=%s, error=%s",
+                        user_id,
+                        group_id,
+                        e,
                     )
 
             # 按group_id分组
