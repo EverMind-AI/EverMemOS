@@ -122,7 +122,9 @@ Beyond "records," dynamic "growth": Real-time user profile updates that get to k
 
 ## 📖 Project Introduction
 
-**EverMemOS** is an open-source project designed to provide long-term memory capabilities to conversational AI agents. This codebase is the official implementation of the paper "EverMemOS". It extracts, structures, and retrieves information from conversations, enabling agents to maintain context, recall past interactions, and progressively build user profiles. This results in more personalized, coherent, and intelligent conversations.
+**EverMemOS** is an open-source project designed to provide long-term memory capabilities to conversational AI agents. It extracts, structures, and retrieves information from conversations, enabling agents to maintain context, recall past interactions, and progressively build user profiles. This results in more personalized, coherent, and intelligent conversations.
+
+> 📄 **Paper Coming Soon** - Our technical paper is in preparation. Stay tuned!
 
 ## 🎯 System Framework
 
@@ -252,10 +254,14 @@ cp env.template .env
 ```
 
 **Docker Services**:
-- **MongoDB** (27017): Primary database for storing memory cells and profiles
-- **Elasticsearch** (19200): Keyword search engine (BM25)
-- **Milvus** (19530): Vector database for semantic retrieval
-- **Redis** (6479): Cache service
+| Service | Host Port | Container Port | Purpose |
+|---------|-----------|----------------|---------|
+| **MongoDB** | 27017 | 27017 | Primary database for storing memory cells and profiles |
+| **Elasticsearch** | 19200 | 9200 | Keyword search engine (BM25) |
+| **Milvus** | 19530 | 19530 | Vector database for semantic retrieval |
+| **Redis** | 6479 | 6379 | Cache service |
+
+> 💡 Use **host ports** when connecting (e.g., `localhost:19200` for Elasticsearch)
 
 > 💡 For detailed Docker configuration and management, see [Docker Deployment Guide](DOCKER_DEPLOYMENT.md)
 
@@ -651,10 +657,11 @@ We are building a vibrant open-source community!
 
 ### Contact
 
-- **GitHub Issues**: [Submit issues and suggestions](https://github.com/your-org/memsys_opensource/issues)
-- **Discussions**: [Join discussions](https://github.com/your-org/memsys_opensource/discussions)
-- **Email**: [Contact email to be added]
-- **Community**: [Community link to be added]
+- **GitHub Issues**: [Submit issues and suggestions](https://github.com/EverMind-AI/EverMemOS/issues)
+- **Discussions**: [Join discussions](https://github.com/EverMind-AI/EverMemOS/discussions)
+- **Email**: evermind@shanda.com
+- **Reddit**: [r/EverMindAI](https://www.reddit.com/r/EverMindAI/)
+- **X**: [@EverMindAI](https://x.com/EverMindAI)
 
 ### Contributors
 
@@ -664,6 +671,14 @@ Thanks to all the developers who have contributed to this project!
 <!-- <a href="https://github.com/your-org/memsys_opensource/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=your-org/memsys_opensource" />
 </a> -->
+
+## 📖 Citation
+
+If you use EverMemOS in your research, please cite our paper (coming soon):
+
+```
+Coming soon
+```
 
 ## 📄 License
 
@@ -684,7 +699,7 @@ This section can include:
 
 Thanks to the following projects and communities for their inspiration and support:
 
-- (To be added)
+- [Memos](https://github.com/usememos/memos) - Thank you to the Memos project for providing a comprehensive, standardized open-source note-taking service that has provided valuable inspiration for our memory system design.
 
 ---
 
