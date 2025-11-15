@@ -596,9 +596,12 @@ async def main():
         max_tokens=config.llm_config[llm_service]["max_tokens"],
     )
 
-    # 创建共享的 Event Log Extractor
+    # 创建共享的 Event Log Extractor（使用评估专用提示词）
     console.print("⚙️ 初始化 Event Log Extractor...", style="yellow")
-    shared_event_log_extractor = EventLogExtractor(llm_provider=shared_llm_provider)
+    shared_event_log_extractor = EventLogExtractor(
+        llm_provider=shared_llm_provider,
+        use_eval_prompts=True  # 评估系统使用 eval/ 提示词
+    )
 
     # 🔥 使用待处理的对话字典（断点续传）
     # 创建进度计数器
