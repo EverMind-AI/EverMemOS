@@ -11,7 +11,12 @@ from datetime import datetime
 import json
 import re
 
-from ..prompts.eval.event_log_prompts import EVENT_LOG_PROMPT
+# 使用动态语言提示词导入（根据 MEMORY_LANGUAGE 环境变量自动选择）
+from ..prompts import EVENT_LOG_PROMPT
+
+# 评估专用提示词
+from ..prompts.eval.event_log_prompts import EVENT_LOG_PROMPT as EVAL_EVENT_LOG_PROMPT
+
 from ..llm.llm_provider import LLMProvider
 from common_utils.datetime_utils import get_now_with_timezone
 
@@ -56,14 +61,22 @@ class EventLogExtractor:
     - Atomic facts are independent, searchable units
     """
 
-    def __init__(self, llm_provider: LLMProvider):
+    def __init__(self, llm_provider: LLMProvider, use_eval_prompts: bool = False):
         """
         Initialize the event log extractor.
 
         Args:
             llm_provider: LLM provider for generating event logs
+            use_eval_prompts: Whether to use evaluation-specific prompts
         """
         self.llm_provider = llm_provider
+        self.use_eval_prompts = use_eval_prompts
+        
+        # 根据 use_eval_prompts 选择对应的提示词
+        if self.use_eval_prompts:
+            self.event_log_prompt = EVAL_EVENT_LOG_PROMPT
+        else:
+            self.event_log_prompt = EVENT_LOG_PROMPT
 
     def _parse_timestamp(self, timestamp) -> datetime:
         """
@@ -189,8 +202,8 @@ class EventLogExtractor:
             dt = self._parse_timestamp(timestamp)
             time_str = self._format_timestamp(dt)
 
-            # 2. 构建prompt
-            prompt = EVENT_LOG_PROMPT.replace("{{EPISODE_TEXT}}", episode_text)
+            # 2. 构建prompt（使用实例变量 self.event_log_prompt）
+            prompt = self.event_log_prompt.replace("{{EPISODE_TEXT}}", episode_text)
             prompt = prompt.replace("{{TIME}}", time_str)
 
             # 3. 调用LLM生成event log

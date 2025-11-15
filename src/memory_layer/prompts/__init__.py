@@ -62,6 +62,9 @@ if MEMORY_LANGUAGE == 'zh':
         get_semantic_generation_prompt,
     )
     
+    # Event Log 相关
+    from .zh.event_log_prompts import EVENT_LOG_PROMPT
+    
 else:
     # ===== 英文提示词（默认） =====
     # 对话相关
@@ -94,6 +97,9 @@ else:
         get_group_semantic_generation_prompt,
         get_semantic_generation_prompt,
     )
+    
+    # Event Log 相关
+    from .en.event_log_prompts import EVENT_LOG_PROMPT
 
 # 导出当前语言信息
 CURRENT_LANGUAGE = MEMORY_LANGUAGE
