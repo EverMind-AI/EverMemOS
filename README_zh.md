@@ -1,18 +1,21 @@
 <div align="center">
 
-<h1>EverMemOS </h1>
+<h1>
+  <img src="figs/logo.png" alt="EverMemOS Logo" height="40" style="vertical-align: middle; margin-right: 12px;"/>
+  EverMemOS
+</h1>
 
 <p><strong>每次交流，都由理解驱动</strong> · 企业级智能记忆系统</p>
 
 <p>
-  <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" />
-  <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-D22128?style=flat-square&logo=apache&logoColor=white" />
-  <img alt="Docker" src="https://img.shields.io/badge/Docker-Supported-2496ED?style=flat-square&logo=docker&logoColor=white" />
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Latest-009688?style=flat-square&logo=fastapi&logoColor=white" />
-  <img alt="MongoDB" src="https://img.shields.io/badge/MongoDB-7.0+-47A248?style=flat-square&logo=mongodb&logoColor=white" />
-  <img alt="Elasticsearch" src="https://img.shields.io/badge/Elasticsearch-8.x-005571?style=flat-square&logo=elasticsearch&logoColor=white" />
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-0084FF?style=flat-square&logo=python&logoColor=white" />
+  <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-00B894?style=flat-square&logo=apache&logoColor=white" />
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-Supported-4A90E2?style=flat-square&logo=docker&logoColor=white" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Latest-26A69A?style=flat-square&logo=fastapi&logoColor=white" />
+  <img alt="MongoDB" src="https://img.shields.io/badge/MongoDB-7.0+-00C853?style=flat-square&logo=mongodb&logoColor=white" />
+  <img alt="Elasticsearch" src="https://img.shields.io/badge/Elasticsearch-8.x-0084FF?style=flat-square&logo=elasticsearch&logoColor=white" />
   <img alt="Milvus" src="https://img.shields.io/badge/Milvus-2.4+-00A3E0?style=flat-square" />
-  <img alt="Redis" src="https://img.shields.io/badge/Redis-7.x-DC382D?style=flat-square&logo=redis&logoColor=white" />
+  <img alt="Redis" src="https://img.shields.io/badge/Redis-7.x-26A69A?style=flat-square&logo=redis&logoColor=white" />
    <a href="https://github.com/EverMind-AI/EverMemOS/releases">
     <img alt="Release" src="https://img.shields.io/badge/release-v1.0.0-4A90E2?style=flat-square" />
   </a>
@@ -60,27 +63,34 @@
 
 ## 💡 独特优势
 
-### 🔗 脉络有绪  
-不止“碎片”，串联“故事”：自动串联对话片段，构建清晰主题脉络，让 AI “看得明白”。  
-
-> 面对多线程对话时，它能自然地区分“A 项目的进度讨论”和“B 团队的策略规划”，并在每个主题中维持连贯的上下文逻辑。  
-> 从零散片语到完整叙事，AI 不再“听懂一句”，而是“听懂整件事”。
-
----
-
-### 🧠 感知有据  
-不止“检索”，智能“感知”：主动捕捉记忆与任务间的深层关联，让 AI 在关键时刻“想得周到”。  
-
-> 想象一下：当用户请求“推荐食物”时，AI 会主动联想到“你两天前刚做了牙科手术”这一关键信息，自动调整建议，避开不适宜的选项。  
-> 这是一种 **上下文自觉 (Contextual Awareness)** —— 让 AI 的思考真正建立在理解之上，而非孤立回应。
-
----
-
-### 💾 画像有灵  
-不止“档案”，动态“成长”：实时更新用户画像，越聊越懂你，让 AI “认得真切”。  
-
-> 你的每一次交流都会悄然更新 AI 对你的理解——偏好、风格、关注点都在持续演化。  
-> 随着互动的深入，它不只是“记住你说过什么”，而是在“学习你是谁”。
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>🔗 脉络有绪</h3>
+      <p><strong>不止“碎片”，串联“故事”</strong>：自动串联对话片段，构建清晰主题脉络，让 AI “看得明白”。</p>
+      <blockquote>
+        面对多线程对话时，它能自然地区分“A 项目的进度讨论”和“B 团队的策略规划”，并在每个主题中维持连贯的上下文逻辑。<br/><br/>
+        从零散片语到完整叙事，AI 不再“听懂一句”，而是“听懂整件事”。
+      </blockquote>
+    </td>
+    <td width="33%" valign="top">
+      <h3>🧠 感知有据</h3>
+      <p><strong>不止“检索”，智能“感知”</strong>：主动捕捉记忆与任务间的深层关联，让 AI 在关键时刻“想得周到”。</p>
+      <blockquote>
+        想象一下：当用户请求“推荐食物”时，AI 会主动联想到“你两天前刚做了牙科手术”这一关键信息，自动调整建议，避开不适宜的选项。<br/><br/>
+        这是一种 <strong>上下文自觉 (Contextual Awareness)</strong> —— 让 AI 的思考真正建立在理解之上，而非孤立回应。
+      </blockquote>
+    </td>
+    <td width="33%" valign="top">
+      <h3>💾 画像有灵</h3>
+      <p><strong>不止“档案”，动态“成长”</strong>：实时更新用户画像，越聊越懂你，让 AI “认得真切”。</p>
+      <blockquote>
+        你的每一次交流都会悄然更新 AI 对你的理解——偏好、风格、关注点都在持续演化。<br/><br/>
+        随着互动的深入，它不只是“记住你说过什么”，而是在“学习你是谁”。
+      </blockquote>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -93,7 +103,7 @@
 <td width="50%" valign="top">
 
 - [📖 项目介绍](#-项目介绍)
-- [🎯 核心概念](#-核心概念)
+- [🎯 系统框架](#-系统框架)
 - [📁 项目结构](#-项目结构)
 - [🚀 快速开始](#-快速开始)
   - [环境要求](#环境要求)
@@ -205,7 +215,7 @@ memsys-opensource/
 ├── demo/                             # 演示代码
 ├── data/                             # 示例对话数据
 ├── evaluation/                       # 评估脚本
-│   └── locomo_evaluation/            # LoCoMo 基准测试
+│   └── src/                          # 评估框架源代码
 ├── data_format/                      # 数据格式定义
 ├── docs/                             # 文档
 ├── config.json                       # 配置文件
@@ -222,7 +232,8 @@ memsys-opensource/
 
 - Python 3.10+
 - uv
-- Docker 和 Docker Compose
+- Docker 20.10+ 和 Docker Compose 2.0+
+- **至少 4GB 可用内存**（用于 Elasticsearch 和 Milvus）
 
 ### 安装步骤
 
@@ -233,7 +244,7 @@ memsys-opensource/
 ```bash
 # 1. 克隆项目
 git clone https://github.com/EverMind-AI/EverMemOS.git
-cd memsys_opensource
+cd EverMemOS
 
 # 2. 启动 Docker 服务
 docker-compose up -d
@@ -260,15 +271,18 @@ cp env.template .env
 | **MongoDB** | 27017 | 27017 | 主数据库，存储记忆单元和画像 |
 | **Elasticsearch** | 19200 | 9200 | 关键词检索引擎（BM25） |
 | **Milvus** | 19530 | 19530 | 向量数据库，语义检索 |
-| **Redis** | 6479 | 6379 | 缓存服务 |
+| **Redis** | 6379 | 6379 | 缓存服务 |
 
-> 💡 连接时请使用**宿主机端口**（如 `localhost:19200` 访问 Elasticsearch）
-
-> 💡 详细的 Docker 配置和管理，请参考 [Docker 部署指南](DOCKER_DEPLOYMENT.md)
+> 💡 **连接提示**：
+> - 连接时使用**宿主机端口**（如 `localhost:19200` 访问 Elasticsearch）
+> - MongoDB 凭据：`admin` / `memsys123`（仅用于本地开发）
+> - 停止服务：`docker-compose down` | 查看日志：`docker-compose logs -f`
 
 > 📖 MongoDB 详细安装指南：[MongoDB Installation Guide](docs/usage/MONGODB_GUIDE_zh.md)
 
 ---
+
+### 如何使用
 
 #### 🎯 运行演示：记忆提取和交互式聊天
 
@@ -435,8 +449,11 @@ uv run python src/bootstrap.py src/run.py --port 8001
 
 使用 V3 API 存储单条消息记忆：
 
+<details>
+<summary>示例：存储单条消息</summary>
+
 ```bash
-curl -X POST http://localhost:1995/api/v3/agentic/memorize \
+curl -X POST http://localhost:8001/api/v3/agentic/memorize \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
@@ -449,6 +466,8 @@ curl -X POST http://localhost:1995/api/v3/agentic/memorize \
     "scene": "group_chat"
   }'
 ```
+
+</details>
 > ℹ️ `scene` 为必填字段，仅支持 `assistant` 或 `group_chat`，用于指定记忆提取策略。
 **API 功能说明**：
 
@@ -479,6 +498,9 @@ EverMemOS 提供两种检索模式：**轻量级检索**（快速）和 **Agenti
 
 **示例 1：个人记忆**
 
+<details>
+<summary>示例：个人记忆检索</summary>
+
 ```bash
 curl -X POST http://localhost:8001/api/v3/agentic/retrieve_lightweight \
   -H "Content-Type: application/json" \
@@ -491,7 +513,12 @@ curl -X POST http://localhost:8001/api/v3/agentic/retrieve_lightweight \
   }'
 ```
 
+</details>
+
 **示例 2：群组记忆**
+
+<details>
+<summary>示例：群组记忆检索</summary>
 
 ```bash
 curl -X POST http://localhost:8001/api/v3/agentic/retrieve_lightweight \
@@ -505,11 +532,16 @@ curl -X POST http://localhost:8001/api/v3/agentic/retrieve_lightweight \
   }'
 ```
 
+</details>
+
 ---
 
 **Agentic 检索**
 
 使用 LLM 引导的多轮智能搜索，自动进行查询改进和结果重排序。
+
+<details>
+<summary>示例：Agentic 检索</summary>
 
 ```bash
 curl -X POST http://localhost:8001/api/v3/agentic/retrieve_agentic \
@@ -526,6 +558,8 @@ curl -X POST http://localhost:8001/api/v3/agentic/retrieve_agentic \
   }'
 ```
 
+</details>
+
 > ⚠️ Agentic 检索需要 LLM API Key，耗时较长，但能为需要多记忆来源、复杂逻辑查询提供更高质量的结果。
 
 > 📖 完整文档：[Agentic V3 API](docs/api_docs/agentic_v3_api_zh.md) | 测试工具：`demo/tools/test_retrieval_comprehensive.py`
@@ -540,13 +574,13 @@ EverMemOS 支持标准化的群聊数据格式（[GroupChatFormat](data_format/g
 # 使用脚本批量存储（中文数据）
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat_zh.json \
-  --api-url http://localhost:1995/api/v3/agentic/memorize \
+  --api-url http://localhost:8001/api/v3/agentic/memorize \
   --scene group_chat
 
 # 或者使用英文数据
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat_en.json \
-  --api-url http://localhost:1995/api/v3/agentic/memorize \
+  --api-url http://localhost:8001/api/v3/agentic/memorize \
   --scene group_chat
 
 # 验证文件格式
@@ -556,7 +590,11 @@ uv run python src/bootstrap.py src/run_memorize.py \
   --validate-only
 ```
 
-> ℹ️ `scene` 为必填字段，仅支持 `assistant` 或 `group_chat`，用于指定记忆提取策略。
+> ℹ️ **Scene 参数说明**：`scene` 为必填字段，用于指定记忆提取策略：
+> - 使用 `assistant` 用于一对一助手对话
+> - 使用 `group_chat` 用于多人群聊讨论
+> 
+> **注意**：在数据文件中，您可能会看到 `scene` 值为 `work` 或 `company` - 这些是数据格式中的内部场景描述符。命令行参数 `--scene` 使用不同的值（`assistant`/`group_chat`）来指定应用哪个提取流水线。
 
 **GroupChatFormat 格式示例**：
 
@@ -602,11 +640,9 @@ uv run python src/bootstrap.py src/run_memorize.py \
 - [快速开始指南](docs/dev_docs/getting_started.md) - 安装、配置和启动
 - [开发指南](docs/dev_docs/development_guide.md) - 架构设计和最佳实践
 - [Bootstrap 使用](docs/dev_docs/bootstrap_usage.md) - 脚本运行器
-- [依赖管理](docs/dev_docs/project_deps_manage.md) - 包管理和版本控制
 
 ### API 文档
-- [Agentic V3 API](docs/api_docs/agentic_v3_api.md) - 智能体层 API
-- [Agentic V2 API](docs/api_docs/agentic_v2_api.md) - 智能体层 API（旧版）
+- [Agentic V3 API](docs/api_docs/agentic_v3_api_zh.md) - 智能体层 API
 
 ### 核心框架
 - [依赖注入框架](src/core/di/README.md) - DI 容器使用指南
@@ -614,7 +650,7 @@ uv run python src/bootstrap.py src/run_memorize.py \
 ### 演示与评估
 - [📖 演示指南](demo/README_zh.md) - 交互式示例和记忆提取演示
 - [📊 数据指南](data/README_zh.md) - 示例对话数据和格式规范
-- [📊 评估指南](evaluation/locomo_evaluation/README_zh.md) - 在公开数据集LoCoMo上测试基于EverMemOS的方法
+- [📊 评估指南](evaluation/README_zh.md) - 在标准基准测试上测试基于EverMemOS的方法
 
 ## 🏗️ 架构设计
 
@@ -631,13 +667,9 @@ EverMemOS 采用分层架构设计，主要包括：
 
 ## 🤝 贡献
 
-我们欢迎所有形式的贡献！无论是报告 Bug、提出新功能建议，还是提交代码改进。
+我们欢迎所有形式的贡献！无论是报告 Bug、提出新功能建议，还是提交代码改进，都非常感谢。
 
-在开始贡献之前，请阅读我们的 [贡献指南](CONTRIBUTING.md)，了解：
-- 开发环境设置
-- 代码规范和最佳实践
-- Git 提交规范
-- Pull Request 流程
+在开始之前，请阅读我们的 [贡献指南](CONTRIBUTING.md)，快速了解开发环境、代码规范、Git 提交流程与 Pull Request 要求。
 
 ## 🌟 加入我们
 
@@ -653,11 +685,13 @@ EverMemOS 采用分层架构设计，主要包括：
 
 ### 联系方式
 
-- **GitHub Issues**: [提交问题和建议](https://github.com/EverMind-AI/EverMemOS/issues)
-- **讨论区**: [参与讨论](https://github.com/EverMind-AI/EverMemOS/discussions)
-- **邮箱**: evermind@shanda.com
-- **Reddit**: [r/EverMindAI](https://www.reddit.com/r/EverMindAI/)
-- **X**: [@EverMindAI](https://x.com/EverMindAI)
+<p>
+  <a href="https://github.com/EverMind-AI/EverMemOS/issues"><img alt="GitHub Issues" src="https://img.shields.io/badge/GitHub-Issues-blue?style=flat-square&logo=github"></a>
+  <a href="https://github.com/EverMind-AI/EverMemOS/discussions"><img alt="GitHub Discussions" src="https://img.shields.io/badge/GitHub-Discussions-blue?style=flat-square&logo=github"></a>
+  <a href="mailto:evermind@shanda.com"><img alt="Email" src="https://img.shields.io/badge/Email-联系我们-blue?style=flat-square&logo=gmail"></a>
+  <a href="https://www.reddit.com/r/EverMindAI/"><img alt="Reddit" src="https://img.shields.io/badge/Reddit-r/EverMindAI-orange?style=flat-square&logo=reddit"></a>
+  <a href="https://x.com/EverMindAI"><img alt="X" src="https://img.shields.io/badge/X-@EverMindAI-black?style=flat-square&logo=x"></a>
+</p>
 
 ### 贡献者
 

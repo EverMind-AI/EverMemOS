@@ -2,79 +2,51 @@
 
 ## 概述
 
-Agentic Layer V3 API 提供了专门用于处理群聊记忆的接口，采用简单直接的消息格式，无需任何预处理或格式转换。
+Agentic Layer V3 在 `/api/v3/agentic` 下提供三个 FastAPI 端点，用于写入群聊记忆与检索历史。所有端点仅接受 `application/json`，成功响应统一为：
 
-## 主要特性
-
-- ✅ **简单直接**：采用最简单的单条消息格式，无需复杂的数据结构
-- ✅ **无需转换**：不需要任何格式转换或适配
-- ✅ **逐条处理**：实时处理每条消息，适合消息流场景
-- ✅ **集中式适配**：所有格式转换逻辑集中在 `group_chat_converter.py`，保持单一职责
-- ✅ **向后兼容**：V2 接口依然可用，支持渐进式迁移
-- ✅ **详细错误信息**：提供清晰的错误提示和数据统计
-
-## 接口对比
-
-| 特性 | V2 接口 | V3 接口 ⭐ |
-|------|---------|-----------|
-| 端点 | `/api/v2/agentic/memorize` | `/api/v3/agentic/memorize` |
-| 输入格式 | 内部格式 | **简单直接格式** |
-| 处理方式 | 逐条（需外部转换） | **逐条（无需转换）** |
-| 格式复杂度 | 高 | **低（最简单）** |
-| 推荐场景 | 已有转换逻辑 | **实时消息流（推荐）** |
-
-**V3 接口的优势**：
-- ✅ 格式最简单，直接传入必要字段即可
-- ✅ 无需任何格式转换或适配
-- ✅ 适合实时消息处理场景
-- ✅ 性能最优（无转换开销）
-
-## 接口说明
-
-### POST `/api/v3/agentic/memorize`
-
-逐条存储单条群聊消息记忆
-
-#### 请求格式
-
-**Content-Type**: `application/json`
-
-**请求体**：简单直接的单条消息格式（无需预转换）
-
-```json
+```
 {
-  "group_id": "group_123",
-  "group_name": "项目讨论组",
-  "message_id": "msg_001",
-  "create_time": "2025-01-15T10:00:00+08:00",
-  "sender": "user_001",
-  "sender_name": "张三",
-  "content": "今天讨论下新功能的技术方案",
-  "refer_list": ["msg_000"]
+  "status": "ok",
+  "message": "<摘要>",
+  "result": { ... }
 }
 ```
 
-**字段说明**：
+当校验失败或出现异常时，`status` 会变为 `failed`。
 
-| 字段 | 类型 | 必需 | 说明 |
+## 端点一览
+
+| 端点 | 作用 |
+|------|------|
+| `POST /api/v3/agentic/memorize` | 写入单条聊天消息，提取 memcells |
+| `POST /api/v3/agentic/retrieve_lightweight` | 低延迟混合检索（Embedding + BM25 + RRF） |
+| `POST /api/v3/agentic/retrieve_agentic` | LLM 驱动的多轮智能检索（含 Rerank） |
+
+---
+
+## POST `/api/v3/agentic/memorize`
+
+接收未转换的原始消息。提供 `group_id` 时，原始请求还会写入 Redis `chat_history:{group_id}`（左推入，TTL 24h），用于后续边界检测。
+
+### 请求字段
+
+| 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| group_id | string | 否 | 群组ID |
-| group_name | string | 否 | 群组名称 |
-| message_id | string | 是 | 消息唯一标识 |
-| create_time | string | 是 | 消息创建时间（ISO 8601格式） |
-| sender | string | 是 | 发送者用户ID |
-| sender_name | string | 否 | 发送者名称（默认使用 sender） |
-| content | string | 是 | 消息内容 |
-| refer_list | array | 否 | 引用的消息ID列表 |
+| `group_id` | string | 否 | 标识群组，开启 Redis 累积 |
+| `group_name` | string | 否 | 群组名称 |
+| `message_id` | string | 是 | 单条消息唯一 ID |
+| `create_time` | string | 是 | ISO 8601 时间，可含时区 |
+| `sender` | string | 是 | 发送者用户 ID |
+| `sender_name` | string | 否 | 缺省等于 `sender` |
+| `content` | string | 是 | 文本内容 |
+| `refer_list` | array\<string> | 否 | 被引用的消息 ID |
 
-#### 响应格式
+### 成功响应
 
-**成功响应 (200 OK)**
-
-```json
+```
 {
   "status": "ok",
-  "message": "记忆存储成功，共保存 1 条记忆",
+  "message": "Extracted 1 memories",
   "result": {
     "saved_memories": [
       {
@@ -82,382 +54,138 @@ Agentic Layer V3 API 提供了专门用于处理群聊记忆的接口，采用�
         "user_id": "user_001",
         "group_id": "group_123",
         "timestamp": "2025-01-15T10:00:00",
-        "content": "用户讨论了新功能的技术方案"
+        "content": "用户讨论了新功能方案"
       }
     ],
-    "count": 1
+    "count": 1,
+    "status_info": "extracted"
   }
 }
 ```
 
-**错误响应 (400 Bad Request)**
+当边界尚未触发时，`status_info` 为 `accumulated`，`saved_memories` 为空，但原始消息已安全入队。
 
-```json
-{
-  "status": "failed",
-  "code": "INVALID_PARAMETER",
-  "message": "数据格式错误：缺少必需字段 message_id",
-  "timestamp": "2025-01-15T10:30:00+00:00",
-  "path": "/api/v3/agentic/memorize"
-}
-```
+### 异常
 
-**错误响应 (500 Internal Server Error)**
-
-```json
-{
-  "status": "failed",
-  "code": "SYSTEM_ERROR",
-  "message": "存储记忆失败，请稍后重试",
-  "timestamp": "2025-01-15T10:30:00+00:00",
-  "path": "/api/v3/agentic/memorize"
-}
-```
+- `400 Bad Request`：字段缺失或格式错误，返回 `{"detail": "..."}`。
+- `500 Internal Server Error`：转换或存储流程发生未捕获错误。
 
 ---
 
-## 使用场景
+## POST `/api/v3/agentic/retrieve_lightweight`
 
-### 1. 实时消息流处理
+同时执行向量检索与 BM25，使用 RRF 融合并返回结果。
 
-适用于处理来自聊天应用的实时消息流，每收到一条消息就立即存储。
+### 请求字段
 
-**示例**：
-```json
+| 字段 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| `query` | string | 是* | — | `data_source="profile"` 时可为空 |
+| `user_id` | string | 否 | `null` | 过滤个人记忆 |
+| `group_id` | string | 否 | `null` | 过滤群聊记忆 |
+| `time_range_days` | integer | 否 | `365` | 滑动时间窗口 |
+| `top_k` | integer | 否 | `20` | 返回条数上限 |
+| `retrieval_mode` | string | 否 | `rrf` | `rrf` / `embedding` / `bm25` |
+| `data_source` | string | 否 | `episode` | `episode` / `event_log` / `semantic_memory` / `profile`，`memcell` 会映射为 `episode` |
+| `memory_scope` | string | 否 | `all` | `all` / `personal` / `group` |
+| `current_time` | string | 否 | `null` | `YYYY-MM-DD`，语义记忆过滤时间 |
+| `radius` | float | 否 | `null` | 余弦相似度阈值 `[-1, 1]` |
+
+\* 当 `data_source="profile"` 时，必须同时提供 `user_id` 与 `group_id`，即使 `query` 为空。
+
+### 成功响应
+
+```
 {
-  "group_id": "group_123",
-  "group_name": "项目讨论组",
-  "message_id": "msg_001",
-  "create_time": "2025-01-15T10:00:00+08:00",
-  "sender": "user_001",
-  "sender_name": "张三",
-  "content": "今天讨论下新功能的技术方案",
-  "refer_list": []
-}
-```
-
-### 2. 聊天机器人集成
-
-聊天机器人接收到用户消息后，可以直接调用 V3 接口存储记忆。
-
-**示例**：
-```json
-{
-  "group_id": "bot_conversation_123",
-  "group_name": "与AI助手的对话",
-  "message_id": "bot_msg_001",
-  "create_time": "2025-01-15T10:05:00+08:00",
-  "sender": "user_456",
-  "sender_name": "李四",
-  "content": "帮我总结下今天的会议内容",
-  "refer_list": []
-}
-```
-
-### 3. 消息队列消费
-
-从消息队列（如 Kafka）消费消息时，可以逐条调用 V3 接口处理。
-
-**Kafka 消费示例**：
-```python
-from kafka import KafkaConsumer
-import httpx
-import asyncio
-
-async def process_message(message):
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "http://localhost:1995/api/v3/agentic/memorize",
-            json={
-                "group_id": message["group_id"],
-                "group_name": message["group_name"],
-                "message_id": message["message_id"],
-                "create_time": message["create_time"],
-                "sender": message["sender"],
-                "sender_name": message["sender_name"],
-                "content": message["content"],
-                "refer_list": message.get("refer_list", [])
-            }
-        )
-        return response.json()
-
-# Kafka 消费者
-consumer = KafkaConsumer('chat_messages')
-for msg in consumer:
-    asyncio.run(process_message(msg.value))
-```
-
----
-
-## 使用示例
-
-### 使用 curl 调用
-
-```bash
-curl -X POST http://localhost:1995/api/v3/agentic/memorize \
-  -H "Content-Type: application/json" \
-  -d '{
-    "group_id": "group_123",
-    "group_name": "项目讨论组",
-    "message_id": "msg_001",
-    "create_time": "2025-01-15T10:00:00+08:00",
-    "sender": "user_001",
-    "sender_name": "张三",
-    "content": "今天讨论下新功能的技术方案",
-    "refer_list": []
-  }'
-```
-
-### 使用 Python 代码调用
-
-```python
-import httpx
-import asyncio
-
-async def call_v3_memorize():
-    # 简单直接的单条消息格式
-    message_data = {
-        "group_id": "group_123",
-        "group_name": "项目讨论组",
-        "message_id": "msg_001",
-        "create_time": "2025-01-15T10:00:00+08:00",
-        "sender": "user_001",
-        "sender_name": "张三",
-        "content": "今天讨论下新功能的技术方案",
-        "refer_list": []
+  "status": "ok",
+  "message": "检索成功，找到 10 条记忆",
+  "result": {
+    "memories": [...],
+    "count": 10,
+    "metadata": {
+      "retrieval_mode": "lightweight",
+      "emb_count": 15,
+      "bm25_count": 12,
+      "final_count": 10,
+      "total_latency_ms": 123.45
     }
-    
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "http://localhost:1995/api/v3/agentic/memorize",
-            json=message_data
-        )
-        result = response.json()
-        print(f"保存了 {result['result']['count']} 条记忆")
-
-asyncio.run(call_v3_memorize())
+  }
+}
 ```
 
-### 使用 run_memorize.py 脚本
+### 异常
 
-对于 GroupChatFormat 格式的 JSON 文件，可以使用 `run_memorize.py` 脚本批量处理：
-
-```bash
-# V3 接口（推荐）
-python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --api-url http://localhost:1995/api/v3/agentic/memorize
-
-# V2 接口（兼容模式）
-python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --api-url http://localhost:1995/api/v2/agentic/memorize \
-  --use-v2
-
-# 仅验证格式
-python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --validate-only
-```
+- `400 Bad Request`：`current_time` 格式错误、缺少 `query`、`profile` 场景缺少 ID 等。
+- `500 Internal Server Error`：检索流程抛出未捕获异常。
 
 ---
 
-## 常见问题
+## POST `/api/v3/agentic/retrieve_agentic`
 
-### 1. V3 接口和 V2 接口应该如何选择？
+执行 agentic 流程：首轮混合检索 → Rerank → LLM 判断是否充分 → 生成改写查询 → 第二轮检索 → 最终 Rerank。
 
-**推荐使用 V3 接口**，理由如下：
-- ✅ 格式更简单，只需要提供必要的字段
-- ✅ 无需任何格式转换或适配
-- ✅ 适合实时消息处理场景
-- ✅ 性能更好（无转换开销）
+### 请求字段
 
-**仅在以下情况使用 V2 接口**：
-- 已有代码使用 V2 接口，需要保持兼容
-- 已有完善的格式转换逻辑
+| 字段 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| `query` | string | 是 | — | 自然语言查询 |
+| `user_id` | string | 否 | `null` | 个人过滤条件 |
+| `group_id` | string | 否 | `null` | 群聊过滤条件 |
+| `time_range_days` | integer | 否 | `365` | 时间窗口 |
+| `top_k` | integer | 否 | `20` | 最终返回条数 |
+| `llm_config.api_key` | string | 是* | — | OpenAI 兼容 API Key |
+| `llm_config.base_url` | string | 否 | `https://openrouter.ai/api/v1` | 自定义 OpenAI 兼容地址 |
+| `llm_config.model` | string | 否 | `qwen/qwen3-235b-a22b-2507` | LLMProvider 使用的模型标识 |
 
-### 2. 如何处理带引用的消息？
+\* 可从 `llm_config.api_key`、`OPENROUTER_API_KEY` 或 `OPENAI_API_KEY` 提供，缺失时返回 `400`。
 
-使用 `refer_list` 字段指定引用的消息ID列表：
+### 成功响应
 
-```json
+```
 {
-  "message_id": "msg_002",
-  "content": "我同意你的方案",
-  "refer_list": ["msg_001"]
+  "status": "ok",
+  "message": "Agentic 检索成功，找到 15 条记忆",
+  "result": {
+    "memories": [...],
+    "count": 15,
+    "metadata": {
+      "retrieval_mode": "agentic",
+      "is_multi_round": true,
+      "round1_count": 20,
+      "is_sufficient": false,
+      "reasoning": "需要更多关于饮食偏好的具体信息",
+      "refined_queries": [
+        "用户最喜欢的菜系？",
+        "用户不喜欢吃什么？"
+      ],
+      "round2_count": 40,
+      "final_count": 15,
+      "total_latency_ms": 2345.67
+    }
+  }
 }
 ```
 
-### 3. group_id 和 group_name 是必需的吗？
+### 异常
 
-不是必需的，但**强烈推荐提供**：
-- `group_id` 用于标识群组，方便后续检索
-- `group_name` 用于显示和理解，提升可读性
+- `400 Bad Request`：缺少 `query`、缺少 API Key 或参数格式错误。
+- `500 Internal Server Error`：LLM 调用或记忆子系统返回异常。
 
-### 4. 如何处理私聊消息？
+---
 
-私聊消息可以不提供 `group_id`，或者使用特殊的私聊ID：
+## 错误载荷
 
-```json
-{
-  "group_id": "private_user001_user002",
-  "group_name": "与张三的私聊",
-  "message_id": "private_msg_001",
-  "create_time": "2025-01-15T10:00:00+08:00",
-  "sender": "user_001",
-  "sender_name": "张三",
-  "content": "你好，最近怎么样？",
-  "refer_list": []
-}
+服务通过 `HTTPException` 统一抛错，网关会序列化为：
+
 ```
-
-### 5. 如何处理消息时间？
-
-`create_time` 必须使用 ISO 8601 格式，支持带时区：
-
-```json
-{
-  "create_time": "2025-01-15T10:00:00+08:00"  // 带时区
-}
-```
-
-或不带时区（默认使用 UTC）：
-
-```json
-{
-  "create_time": "2025-01-15T10:00:00"  // UTC
-}
-```
-
-### 6. 如何批量处理历史消息？
-
-使用 `run_memorize.py` 脚本：
-
-1. 准备 GroupChatFormat 格式的 JSON 文件
-2. 运行脚本，脚本会自动逐条调用 V3 接口
-
-```bash
-python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --api-url http://localhost:1995/api/v3/agentic/memorize
-```
-
-### 7. 接口调用频率有限制吗？
-
-目前没有硬性限制，但建议：
-- 实时场景：每秒不超过 100 次请求
-- 批量导入：建议每条消息间隔 0.1 秒
-
-### 8. 如何处理错误？
-
-接口会返回详细的错误信息：
-
-```json
 {
   "status": "failed",
-  "code": "INVALID_PARAMETER",
-  "message": "缺少必需字段: message_id"
+  "code": "<ErrorCode>",
+  "message": "<错误说明>",
+  "timestamp": "<ISO 8601>",
+  "path": "<请求路径>"
 }
 ```
 
-建议在客户端实现重试机制，对于 5xx 错误可以重试 3 次。
+对于 `5xx`，建议客户端按需实现幂等重试。*** End Patch***}github.com to=functions.apply_patch
 
----
-
-## 架构说明
-
-### 数据流
-
-```
-客户端
-  ↓
-  │ 简单直接的单条消息格式
-  ↓
-V3 Controller (agentic_v3_controller.py)
-  ↓
-  │ 调用 group_chat_converter.py
-  ↓
-格式转换 (convert_simple_message_to_memorize_input)
-  ↓
-  │ 内部格式
-  ↓
-Memory Manager (memory_manager.py)
-  ↓
-  │ 记忆存储
-  ↓
-数据库 / 向量库
-```
-
-### 核心组件
-
-1. **V3 Controller** (`agentic_v3_controller.py`)
-   - 接收简单直接的单条消息
-   - 调用 converter 进行格式转换
-   - 调用 memory_manager 存储记忆
-
-2. **Group Chat Converter** (`group_chat_converter.py`)
-   - 集中式适配层
-   - 负责所有格式转换逻辑
-   - 保持单一职责
-
-3. **Memory Manager** (`memory_manager.py`)
-   - 记忆提取和存储
-   - 向量化
-   - 持久化
-
----
-
-## 迁移指南
-
-### 从 V2 迁移到 V3
-
-#### V2 接口（旧）
-
-```python
-# 需要先转换格式
-memorize_input = convert_group_chat_format_to_memorize_input(group_chat_data)
-
-# 逐条调用
-for message in memorize_input["messages"]:
-    response = await client.post(
-        "http://localhost:1995/api/v2/agentic/memorize",
-        json={
-            "messages": [message],
-            "group_id": group_id,
-            "raw_data_type": "Conversation"
-        }
-    )
-```
-
-#### V3 接口（新）
-
-```python
-# 直接调用，无需转换
-response = await client.post(
-    "http://localhost:1995/api/v3/agentic/memorize",
-    json={
-        "group_id": "group_123",
-        "group_name": "项目讨论组",
-        "message_id": "msg_001",
-        "create_time": "2025-01-15T10:00:00+08:00",
-        "sender": "user_001",
-        "sender_name": "张三",
-        "content": "今天讨论下新功能的技术方案",
-        "refer_list": []
-    }
-)
-```
-
-**迁移优势**：
-- 代码更简洁
-- 无需格式转换
-- 性能更好
-
----
-
-## 相关文档
-
-- [GroupChatFormat 格式规范](../../data_format/group_chat/group_chat_format.md)
-- [V3 API 测试指南](../dev_docs/v3_api_testing_guide.md)
-- [run_memorize.py 使用指南](../dev_docs/run_memorize_usage.md)
-- [V2 API 文档](./agentic_v2_api.md)

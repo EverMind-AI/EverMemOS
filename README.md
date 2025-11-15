@@ -1,18 +1,21 @@
 <div align="center">
 
-<h1>EverMemOS </h1>
+<h1>
+  <img src="figs/logo.png" alt="EverMemOS Logo" height="40" style="vertical-align: middle; margin-right: 12px;"/>
+  EverMemOS
+</h1>
 
 <p><strong>Let every interaction be driven by understanding.</strong> · Enterprise-Grade Intelligent Memory System</p>
 
 <p>
-  <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" />
-  <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-D22128?style=flat-square&logo=apache&logoColor=white" />
-  <img alt="Docker" src="https://img.shields.io/badge/Docker-Supported-2496ED?style=flat-square&logo=docker&logoColor=white" />
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Latest-009688?style=flat-square&logo=fastapi&logoColor=white" />
-  <img alt="MongoDB" src="https://img.shields.io/badge/MongoDB-7.0+-47A248?style=flat-square&logo=mongodb&logoColor=white" />
-  <img alt="Elasticsearch" src="https://img.shields.io/badge/Elasticsearch-8.x-005571?style=flat-square&logo=elasticsearch&logoColor=white" />
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-0084FF?style=flat-square&logo=python&logoColor=white" />
+  <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-00B894?style=flat-square&logo=apache&logoColor=white" />
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-Supported-4A90E2?style=flat-square&logo=docker&logoColor=white" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Latest-26A69A?style=flat-square&logo=fastapi&logoColor=white" />
+  <img alt="MongoDB" src="https://img.shields.io/badge/MongoDB-7.0+-00C853?style=flat-square&logo=mongodb&logoColor=white" />
+  <img alt="Elasticsearch" src="https://img.shields.io/badge/Elasticsearch-8.x-0084FF?style=flat-square&logo=elasticsearch&logoColor=white" />
   <img alt="Milvus" src="https://img.shields.io/badge/Milvus-2.4+-00A3E0?style=flat-square" />
-  <img alt="Redis" src="https://img.shields.io/badge/Redis-7.x-DC382D?style=flat-square&logo=redis&logoColor=white" />
+  <img alt="Redis" src="https://img.shields.io/badge/Redis-7.x-26A69A?style=flat-square&logo=redis&logoColor=white" />
    <a href="https://github.com/EverMind-AI/EverMemOS/releases">
     <img alt="Release" src="https://img.shields.io/badge/release-v1.0.0-4A90E2?style=flat-square" />
   </a>
@@ -60,31 +63,38 @@ Build AI memory that never forgets, making every conversation built on previous 
 
 ## 💡 Unique Advantages
 
-### 🔗 Coherent Narrative  
-Beyond "fragments," connecting "stories": Automatically linking conversation pieces to build clear thematic context, enabling AI to "truly understand."
-
-> When facing multi-threaded conversations, it naturally distinguishes between "Project A progress discussion" and "Team B strategy planning," maintaining coherent contextual logic within each theme.  
-> From scattered phrases to complete narratives, AI no longer just "understands one sentence" but "understands the whole story."
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>🔗 Coherent Narrative</h3>
+      <p><strong>Beyond "fragments," connecting "stories"</strong>: Automatically linking conversation pieces to build clear thematic context, enabling AI to "truly understand."</p>
+      <blockquote>
+        When facing multi-threaded conversations, it naturally distinguishes between "Project A progress discussion" and "Team B strategy planning," maintaining coherent contextual logic within each theme.<br/><br/>
+        From scattered phrases to complete narratives, AI no longer just "understands one sentence" but "understands the whole story."
+      </blockquote>
+    </td>
+    <td width="33%" valign="top">
+      <h3>🧠 Evidence-Based Perception</h3>
+      <p><strong>Beyond "retrieval," intelligent "perception"</strong>: Proactively capturing deep connections between memories and tasks, enabling AI to "think thoroughly" at critical moments.</p>
+      <blockquote>
+        Imagine: When a user asks for "food recommendations," the AI proactively recalls "you had dental surgery two days ago" as a key piece of information, automatically adjusting suggestions to avoid unsuitable options.<br/><br/>
+        This is <strong>Contextual Awareness</strong> — enabling AI thinking to be truly built on understanding rather than isolated responses.
+      </blockquote>
+    </td>
+    <td width="33%" valign="top">
+      <h3>💾 Living Profiles</h3>
+      <p><strong>Beyond "records," dynamic "growth"</strong>: Real-time user profile updates that get to know you better with each conversation, enabling AI to "recognize you authentically."</p>
+      <blockquote>
+        Every interaction subtly updates the AI's understanding of you — preferences, style, and focus points all continuously evolve.<br/><br/>
+        As interactions deepen, it doesn't just "remember what you said," but is "learning who you are."
+      </blockquote>
+    </td>
+  </tr>
+</table>
 
 ---
 
-### 🧠 Evidence-Based Perception  
-Beyond "retrieval," intelligent "perception": Proactively capturing deep connections between memories and tasks, enabling AI to "think thoroughly" at critical moments.
-
-> Imagine: When a user asks for "food recommendations," the AI proactively recalls "you had dental surgery two days ago" as a key piece of information, automatically adjusting suggestions to avoid unsuitable options.  
-> This is **Contextual Awareness** — enabling AI thinking to be truly built on understanding rather than isolated responses.
-
----
-
-### 💾 Living Profiles  
-Beyond "records," dynamic "growth": Real-time user profile updates that get to know you better with each conversation, enabling AI to "recognize you authentically."
-
-> Every interaction subtly updates the AI's understanding of you — preferences, style, and focus points all continuously evolve.  
-> As interactions deepen, it doesn't just "remember what you said," but is "learning who you are."
-
----
-
-<h2>📑 Table of Contents</h2>
+## 📑 Table of Contents
 
 
 <div align="center">
@@ -204,7 +214,7 @@ memsys-opensource/
 ├── demo/                             # Demo code
 ├── data/                             # Sample conversation data
 ├── evaluation/                       # Evaluation scripts
-│   └── locomo_evaluation/            # LoCoMo benchmark testing
+│   └── src/                          # Evaluation framework source code
 ├── data_format/                      # Data format definitions
 ├── docs/                             # Documentation
 ├── config.json                       # Configuration file
@@ -221,7 +231,8 @@ memsys-opensource/
 
 - Python 3.10+
 - uv (recommended package manager)
-- Docker and Docker Compose
+- Docker 20.10+ and Docker Compose 2.0+
+- **At least 4GB of available RAM** (for Elasticsearch and Milvus)
 
 ### Installation
 
@@ -232,7 +243,7 @@ Use Docker Compose to start all dependency services (MongoDB, Elasticsearch, Mil
 ```bash
 # 1. Clone the repository
 git clone https://github.com/EverMind-AI/EverMemOS.git
-cd memsys_opensource
+cd EverMemOS
 
 # 2. Start Docker services
 docker-compose up -d
@@ -259,11 +270,12 @@ cp env.template .env
 | **MongoDB** | 27017 | 27017 | Primary database for storing memory cells and profiles |
 | **Elasticsearch** | 19200 | 9200 | Keyword search engine (BM25) |
 | **Milvus** | 19530 | 19530 | Vector database for semantic retrieval |
-| **Redis** | 6479 | 6379 | Cache service |
+| **Redis** | 6379 | 6379 | Cache service |
 
-> 💡 Use **host ports** when connecting (e.g., `localhost:19200` for Elasticsearch)
-
-> 💡 For detailed Docker configuration and management, see [Docker Deployment Guide](DOCKER_DEPLOYMENT.md)
+> 💡 **Connection Tips**:
+> - Use **host ports** when connecting (e.g., `localhost:19200` for Elasticsearch)
+> - MongoDB credentials: `admin` / `memsys123` (local development only)
+> - Stop services: `docker-compose down` | View logs: `docker-compose logs -f`
 
 > 📖 MongoDB detailed installation guide: [MongoDB Installation Guide](docs/usage/MONGODB_GUIDE.md)
 
@@ -327,14 +339,10 @@ Run the memory extraction script to process sample conversation data and build t
 uv run python src/bootstrap.py demo/extract_memory.py
 ```
 
-This script will:
-- Read conversation data from the `data/` directory
-- Extract MemCells and save them to the configured database (e.g., MongoDB)
-- Generate user profiles and save them to `demo/memcell_outputs/` directory
-
-> **💡 Tip**:
-> Configuration is very simple! `extract_memory.py` uses HTTP API and requires only 2 parameters to run.
-> For detailed configuration instructions and usage guide, please see the [Demo Documentation](demo/README.md).
+This script performs the following actions:
+- Calls `demo.tools.clear_all_data.clear_all_memories()` so the demo starts from an empty MongoDB/Elasticsearch/Milvus/Redis state. Ensure the dependency stack launched by `docker-compose` is running before executing the script, otherwise the wipe step will fail.
+- Loads `data/assistant_chat_zh.json`, appends `scene="assistant"` to each message, and streams every entry to `http://localhost:8001/api/v3/agentic/memorize`. Update the `base_url`, `data_file`, or `profile_scene` constants in `demo/extract_memory.py` if you host the API on another endpoint or want to ingest a different scenario.
+- Writes through the HTTP API only: MemCells, episodes, and profiles are created inside your databases, not under `demo/memcell_outputs/`. Inspect MongoDB (and Milvus/Elasticsearch) to verify ingestion or proceed directly to the chat demo.
 
 **Step 2: Chat with Memory**
 
@@ -345,15 +353,14 @@ After extracting memories, start the interactive chat demo:
 uv run python src/bootstrap.py demo/chat_with_memory.py
 ```
 
-This will launch a command-line interface where you can converse with an agent that utilizes the just-extracted memories. For more details on chat features, tips, and suggested questions, please see the [Demo Guide](demo/README.md).
+This program loads `.env` via `python-dotenv`, verifies that at least one LLM key (`LLM_API_KEY`, `OPENROUTER_API_KEY`, or `OPENAI_API_KEY`) is available, and connects to MongoDB through `demo.utils.ensure_mongo_beanie_ready` to enumerate groups that already contain MemCells. Each user query invokes `api/v3/agentic/retrieve_lightweight` unless you explicitly select the Agentic mode, in which case the orchestrator switches to `api/v3/agentic/retrieve_agentic` and warns about the additional LLM latency.
 
 **Interactive Workflow:**
-1. **Select Language**: Choose between Chinese (中文) or English interface.
-2. **Select Scenario Mode**:
-   - **Assistant Mode**: One-on-one conversation with personal memory-based AI assistant.
-   - **Group Chat Mode**: Multi-person chat with group memory-based conversation analysis.
-3. **Select Conversation Group**: Choose from available groups in your database.
-4. **Start Chatting**: Interact with the memory-enhanced AI agent.
+1. **Select Language**: Choose a zh or en terminal UI.
+2. **Select Scenario Mode**: Assistant (one-on-one) or Group Chat (multi-speaker analysis).
+3. **Select Conversation Group**: Groups are read live from MongoDB via `query_all_groups_from_mongodb`; run the extraction step first so the list is non-empty.
+4. **Select Retrieval Mode**: `rrf`, `embedding`, `bm25`, or LLM-guided Agentic retrieval.
+5. **Start Chatting**: Pose questions, inspect the retrieved memories that are displayed before each response, and use `help`, `clear`, `reload`, or `exit` to manage the session.
 
 ---
 
@@ -440,8 +447,11 @@ uv run python src/bootstrap.py src/run.py --port 8001
 
 Use V3 API to store single message memory:
 
+<details>
+<summary>Example: Store single message memory</summary>
+
 ```bash
-curl -X POST http://localhost:1995/api/v3/agentic/memorize \
+curl -X POST http://localhost:8001/api/v3/agentic/memorize \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
@@ -454,6 +464,8 @@ curl -X POST http://localhost:1995/api/v3/agentic/memorize \
     "scene": "group_chat"
   }'
 ```
+
+</details>
 
 **API Features**:
 
@@ -484,6 +496,9 @@ EverMemOS provides two retrieval modes: **Lightweight** (fast) and **Agentic** (
 
 **Example 1: Personal Memory**
 
+<details>
+<summary>Example: Personal Memory Retrieval</summary>
+
 ```bash
 curl -X POST http://localhost:8001/api/v3/agentic/retrieve_lightweight \
   -H "Content-Type: application/json" \
@@ -496,7 +511,12 @@ curl -X POST http://localhost:8001/api/v3/agentic/retrieve_lightweight \
   }'
 ```
 
+</details>
+
 **Example 2: Group Memory**
+
+<details>
+<summary>Example: Group Memory Retrieval</summary>
 
 ```bash
 curl -X POST http://localhost:8001/api/v3/agentic/retrieve_lightweight \
@@ -510,11 +530,16 @@ curl -X POST http://localhost:8001/api/v3/agentic/retrieve_lightweight \
   }'
 ```
 
+</details>
+
 ---
 
 **Agentic Retrieval**
 
 LLM-guided multi-round intelligent search with automatic query refinement and result reranking.
+
+<details>
+<summary>Example: Agentic Retrieval</summary>
 
 ```bash
 curl -X POST http://localhost:8001/api/v3/agentic/retrieve_agentic \
@@ -531,6 +556,8 @@ curl -X POST http://localhost:8001/api/v3/agentic/retrieve_agentic \
   }'
 ```
 
+</details>
+
 > ⚠️ Agentic retrieval requires LLM API key and takes longer, but provides higher quality results for queries requiring multiple memory sources and complex logic.
 
 > 📖 Full Documentation: [Agentic V3 API](docs/api_docs/agentic_v3_api.md) | Testing Tool: `demo/tools/test_retrieval_comprehensive.py`
@@ -545,13 +572,13 @@ EverMemOS supports a standardized group chat data format ([GroupChatFormat](data
 # Use script for batch storage (Chinese data)
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat_zh.json \
-  --api-url http://localhost:1995/api/v3/agentic/memorize \
+  --api-url http://localhost:8001/api/v3/agentic/memorize \
   --scene group_chat 
 
 # Or use English data
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat_en.json \
-  --api-url http://localhost:1995/api/v3/agentic/memorize \
+  --api-url http://localhost:8001/api/v3/agentic/memorize \
   --scene group_chat
 
 # Validate file format
@@ -561,7 +588,11 @@ uv run python src/bootstrap.py src/run_memorize.py \
   --validate-only
 ```
 
-> ℹ️ `scene` is required and must be either `assistant` or `group_chat`, so the memorization pipeline knows which extraction profile to run.
+> ℹ️ **Scene Parameter Explanation**: The `scene` parameter is required and specifies the memory extraction strategy:
+> - Use `assistant` for one-on-one conversations with AI assistant
+> - Use `group_chat` for multi-person group discussions
+> 
+> **Note**: In your data files, you may see `scene` values like `work` or `company` - these are internal scene descriptors in the data format. The `--scene` command-line parameter uses different values (`assistant`/`group_chat`) to specify which extraction pipeline to apply.
 
 **GroupChatFormat Example**:
 
@@ -606,11 +637,9 @@ For detailed installation, configuration, and usage instructions, please refer t
 - [Quick Start Guide](docs/dev_docs/getting_started.md) - Installation, configuration, and startup
 - [Development Guide](docs/dev_docs/development_guide.md) - Architecture design and best practices
 - [Bootstrap Usage](docs/dev_docs/bootstrap_usage.md) - Script runner
-- [Dependency Management](docs/dev_docs/project_deps_manage.md) - Package management and version control
 
 ### API Documentation
 - [Agentic V3 API](docs/api_docs/agentic_v3_api.md) - Agentic layer API
-- [Agentic V2 API](docs/api_docs/agentic_v2_api.md) - Agentic layer API (legacy)
 
 ### Core Framework
 - [Dependency Injection Framework](src/core/di/README.md) - DI container usage guide
@@ -618,7 +647,7 @@ For detailed installation, configuration, and usage instructions, please refer t
 ### Demos & Evaluation
 - [📖 Demo Guide](demo/README.md) - Interactive examples and memory extraction demos
 - [📊 Data Guide](data/README.md) - Sample conversation data and format specifications
-- [📊 Evaluation Guide](evaluation/locomo_evaluation/README.md) - Testing EverMemOS-based methods on the public LoCoMo dataset
+- [📊 Evaluation Guide](evaluation/README.md) - Testing EverMemOS-based methods on standard benchmarks
 
 ## 🏗️ Architecture Design
 
@@ -657,11 +686,13 @@ We are building a vibrant open-source community!
 
 ### Contact
 
-- **GitHub Issues**: [Submit issues and suggestions](https://github.com/EverMind-AI/EverMemOS/issues)
-- **Discussions**: [Join discussions](https://github.com/EverMind-AI/EverMemOS/discussions)
-- **Email**: evermind@shanda.com
-- **Reddit**: [r/EverMindAI](https://www.reddit.com/r/EverMindAI/)
-- **X**: [@EverMindAI](https://x.com/EverMindAI)
+<p>
+  <a href="https://github.com/EverMind-AI/EverMemOS/issues"><img alt="GitHub Issues" src="https://img.shields.io/badge/GitHub-Issues-blue?style=flat-square&logo=github"></a>
+  <a href="https://github.com/EverMind-AI/EverMemOS/discussions"><img alt="GitHub Discussions" src="https://img.shields.io/badge/GitHub-Discussions-blue?style=flat-square&logo=github"></a>
+  <a href="mailto:evermind@shanda.com"><img alt="Email" src="https://img.shields.io/badge/Email-Contact_Us-blue?style=flat-square&logo=gmail"></a>
+  <a href="https://www.reddit.com/r/EverMindAI/"><img alt="Reddit" src="https://img.shields.io/badge/Reddit-r/EverMindAI-orange?style=flat-square&logo=reddit"></a>
+  <a href="https://x.com/EverMindAI"><img alt="X" src="https://img.shields.io/badge/X-@EverMindAI-black?style=flat-square&logo=x"></a>
+</p>
 
 ### Contributors
 

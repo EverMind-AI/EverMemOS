@@ -56,7 +56,7 @@ Each stage saves its output and can be resumed independently.
 
 ### Prerequisites
 
-- Python 3.12
+- Python 3.10+
 - EvermemOS environment configured (see main project's `env.template`)
 
 ### Data Preparation
