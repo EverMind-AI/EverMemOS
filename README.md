@@ -22,7 +22,7 @@
 </p>
 
 <p>
-  <a href="README.md">English</a> | <a href="README_zh.md">简体中文</a>
+  <a href="README.md">English</a> | <a href="README_zh.md">简体中文</a> | <a href="https://evermind-ai.com/">Official Website</a>
 </p>
 
 </div>
