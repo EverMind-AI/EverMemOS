@@ -741,6 +741,8 @@ This section can include:
 
 Thanks to the following projects and communities for their inspiration and support:
 
+- [Nemori](https://github.com/nemori-ai/nemori) - A self-organising long-term memory substrate for agentic LLM workflows. Nemori's approach to aligning AI memory with human episodic memory granularity, combining insights from Event Segmentation Theory and Predictive Processing, has provided valuable inspiration for our memory system design. The minimalist yet profound approach to episode segmentation and semantic knowledge distillation has influenced our thinking on coherent narrative construction and evidence-based perception.
+
 - [Memos](https://github.com/usememos/memos) - Thank you to the Memos project for providing a comprehensive, standardized open-source note-taking service that has provided valuable inspiration for our memory system design.
 
 ---

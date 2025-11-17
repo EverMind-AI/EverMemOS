@@ -733,6 +733,8 @@ Coming soon
 
 感谢以下项目和社区的灵感和支持：
 
+- [Nemori](https://github.com/nemori-ai/nemori) - 一个用于智能体 LLM 工作流的自组织长期记忆系统。Nemori 将 AI 记忆与人类情景记忆粒度对齐的方法，结合事件分割理论（Event Segmentation Theory）和预测处理（Predictive Processing）的见解，为我们的记忆系统设计提供了宝贵的启发。其简约而深刻的事件分割和语义知识提取方法，影响了我们在连贯叙事构建和基于证据的感知方面的思考。
+
 - [Memos](https://github.com/usememos/memos) - 感谢 Memos 项目提供了一个完善的、标准化的开源笔记服务，为我们的记忆系统设计提供了宝贵的启发。
 
 ---
