@@ -157,12 +157,45 @@ class ChatOrchestrator:
         
         return True
     
+    def select_history_mode(self, texts: I18nTexts) -> bool:
+        """选择历史记录模式
+        
+        Args:
+            texts: 国际化文本对象
+            
+        Returns:
+            True - 加载历史记录，False - 新建会话
+        """
+        ui = CLIUI()
+        print()
+        ui.section_heading(texts.get("history_mode_selection_title"))
+        print()
+        print(f"  [1] {texts.get('history_mode_load')}")
+        print(f"  [2] {texts.get('history_mode_new')}")
+        print()
+        
+        while True:
+            try:
+                choice = input(f"{texts.get('history_mode_prompt')}: ").strip()
+                if choice == "1":
+                    ui.success(f"✓ {texts.get('history_mode_load_selected')}")
+                    return True
+                elif choice == "2":
+                    ui.success(f"✓ {texts.get('history_mode_new_selected')}")
+                    return False
+                else:
+                    ui.error(f"✗ {texts.get('invalid_input_number')}")
+            except KeyboardInterrupt:
+                print("\n")
+                raise
+    
     async def create_session(
         self,
         group_id: str,
         scenario_type: str,
         retrieval_mode: str,
         texts: I18nTexts,
+        load_history: bool = True,
     ) -> Optional[ChatSession]:
         """创建并初始化会话"""
         chat_config = ChatModeConfig()
@@ -178,7 +211,7 @@ class ChatOrchestrator:
             texts=texts,
         )
         
-        if not await session.initialize():
+        if not await session.initialize(load_history=load_history):
             ChatUI.print_error(texts.get("session_init_failed"), texts)
             return None
         
@@ -293,14 +326,21 @@ class ChatOrchestrator:
             print("\n")
             return
         
-        # 9. 创建会话
-        session = await self.create_session(group_id, scenario_type, retrieval_mode, texts)
+        # 9. 历史记录模式选择
+        try:
+            load_history = self.select_history_mode(texts)
+        except KeyboardInterrupt:
+            print("\n")
+            return
+        
+        # 10. 创建会话
+        session = await self.create_session(group_id, scenario_type, retrieval_mode, texts, load_history)
         if not session:
             return
         
-        # 10. 运行对话循环
+        # 11. 运行对话循环
         await self.run_chat_loop(session, texts)
         
-        # 11. 保存历史
+        # 12. 保存历史
         self.save_readline_history()
 

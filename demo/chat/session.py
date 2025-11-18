@@ -63,9 +63,12 @@ class ChatSession:
         # 最后一次检索元数据
         self.last_retrieval_metadata: Optional[Dict[str, Any]] = None
     
-    async def initialize(self) -> bool:
+    async def initialize(self, load_history: bool = True) -> bool:
         """初始化会话
         
+        Args:
+            load_history: 是否加载历史记录
+            
         Returns:
             初始化是否成功
         """
@@ -83,12 +86,16 @@ class ChatSession:
             self.memcell_count = len(memcells)
             print(f"[{self.texts.get('loading_label')}] {self.texts.get('loading_memories_success', count=self.memcell_count)} ✅")
             
-            # 加载对话历史
-            loaded_history_count = await self.load_conversation_history()
-            if loaded_history_count > 0:
-                print(f"[{self.texts.get('loading_label')}] {self.texts.get('loading_history_success', count=loaded_history_count)} ✅")
+            # 根据用户选择加载对话历史
+            if load_history:
+                loaded_history_count = await self.load_conversation_history()
+                if loaded_history_count > 0:
+                    print(f"[{self.texts.get('loading_label')}] {self.texts.get('loading_history_success', count=loaded_history_count)} ✅")
+                else:
+                    print(f"[{self.texts.get('loading_label')}] {self.texts.get('loading_history_new')} ✅")
             else:
-                print(f"[{self.texts.get('loading_label')}] {self.texts.get('loading_history_new')} ✅")
+                self.conversation_history = []
+                print(f"[{self.texts.get('loading_label')}] {self.texts.get('history_cleared')} ✅")
             
             # 创建 LLM Provider
             self.llm_provider = LLMProvider(

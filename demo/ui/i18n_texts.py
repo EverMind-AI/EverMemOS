@@ -52,6 +52,35 @@ class I18nTexts:
             "en": "Multi-person chat with group memory-based conversation analysis",
         },
         "scenario_selected": {"zh": "已选择场景模式", "en": "Scenario mode selected"},
+        # ==================== 历史记录选择 ====================
+        "history_mode_selection_title": {
+            "zh": "📝  对话历史",
+            "en": "📝  Conversation History",
+        },
+        "history_mode_prompt": {
+            "zh": "请选择 [1-2]",
+            "en": "Please select [1-2]",
+        },
+        "history_mode_load": {
+            "zh": "加载历史记录 - 继续之前的对话",
+            "en": "Load History - Continue previous conversation",
+        },
+        "history_mode_new": {
+            "zh": "新建会话 - 清空历史记录",
+            "en": "New Session - Clear history",
+        },
+        "history_mode_load_selected": {
+            "zh": "将加载历史记录",
+            "en": "Will load history",
+        },
+        "history_mode_new_selected": {
+            "zh": "将开始新会话",
+            "en": "Will start new session",
+        },
+        "history_cleared": {
+            "zh": "已清空历史记录",
+            "en": "History cleared",
+        },
         # ==================== 检索模式选择 ====================
         "retrieval_mode_selection_title": {
             "zh": "🔍  检索模式选择",
