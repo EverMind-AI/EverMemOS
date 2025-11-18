@@ -177,3 +177,6 @@ evaluation-full = [
 bootstrap = "src.bootstrap:main"
 web = "src.run:main"
 manage = "src.manage:cli"
+
+[project.entry-points."memsys.addons"]
+core = "src.addon"

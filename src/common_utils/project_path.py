@@ -7,3 +7,8 @@ utils_dir = Path(__file__).parent
 src_dir = utils_dir.parent
 CURRENT_DIR = src_dir
 PROJECT_DIR = src_dir.parent
+
+
+def get_base_scan_path():
+    """获取基础扫描路径"""
+    return CURRENT_DIR

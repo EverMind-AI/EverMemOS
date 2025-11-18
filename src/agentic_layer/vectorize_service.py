@@ -17,7 +17,8 @@ from dataclasses import dataclass
 import numpy as np
 from openai import AsyncOpenAI
 
-from core.di import get_bean, service
+from core.di.utils import get_bean
+from core.di.decorators import service
 
 logger = logging.getLogger(__name__)
 

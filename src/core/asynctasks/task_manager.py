@@ -13,6 +13,7 @@ from arq.connections import RedisSettings
 from arq.jobs import Job
 from arq.worker import Worker, Function, func as arq_func
 
+from core.asynctasks.task_scan_registry import TaskScanDirectoriesRegistry
 from core.context.context_manager import ContextManager
 from core.context.context import get_current_user_info
 from core.di.decorators import component
@@ -162,19 +163,15 @@ class TaskManager:
         self._task_registry[task_function.name] = task_function
         logger.info(f"已注册任务: {task_function.name}")
 
-    def scan_and_register_tasks(self, task_directories: List[str]) -> None:
+    def scan_and_register_tasks(self, registry: TaskScanDirectoriesRegistry) -> None:
         """
-        扫描指定目录并自动注册任务
+        扫描任务目录并自动注册任务
 
         Args:
-            task_directories: 要扫描的任务目录列表
+            registry: 任务扫描目录注册器
         """
-        logger.info(f"开始扫描任务目录: {task_directories}")
-
-        for directory in task_directories:
+        for directory in registry.get_scan_directories():
             self._scan_directory_for_tasks(directory)
-
-        logger.info(f"任务扫描完成，共注册了 {len(self._task_registry)} 个任务")
 
     def _scan_directory_for_tasks(self, directory: str) -> None:
         """

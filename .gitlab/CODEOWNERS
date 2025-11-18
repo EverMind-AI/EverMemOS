@@ -11,5 +11,8 @@
 /src/*.py @chandler.zhang
 
 /pyproject.toml @chandler.zhang
+/pyrightconfig.json @chandler.zhang
+/pylintrc @chandler.zhang
+/env.template @chandler.zhang
 
 /gitlab-ci.yml @jianhua.yao

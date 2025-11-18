@@ -25,8 +25,10 @@ from typing import (
     get_args,
 )
 from threading import RLock
-from enum import Enum
 
+from core.di.bean_definition import BeanDefinition, BeanScope
+from core.di.bean_order_strategy import BeanOrderStrategy
+from core.di.scan_context import get_current_scan_context
 from core.di.exceptions import (
     CircularDependencyError,
     BeanNotFoundError,
@@ -34,48 +36,30 @@ from core.di.exceptions import (
     FactoryError,
     DependencyResolutionError,
     MockNotEnabledError,
-    PrimaryBeanConflictError,
 )
 
 T = TypeVar('T')
 
 
-class BeanScope(Enum):
-    """Bean作用域"""
-
-    SINGLETON = "singleton"
-    PROTOTYPE = "prototype"
-    FACTORY = "factory"
-
-
-class BeanDefinition:
-    """Bean定义"""
-
-    def __init__(
-        self,
-        bean_type: Type,
-        bean_name: str = None,
-        scope: BeanScope = BeanScope.SINGLETON,
-        is_primary: bool = False,
-        is_mock: bool = False,
-        factory_method: Callable = None,
-        instance: Any = None,
-    ):
-        self.bean_type = bean_type
-        self.bean_name = bean_name or bean_type.__name__.lower()
-        self.scope = scope
-        self.is_primary = is_primary
-        self.is_mock = is_mock
-        self.factory_method = factory_method
-        self.instance = instance
-        self.dependencies: Set[Type] = set()
-
-    def __repr__(self):
-        return f"BeanDefinition(type={self.bean_type.__name__}, name={self.bean_name}, scope={self.scope.value})"
-
-
 class DIContainer:
     """依赖注入容器"""
+
+    # 类级别的Bean排序策略，可以被替换
+    _bean_order_strategy_class = BeanOrderStrategy
+
+    @classmethod
+    def replace_bean_order_strategy(cls, strategy_class):
+        """
+        替换Bean排序策略类
+
+        Args:
+            strategy_class: 新的排序策略类，必须具有与BeanOrderStrategy兼容的接口
+
+        注意:
+            这是一个临时方案，因为DI机制还没有完全建立。
+            此方法会影响所有DIContainer实例的排序行为。
+        """
+        cls._bean_order_strategy_class = strategy_class
 
     def __init__(self):
         self._lock = RLock()
@@ -83,8 +67,10 @@ class DIContainer:
         self._bean_definitions: Dict[Type, List[BeanDefinition]] = {}
         # 按名称存储Bean定义 {name: BeanDefinition}
         self._named_beans: Dict[str, BeanDefinition] = {}
+
         # 存储单例实例 {BeanDefinition: instance}
         self._singleton_instances: Dict[BeanDefinition, Any] = {}
+
         # Mock模式
         self._mock_mode = False
         # 依赖解析栈，用于检测循环依赖
@@ -93,8 +79,6 @@ class DIContainer:
         # 性能优化缓存
         # 类型继承关系缓存 {parent_type: [child_types]}
         self._inheritance_cache: Dict[Type, List[Type]] = {}
-        # Primary Bean快速索引 {Type: BeanDefinition}
-        self._primary_beans: Dict[Type, BeanDefinition] = {}
         # 候选Bean缓存 {(Type, mock_mode): [BeanDefinition]}
         self._candidates_cache: Dict[tuple, List[BeanDefinition]] = {}
         # 缓存失效标志
@@ -118,6 +102,61 @@ class DIContainer:
         """检查是否为Mock模式"""
         return self._mock_mode
 
+    def _create_bean_definition(
+        self,
+        bean_type: Type[T],
+        bean_name: str = None,
+        scope: BeanScope = BeanScope.SINGLETON,
+        is_primary: bool = False,
+        is_mock: bool = False,
+        factory_method: Callable = None,
+        instance: Any = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> BeanDefinition:
+        """
+        创建 BeanDefinition，并自动合并扫描上下文中的 metadata
+
+        Args:
+            bean_type: Bean的类型
+            bean_name: Bean的名称
+            scope: Bean的作用域
+            is_primary: 是否为主Bean
+            is_mock: 是否为Mock实现
+            factory_method: 工厂方法
+            instance: 预先创建的实例
+            metadata: Bean的元数据
+
+        Returns:
+            BeanDefinition 实例
+        """
+        # 合并 metadata：先从 scan_context 获取，再与传入的 metadata 合并
+        merged_metadata = {}
+
+        # 1. 检查是否在扫描上下文中，如果是则获取上下文的 metadata
+        scan_context = get_current_scan_context()
+        if scan_context:
+            # 从扫描上下文中获取 metadata
+            context_metadata = scan_context.metadata.copy()
+            merged_metadata.update(context_metadata)
+
+        # 2. 合并传入的 metadata（传入的优先级更高，可以覆盖扫描上下文的）
+        if metadata:
+            merged_metadata.update(metadata)
+
+        # 3. 创建 BeanDefinition
+        bean_def = BeanDefinition(
+            bean_type=bean_type,
+            bean_name=bean_name,
+            scope=scope,
+            is_primary=is_primary,
+            is_mock=is_mock,
+            factory_method=factory_method,
+            instance=instance,
+            metadata=merged_metadata if merged_metadata else None,
+        )
+
+        return bean_def
+
     def register_bean(
         self,
         bean_type: Type[T],
@@ -126,16 +165,30 @@ class DIContainer:
         is_primary: bool = False,
         is_mock: bool = False,
         instance: T = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> 'DIContainer':
-        """注册Bean"""
+        """
+        注册Bean
+
+        Args:
+            bean_type: Bean的类型
+            bean_name: Bean的名称
+            scope: Bean的作用域
+            is_primary: 是否为主Bean
+            is_mock: 是否为Mock实现
+            instance: 预先创建的实例
+            metadata: Bean的元数据，可用于存储额外信息
+        """
         with self._lock:
-            bean_def = BeanDefinition(
+            # 使用统一的方法创建 BeanDefinition，会自动合并扫描上下文的 metadata
+            bean_def = self._create_bean_definition(
                 bean_type=bean_type,
                 bean_name=bean_name,
                 scope=scope,
                 is_primary=is_primary,
                 is_mock=is_mock,
                 instance=instance,
+                metadata=metadata,
             )
 
             # 检查重复注册
@@ -144,23 +197,11 @@ class DIContainer:
                 if not (is_mock or existing.is_mock):
                     raise DuplicateBeanError(bean_name=bean_def.bean_name)
 
-            # 优化：检查Primary冲突 - 使用索引而不是遍历
-            if is_primary:
-                existing_primary = self._primary_beans.get(bean_type)
-                if existing_primary and not existing_primary.is_mock:
-                    raise PrimaryBeanConflictError(
-                        bean_type, existing_primary.bean_type, bean_type
-                    )
-
             # 注册Bean定义
             if bean_type not in self._bean_definitions:
                 self._bean_definitions[bean_type] = []
             self._bean_definitions[bean_type].append(bean_def)
             self._named_beans[bean_def.bean_name] = bean_def
-
-            # 更新Primary Bean索引
-            if is_primary:
-                self._primary_beans[bean_type] = bean_def
 
             # 分析依赖关系
             self._analyze_dependencies(bean_def)
@@ -181,16 +222,29 @@ class DIContainer:
         bean_name: str = None,
         is_primary: bool = False,
         is_mock: bool = False,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> 'DIContainer':
-        """注册Factory方法"""
+        """
+        注册Factory方法
+
+        Args:
+            bean_type: Bean的类型
+            factory_method: 工厂方法
+            bean_name: Bean的名称
+            is_primary: 是否为主Bean
+            is_mock: 是否为Mock实现
+            metadata: Bean的元数据，可用于存储额外信息
+        """
         with self._lock:
-            bean_def = BeanDefinition(
+            # 使用统一的方法创建 BeanDefinition，会自动合并扫描上下文的 metadata
+            bean_def = self._create_bean_definition(
                 bean_type=bean_type,
                 bean_name=bean_name,
                 scope=BeanScope.FACTORY,
                 is_primary=is_primary,
                 is_mock=is_mock,
                 factory_method=factory_method,
+                metadata=metadata,
             )
 
             # 检查重复注册
@@ -204,10 +258,6 @@ class DIContainer:
                 self._bean_definitions[bean_type] = []
             self._bean_definitions[bean_type].append(bean_def)
             self._named_beans[bean_def.bean_name] = bean_def
-
-            # 更新Primary Bean索引
-            if is_primary:
-                self._primary_beans[bean_type] = bean_def
 
             # 使缓存失效
             self._invalidate_cache()
@@ -239,7 +289,15 @@ class DIContainer:
             return self._create_instance(candidates[0])
 
     def _get_candidates_with_priority(self, bean_type: Type) -> List[BeanDefinition]:
-        """获取类型的候选Bean定义（按优先级排序）"""
+        """
+        获取类型的候选Bean定义（按优先级排序）
+
+        优先级排序规则（从高到低）：
+        1. is_mock: Mock Bean > 非Mock Bean（仅在Mock模式下生效）
+        2. 匹配方式: 直接匹配 > 实现类匹配
+        3. primary: Primary Bean > 非Primary Bean
+        4. scope: Factory Bean > Regular Bean
+        """
         # 使用缓存键
         cache_key = (bean_type, self._mock_mode)
 
@@ -250,129 +308,32 @@ class DIContainer:
         # 确保继承关系缓存是最新的
         self._build_inheritance_cache()
 
-        # 按优先级收集候选者
-        priority_candidates = []
+        # 收集所有候选Bean
+        all_candidates = []
+        direct_match_types = set()
 
-        # 在Mock模式下，优先考虑Mock Bean
-        if self._mock_mode:
-            mock_candidates = []
-            non_mock_candidates = []
+        # 1. 收集直接匹配的Bean（包括Primary和非Primary）
+        if bean_type in self._bean_definitions:
+            for bean_def in self._bean_definitions[bean_type]:
+                if self._is_bean_available(bean_def):
+                    all_candidates.append(bean_def)
+                    direct_match_types.add(bean_def.bean_type)
 
-            # 1. 最高优先级：Primary Bean（直接匹配）
-            primary_bean = self._primary_beans.get(bean_type)
-            if primary_bean and self._is_bean_available(primary_bean):
-                if primary_bean.is_mock:
-                    mock_candidates.append(primary_bean)
-                else:
-                    non_mock_candidates.append(primary_bean)
+        # 2. 收集实现类匹配的Bean（接口/抽象类的实现）
+        impl_types = self._inheritance_cache.get(bean_type, [])
+        for impl_type in impl_types:
+            if impl_type in self._bean_definitions:
+                for bean_def in self._bean_definitions[impl_type]:
+                    if self._is_bean_available(bean_def):
+                        all_candidates.append(bean_def)
+                        # impl_type 不加入 direct_match_types，因为它是实现类匹配
 
-            # 2. 高优先级：直接匹配的非Primary Bean
-            if bean_type in self._bean_definitions:
-                direct_matches = [
-                    bean_def
-                    for bean_def in self._bean_definitions[bean_type]
-                    if self._is_bean_available(bean_def) and not bean_def.is_primary
-                ]
-                # 按Mock状态分组
-                mock_matches = [bd for bd in direct_matches if bd.is_mock]
-                non_mock_matches = [bd for bd in direct_matches if not bd.is_mock]
-
-                # 每组内部按Factory优先级排序
-                mock_factory_beans = [
-                    bd for bd in mock_matches if bd.scope == BeanScope.FACTORY
-                ]
-                mock_regular_beans = [
-                    bd for bd in mock_matches if bd.scope != BeanScope.FACTORY
-                ]
-                non_mock_factory_beans = [
-                    bd for bd in non_mock_matches if bd.scope == BeanScope.FACTORY
-                ]
-                non_mock_regular_beans = [
-                    bd for bd in non_mock_matches if bd.scope != BeanScope.FACTORY
-                ]
-
-                mock_candidates.extend(mock_factory_beans)
-                mock_candidates.extend(mock_regular_beans)
-                non_mock_candidates.extend(non_mock_factory_beans)
-                non_mock_candidates.extend(non_mock_regular_beans)
-
-            # 3. 中优先级：接口/抽象类的实现类匹配
-            # 先收集所有实现类的bean定义，然后统一排序
-            all_mock_impls = []
-            all_non_mock_impls = []
-
-            impl_types = self._inheritance_cache.get(bean_type, [])
-            for impl_type in impl_types:
-                if impl_type in self._bean_definitions:
-                    for bean_def in self._bean_definitions[impl_type]:
-                        if self._is_bean_available(bean_def):
-                            if bean_def.is_mock:
-                                all_mock_impls.append(bean_def)
-                            else:
-                                all_non_mock_impls.append(bean_def)
-
-            # 按Primary和Factory优先级排序所有实现
-            def sort_impls(impls):
-                primary_impls = [bd for bd in impls if bd.is_primary]
-                other_impls = [bd for bd in impls if not bd.is_primary]
-                factory_impls = [
-                    bd for bd in other_impls if bd.scope == BeanScope.FACTORY
-                ]
-                regular_impls = [
-                    bd for bd in other_impls if bd.scope != BeanScope.FACTORY
-                ]
-                return primary_impls + factory_impls + regular_impls
-
-            mock_candidates.extend(sort_impls(all_mock_impls))
-            non_mock_candidates.extend(sort_impls(all_non_mock_impls))
-
-            # Mock Bean优先，然后是非Mock Bean
-            priority_candidates = mock_candidates + non_mock_candidates
-
-        else:
-            # 非Mock模式下的原有逻辑
-            # 1. 最高优先级：Primary Bean（直接匹配）
-            primary_bean = self._primary_beans.get(bean_type)
-            if primary_bean and self._is_bean_available(primary_bean):
-                priority_candidates.append(primary_bean)
-
-            # 2. 高优先级：直接匹配的非Primary Bean
-            if bean_type in self._bean_definitions:
-                direct_matches = [
-                    bean_def
-                    for bean_def in self._bean_definitions[bean_type]
-                    if self._is_bean_available(bean_def) and not bean_def.is_primary
-                ]
-                # Factory优先于普通Bean
-                factory_beans = [
-                    bd for bd in direct_matches if bd.scope == BeanScope.FACTORY
-                ]
-                regular_beans = [
-                    bd for bd in direct_matches if bd.scope != BeanScope.FACTORY
-                ]
-                priority_candidates.extend(factory_beans)
-                priority_candidates.extend(regular_beans)
-
-            # 3. 中优先级：接口/抽象类的实现类匹配
-            # 先收集所有实现类的bean定义，然后统一排序
-            all_impls = []
-
-            impl_types = self._inheritance_cache.get(bean_type, [])
-            for impl_type in impl_types:
-                if impl_type in self._bean_definitions:
-                    for bean_def in self._bean_definitions[impl_type]:
-                        if self._is_bean_available(bean_def):
-                            all_impls.append(bean_def)
-
-            # 按Primary和Factory优先级排序所有实现
-            primary_impls = [bd for bd in all_impls if bd.is_primary]
-            other_impls = [bd for bd in all_impls if not bd.is_primary]
-            factory_impls = [bd for bd in other_impls if bd.scope == BeanScope.FACTORY]
-            regular_impls = [bd for bd in other_impls if bd.scope != BeanScope.FACTORY]
-
-            priority_candidates.extend(primary_impls)
-            priority_candidates.extend(factory_impls)
-            priority_candidates.extend(regular_impls)
+        # 3. 使用当前配置的Bean排序策略进行统一排序
+        priority_candidates = self._bean_order_strategy_class.sort_beans_with_context(
+            bean_defs=all_candidates,
+            direct_match_types=direct_match_types,
+            mock_mode=self._mock_mode,
+        )
 
         # 缓存结果
         self._candidates_cache[cache_key] = priority_candidates

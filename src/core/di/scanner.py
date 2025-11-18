@@ -7,11 +7,12 @@ import os
 import sys
 import importlib
 from pathlib import Path
-from typing import List, Set, Optional
+from typing import List, Set, Optional, Dict, Any
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from core.observation.logger import get_logger
+from core.di.scan_context import ScanContextRegistry, scan_context
 
 
 class ComponentScanner:
@@ -37,6 +38,9 @@ class ComponentScanner:
 
         # 创建专门的日志记录器
         self.logger = get_logger(__name__)
+
+        # 扫描上下文注册器
+        self.context_registry = ScanContextRegistry()
 
         # 需要预加载的关键模块，避免并行导入时的循环依赖
         self.preload_modules = [
@@ -138,6 +142,41 @@ class ComponentScanner:
         if module_name not in self.preload_modules:
             self.preload_modules.append(module_name)
         return self
+
+    def register_scan_context(
+        self, path: str, metadata: Dict[str, Any]
+    ) -> 'ComponentScanner':
+        """
+        注册扫描路径的上下文元数据
+
+        Args:
+            path: 扫描路径
+            metadata: 上下文元数据，可以包含任意自定义信息
+
+        Returns:
+            self，支持链式调用
+
+        Example:
+            ```python
+            scanner = ComponentScanner()
+            scanner.register_scan_context(
+                "src/plugins",
+                {"plugin_type": "core", "load_priority": 1}
+            )
+            scanner.add_scan_path("src/plugins").scan()
+            ```
+        """
+        self.context_registry.register(path, metadata)
+        return self
+
+    def get_context_registry(self) -> ScanContextRegistry:
+        """
+        获取上下文注册器
+
+        Returns:
+            上下文注册器实例
+        """
+        return self.context_registry
 
     def scan(self) -> 'ComponentScanner':
         """执行扫描"""
@@ -280,8 +319,14 @@ class ComponentScanner:
             return
 
         try:
-            # 导入模块以触发装饰器
-            importlib.import_module(module_name)
+            # 获取该文件路径对应的上下文元数据
+            metadata = self.context_registry.get_metadata_for_path(file_path)
+
+            # 在扫描上下文中导入模块
+            # 被导入的模块可以通过 get_current_scan_context() 获取上下文信息
+            with scan_context(file_path, module_name, metadata):
+                # 导入模块以触发装饰器
+                importlib.import_module(module_name)
 
         except ImportError as e:
             self.logger.error("导入模块失败 %s: %s", module_name, e)
@@ -316,81 +361,3 @@ class ComponentScanner:
             pass
 
         return None
-
-
-def create_scanner(base_path: str = None) -> ComponentScanner:
-    """创建扫描器"""
-    scanner = ComponentScanner()
-
-    if base_path:
-        scanner.add_scan_path(base_path)
-    else:
-        # 默认扫描当前工作目录
-        current_dir = os.getcwd()
-        # 查找src目录
-        src_path = Path(current_dir) / "src"
-        if src_path.exists():
-            scanner.add_scan_path(str(src_path))
-        else:
-            scanner.add_scan_path(current_dir)
-
-    return scanner
-
-
-def scan_project(
-    base_path: str = None, exclude_paths: List[str] = None, parallel: bool = True
-) -> ComponentScanner:
-    """扫描项目"""
-    scanner = create_scanner(base_path)
-
-    # 添加排除路径
-    if exclude_paths:
-        for path in exclude_paths:
-            scanner.exclude_path(path)
-
-    scanner.set_parallel(parallel)
-    return scanner.scan()
-
-
-def auto_scan():
-    """自动扫描（智能检测项目结构）"""
-    logger = get_logger(__name__)
-    logger.info("🎯 开始自动扫描项目...")
-
-    # 查找项目根目录
-    current_dir = Path.cwd()
-    project_root = current_dir
-
-    # 向上查找包含src目录的路径
-    for parent in current_dir.parents:
-        if (parent / "src").exists():
-            project_root = parent
-            break
-
-    # 扫描src目录
-    src_path = project_root / "src"
-    if src_path.exists():
-        logger.info("📁 检测到项目根目录: %s", project_root)
-        scanner = ComponentScanner()
-        scanner.add_scan_path(str(src_path))
-
-        # 智能排除目录
-        excluded_dirs = []
-        for item in src_path.iterdir():
-            if item.is_dir() and item.name in {
-                'di',
-                'config',
-                'test',
-                'tests',
-                '__pycache__',
-            }:
-                scanner.exclude_path(item.name)
-                excluded_dirs.append(item.name)
-
-        if excluded_dirs:
-            logger.debug("智能排除目录: %s", ', '.join(excluded_dirs))
-
-        return scanner.scan()
-    else:
-        logger.info("⚠️  未找到src目录，扫描当前目录: %s", current_dir)
-        return scan_project(str(current_dir))

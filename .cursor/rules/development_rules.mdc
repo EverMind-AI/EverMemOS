@@ -38,3 +38,14 @@ alwaysApply: false
       -   其他语言: 遵循各语言的最佳实践
     - **依赖管理:** 如果发现异常导入，记得修复；如果发现缺少导入，记得添加
     - **类型注解:** 在支持类型注解的语言中（Python、TypeScript等），声明变量时尽可能注解类型，提高代码可读性
+
+-  **模块介绍文件命名规范:**
+    - 在 `src/core/` 目录下的各个子模块中，使用小写的 `introduction.md` 作为模块介绍文件
+    - 不使用全大写的 `README.md`（README.md可能是自动生成的或历史遗留的）
+    - 命名示例：
+      ```
+      src/core/di/introduction.md              # DI模块介绍
+      src/core/addons/introduction.md          # Addons模块介绍
+      src/core/component/introduction.md       # Component模块介绍
+      ```
+    - `introduction.md` 应包含：模块简介、目录结构、核心功能、使用示例、相关文档等

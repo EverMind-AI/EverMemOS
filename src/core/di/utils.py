@@ -6,8 +6,8 @@
 from typing import Type, TypeVar, List, Dict, Any, Optional, Callable
 import inspect
 
-from core.di.container import get_container, BeanScope
-from core.di.scanner import auto_scan, scan_project
+from core.di.container import get_container
+from core.di.bean_definition import BeanScope
 from core.di.exceptions import BeanNotFoundError
 
 T = TypeVar('T')
@@ -75,6 +75,7 @@ def register_bean(
     scope: BeanScope = BeanScope.SINGLETON,
     is_primary: bool = False,
     is_mock: bool = False,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
     注册Bean
@@ -86,6 +87,7 @@ def register_bean(
         scope: Bean作用域
         is_primary: 是否为Primary实现
         is_mock: 是否为Mock实现
+        metadata: Bean的元数据，可用于存储额外信息
     """
     get_container().register_bean(
         bean_type=bean_type,
@@ -94,6 +96,7 @@ def register_bean(
         scope=scope,
         is_primary=is_primary,
         is_mock=is_mock,
+        metadata=metadata,
     )
 
 
@@ -103,6 +106,7 @@ def register_factory(
     name: str = None,
     is_primary: bool = False,
     is_mock: bool = False,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
     注册Factory方法
@@ -113,6 +117,7 @@ def register_factory(
         name: Bean名称
         is_primary: 是否为Primary实现
         is_mock: 是否为Mock实现
+        metadata: Bean的元数据，可用于存储额外信息
     """
     get_container().register_factory(
         bean_type=bean_type,
@@ -120,6 +125,7 @@ def register_factory(
         bean_name=name,
         is_primary=is_primary,
         is_mock=is_mock,
+        metadata=metadata,
     )
 
 
@@ -216,20 +222,6 @@ def is_mock_mode() -> bool:
 def clear_container() -> None:
     """清空容器"""
     get_container().clear()
-
-
-def scan_packages(base_path: str = None, exclude_paths: List[str] = None) -> None:
-    """
-    扫描包并注册组件
-
-    Args:
-        base_path: 基础路径
-        exclude_paths: 排除路径列表
-    """
-    if base_path:
-        scan_project(base_path, exclude_paths)
-    else:
-        auto_scan()
 
 
 def inject(target_func: Callable) -> Callable:

@@ -51,7 +51,7 @@ class NotificationService(ABC):
 使用依赖注入装饰器标记实现类：
 
 ```python
-from core.di import repository, service
+from core.di.decorators import repository, service
 
 @repository("mysql_user_repo")
 class MySQLUserRepository(UserRepository):
@@ -133,7 +133,7 @@ class PrimaryUserRepository(UserRepository):
 使用`@mock_impl`装饰器定义Mock实现：
 
 ```python
-from core.di import mock_impl
+from core.di.decorators import mock_impl
 
 @mock_impl("mock_user_repo")
 class MockUserRepository(UserRepository):
@@ -204,7 +204,7 @@ MOCK_MODE=true
 
 ```python
 import os
-from core.di import enable_mock_mode, disable_mock_mode, get_bean_by_type
+from core.di.utils import enable_mock_mode, disable_mock_mode, get_bean_by_type
 
 def setup_mock_mode():
     """根据环境变量设置Mock模式"""
@@ -266,7 +266,7 @@ def setup_test_environment(test_type: str):
     
     if test_type == "performance":
         # 性能测试使用慢速Mock
-        from core.di import register_bean
+        from core.di.utils import register_bean
         slow_mock = SlowMockNotificationService()
         register_bean(NotificationService, slow_mock, "mock_notification")
     else:
@@ -309,6 +309,9 @@ class UserService(ABC):  # 不推荐：混合了存储和验证职责
 ### 2. 装饰器使用规范
 
 ```python
+# 从具体的装饰器模块导入
+from core.di.decorators import repository, service, component, mock_impl, factory
+
 # 数据访问层
 @repository("user_repository")
 class UserRepositoryImpl(UserRepository):
@@ -341,7 +344,8 @@ def create_database_connection() -> DatabaseConnection:
 使用延迟注入避免循环依赖：
 
 ```python
-from core.di import lazy_inject
+from core.di.decorators import service
+from core.di.utils import lazy_inject
 
 @service("order_service")
 class OrderService:
@@ -415,7 +419,7 @@ setup_all()
 # ================================================
 
 # 现在可以正常导入和使用项目模块
-from core.di import get_bean_by_type
+from core.di.utils import get_bean_by_type
 from core.observation.logger import get_logger
 
 logger = get_logger(__name__)
@@ -458,7 +462,7 @@ from application_startup import setup_all
 setup_all()
 # =======================================
 
-from core.di import get_bean_by_type
+from core.di.utils import get_bean_by_type
 from core.observation.logger import get_logger
 
 logger = get_logger(__name__)
@@ -548,6 +552,8 @@ python run.py
 ### 完整的开发流程示例
 
 ```python
+from core.di.decorators import service, mock_impl
+
 # 1. 定义接口
 class PaymentProcessor(ABC):
     @abstractmethod
@@ -588,6 +594,8 @@ class OrderService:
 
 # 5. 开发时使用
 def development_workflow():
+    from core.di.utils import enable_mock_mode, get_bean_by_type
+    
     # 启用Mock模式进行开发
     enable_mock_mode()
     
@@ -605,6 +613,8 @@ def development_workflow():
 
 # 6. 生产环境使用
 def production_workflow():
+    from core.di.utils import disable_mock_mode, get_bean_by_type
+    
     # 禁用Mock模式使用真实服务
     disable_mock_mode()
     

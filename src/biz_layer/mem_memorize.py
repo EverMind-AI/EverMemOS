@@ -4,7 +4,13 @@ import json
 import traceback
 from memory_layer.memory_manager import MemorizeRequest, MemorizeOfflineRequest
 from memory_layer.memory_manager import MemoryManager
-from memory_layer.types import MemoryType, MemCell, Memory, RawDataType, SemanticMemoryItem
+from memory_layer.types import (
+    MemoryType,
+    MemCell,
+    Memory,
+    RawDataType,
+    SemanticMemoryItem,
+)
 from memory_layer.memory_extractor.event_log_extractor import EventLog
 from memory_layer.memcell_extractor.base_memcell_extractor import RawData
 from infra_layer.adapters.out.persistence.document.memory.memcell import DataTypeEnum
@@ -20,7 +26,7 @@ from memory_layer.memory_extractor.group_profile_memory_extractor import (
     GroupProfileMemoryExtractRequest,
     GroupProfileMemory,
 )
-from core.di import get_bean_by_type, enable_mock_mode, scan_packages
+from core.di import get_bean_by_type
 from component.redis_provider import RedisProvider
 from infra_layer.adapters.out.persistence.repository.episodic_memory_raw_repository import (
     EpisodicMemoryRawRepository,
@@ -54,7 +60,11 @@ from datetime import datetime, timedelta
 import os
 import asyncio
 from collections import defaultdict
-from common_utils.datetime_utils import get_now_with_timezone, to_iso_format, from_iso_format
+from common_utils.datetime_utils import (
+    get_now_with_timezone,
+    to_iso_format,
+    from_iso_format,
+)
 from memory_layer.memcell_extractor.base_memcell_extractor import StatusResult
 import traceback
 
@@ -89,9 +99,11 @@ from biz_layer.memcell_milvus_sync import MemCellMilvusSyncService
 logger = get_logger(__name__)
 
 
-async def _trigger_clustering(group_id: str, memcell: MemCell, scene: Optional[str] = None) -> None:
+async def _trigger_clustering(
+    group_id: str, memcell: MemCell, scene: Optional[str] = None
+) -> None:
     """异步触发 MemCell 聚类（后台任务，不阻塞主流程）
-    
+
     Args:
         group_id: 群组ID
         memcell: 刚保存的 MemCell
@@ -99,68 +111,86 @@ async def _trigger_clustering(group_id: str, memcell: MemCell, scene: Optional[s
             - None/"work"/"company" 等：使用 group_chat 场景
             - "assistant"/"companion" 等：使用 assistant 场景
     """
-    logger.info(f"[聚类] 开始触发聚类: group_id={group_id}, event_id={memcell.event_id}, scene={scene}")
-    
+    logger.info(
+        f"[聚类] 开始触发聚类: group_id={group_id}, event_id={memcell.event_id}, scene={scene}"
+    )
+
     try:
-        from memory_layer.cluster_manager import ClusterManager, ClusterManagerConfig, MongoClusterStorage
-        from memory_layer.profile_manager import ProfileManager, ProfileManagerConfig, MongoProfileStorage
+        from memory_layer.cluster_manager import (
+            ClusterManager,
+            ClusterManagerConfig,
+            MongoClusterStorage,
+        )
+        from memory_layer.profile_manager import (
+            ProfileManager,
+            ProfileManagerConfig,
+            MongoProfileStorage,
+        )
         from memory_layer.llm.llm_provider import LLMProvider
         from core.di import get_bean_by_type
         import os
-        
+
         logger.info(f"[聚类] 正在获取 MongoClusterStorage...")
         # 获取 MongoDB 存储
         mongo_storage = get_bean_by_type(MongoClusterStorage)
         logger.info(f"[聚类] MongoClusterStorage 获取成功: {type(mongo_storage)}")
-        
+
         # 创建 ClusterManager（使用 MongoDB 存储）
         config = ClusterManagerConfig(
             similarity_threshold=0.65,
             max_time_gap_days=7,
-            enable_persistence=False  # MongoDB 不需要文件持久化
+            enable_persistence=False,  # MongoDB 不需要文件持久化
         )
         cluster_manager = ClusterManager(config=config, storage=mongo_storage)
         logger.info(f"[聚类] ClusterManager 创建成功")
-        
+
         # 创建 ProfileManager 并连接到 ClusterManager
         # 获取 MongoDB Profile 存储
         profile_storage = get_bean_by_type(MongoProfileStorage)
         logger.info(f"[聚类] MongoProfileStorage 获取成功: {type(profile_storage)}")
-        
+
         llm_provider = LLMProvider(
             provider_type=os.getenv("LLM_PROVIDER", "openai"),
             model=os.getenv("LLM_MODEL", "gpt-4"),
             base_url=os.getenv("LLM_BASE_URL"),
             api_key=os.getenv("LLM_API_KEY"),
             temperature=float(os.getenv("LLM_TEMPERATURE", "0.3")),
-            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "16384"))
+            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "16384")),
         )
-        
+
         # 根据 scene 决定 Profile 提取场景
         # assistant/companion -> assistant 场景（提取兴趣、偏好、生活习惯）
         # 其他 -> group_chat 场景（提取工作角色、技能、项目经验）
-        profile_scenario = "assistant" if scene and scene.lower() in ["assistant", "companion"] else "group_chat"
-        
+        profile_scenario = (
+            "assistant"
+            if scene and scene.lower() in ["assistant", "companion"]
+            else "group_chat"
+        )
+
         profile_config = ProfileManagerConfig(
             scenario=profile_scenario,
             min_confidence=0.6,
             enable_versioning=True,
-            auto_extract=True
+            auto_extract=True,
         )
-        
+
         profile_manager = ProfileManager(
             llm_provider=llm_provider,
             config=profile_config,
             storage=profile_storage,  # 使用 MongoDB 存储
             group_id=group_id,
-            group_name=None  # 可以从 memcell 中获取
+            group_name=None,  # 可以从 memcell 中获取
         )
-        
+
         # 连接 ProfileManager 到 ClusterManager
         profile_manager.attach_to_cluster_manager(cluster_manager)
-        logger.info(f"[聚类] ProfileManager 已连接到 ClusterManager (场景: {profile_scenario}, 使用 MongoDB 存储)")
-        print(f"[聚类] ProfileManager 已连接，阈值: {profile_manager._min_memcells_threshold}")
-        
+        logger.info(
+            f"[聚类] ProfileManager 已连接到 ClusterManager (场景: {profile_scenario}, 使用 MongoDB 存储)"
+        )
+        print(
+            f"[聚类] ProfileManager 已连接，阈值: {profile_manager._min_memcells_threshold}"
+        )
+
         # 将 MemCell 转换为聚类所需的字典格式
         memcell_dict = {
             "event_id": str(memcell.event_id),
@@ -169,28 +199,32 @@ async def _trigger_clustering(group_id: str, memcell: MemCell, scene: Optional[s
             "participants": memcell.participants or [],
             "group_id": group_id,
         }
-        
+
         logger.info(f"[聚类] 开始执行聚类: {memcell_dict['event_id']}")
         print(f"[聚类] 开始执行聚类: event_id={memcell_dict['event_id']}")
-        
+
         # 执行聚类（会自动触发 ProfileManager 的回调）
         cluster_id = await cluster_manager.cluster_memcell(
-            group_id=group_id,
-            memcell=memcell_dict
+            group_id=group_id, memcell=memcell_dict
         )
-        
+
         print(f"[聚类] 聚类完成: cluster_id={cluster_id}")
-        
+
         if cluster_id:
-            logger.info(f"[聚类] ✅ MemCell {memcell.event_id} -> Cluster {cluster_id} (group: {group_id})")
+            logger.info(
+                f"[聚类] ✅ MemCell {memcell.event_id} -> Cluster {cluster_id} (group: {group_id})"
+            )
             print(f"[聚类] ✅ MemCell {memcell.event_id} -> Cluster {cluster_id}")
         else:
-            logger.warning(f"[聚类] ⚠️ MemCell {memcell.event_id} 聚类返回 None (group: {group_id})")
+            logger.warning(
+                f"[聚类] ⚠️ MemCell {memcell.event_id} 聚类返回 None (group: {group_id})"
+            )
             print(f"[聚类] ⚠️ 聚类返回 None")
-    
+
     except Exception as e:
         # 聚类失败，打印详细错误信息并重新抛出
         import traceback
+
         error_msg = f"[聚类] ❌ 触发聚类失败: {e}"
         logger.error(error_msg, exc_info=True)
         print(error_msg)  # 确保在控制台能看到
@@ -303,35 +337,35 @@ async def preprocess_conv_request(
     3. 将当前新消息作为 new_raw_data_list
     4. 边界检测由后续逻辑处理（检测后会清空或保留 Redis）
     """
-    
+
     logger.info(f"[preprocess] 开始处理: group_id={request.group_id}")
-    
+
     # 检查是否有新数据
     if not request.new_raw_data_list:
         logger.info("[preprocess] 没有新数据，跳过处理")
         return None
-    
+
     # 从 Redis 读取所有历史消息
     redis_key = f"chat_history:{request.group_id}"
-    
+
     try:
         redis_provider = get_bean_by_type(RedisProvider)
         messages_json = await redis_provider.lrange(redis_key, 0, -1)
-        
+
         logger.info(f"[preprocess] 从 Redis 读取 {len(messages_json)} 条历史消息")
-        
+
         # 将 JSON 字符串转换为 RawData 对象
         history_raw_data_list = []
         for msg_json in messages_json:
             msg_dict = json.loads(msg_json)
-            
+
             # 提取消息时间
             create_time_str = msg_dict.get('create_time')
             if create_time_str:
                 message_time = from_iso_format(create_time_str)
             else:
                 message_time = current_time
-            
+
             # 构造 RawData
             raw_data = RawData(
                 content={
@@ -344,15 +378,17 @@ async def preprocess_conv_request(
                 data_type=RawDataType.CONVERSATION,
             )
             history_raw_data_list.append(raw_data)
-        
+
         # 更新 request
         request.history_raw_data_list = history_raw_data_list
         # new_raw_data_list 保持不变（就是新传入的消息）
-        
-        logger.info(f"[preprocess] 完成: 历史 {len(history_raw_data_list)} 条, 新消息 {len(request.new_raw_data_list)} 条")
-        
+
+        logger.info(
+            f"[preprocess] 完成: 历史 {len(history_raw_data_list)} 条, 新消息 {len(request.new_raw_data_list)} 条"
+        )
+
         return request
-        
+
     except Exception as e:
         logger.error(f"[preprocess] Redis 读取失败: {e}")
         traceback.print_exc()
@@ -460,19 +496,27 @@ async def save_memories(
 
     # 按对象类型分类保存
     episode_memories = [
-        m for m in memory_list if isinstance(m, Memory) and hasattr(m, 'memory_type') and m.memory_type == MemoryType.EPISODE_SUMMARY
+        m
+        for m in memory_list
+        if isinstance(m, Memory)
+        and hasattr(m, 'memory_type')
+        and m.memory_type == MemoryType.EPISODE_SUMMARY
     ]
-    semantic_memories = [
-        m for m in memory_list if isinstance(m, SemanticMemoryItem)
-    ]
-    event_logs = [
-        m for m in memory_list if isinstance(m, EventLog)
-    ]
+    semantic_memories = [m for m in memory_list if isinstance(m, SemanticMemoryItem)]
+    event_logs = [m for m in memory_list if isinstance(m, EventLog)]
     profile_memories = [
-        m for m in memory_list if isinstance(m, Memory) and hasattr(m, 'memory_type') and m.memory_type == MemoryType.PROFILE
+        m
+        for m in memory_list
+        if isinstance(m, Memory)
+        and hasattr(m, 'memory_type')
+        and m.memory_type == MemoryType.PROFILE
     ]
     group_profile_memories = [
-        m for m in memory_list if isinstance(m, Memory) and hasattr(m, 'memory_type') and m.memory_type == MemoryType.GROUP_PROFILE
+        m
+        for m in memory_list
+        if isinstance(m, Memory)
+        and hasattr(m, 'memory_type')
+        and m.memory_type == MemoryType.GROUP_PROFILE
     ]
 
     # 保存个人 episode 到 MongoDB/ES/Milvus
@@ -481,16 +525,18 @@ async def save_memories(
         doc = _convert_episode_memory_to_doc(episode_mem, current_time)
         doc = await episodic_memory_repo.append_episodic_memory(doc)
         episode_mem.event_id = str(doc.event_id)
-        
+
         # 保存到 ES
         es_doc = EpisodicMemoryConverter.from_mongo(doc)
         es_doc.type = "personal_episode"  # 标记为个人episode
         await es_doc.save()
-        
+
         # 保存到 Milvus（添加缺失的字段）
         milvus_entity = EpisodicMemoryMilvusConverter.from_mongo(doc)
-        vector = milvus_entity.get("vector") if isinstance(milvus_entity, dict) else None
-        
+        vector = (
+            milvus_entity.get("vector") if isinstance(milvus_entity, dict) else None
+        )
+
         if not vector or (isinstance(vector, list) and len(vector) == 0):
             logger.warning(
                 "[mem_memorize] 跳过写入Milvus：向量为空或缺失，event_id=%s",
@@ -510,12 +556,12 @@ async def save_memories(
             # 确保 search_content 字段存在
             if "search_content" not in milvus_entity:
                 milvus_entity["search_content"] = milvus_entity.get("episode", "")[:500]
-            
+
             await episodic_memory_milvus_repo.insert(milvus_entity)
             logger.debug(
                 f"✅ 保存 personal_episode: user_id={doc.user_id}, event_id={episode_mem.event_id}"
             )
-        
+
         logger.debug(f"✅ 保存 episode_memory: {episode_mem.event_id}")
 
     # 保存Profile记忆到CoreMemoryRawRepository
@@ -534,31 +580,35 @@ async def save_memories(
             )
         except Exception as e:
             logger.error(f"保存Group Profile记忆失败: {e}")
-    
+
     # 保存个人语义记忆到 MongoDB/Milvus/ES
     semantic_memory_repo = get_bean_by_type(PersonalSemanticMemoryRawRepository)
-    
+
     for sem_mem in semantic_memories:
         if not sem_mem.content or not sem_mem.embedding:
             continue
-        
+
         parent_event_id = sem_mem.parent_event_id
-        parent_doc = await episodic_memory_repo.get_by_event_id(str(parent_event_id), sem_mem.user_id)
+        parent_doc = await episodic_memory_repo.get_by_event_id(
+            str(parent_event_id), sem_mem.user_id
+        )
         if not parent_doc:
             continue
-        
+
         # 转换为 PersonalSemanticMemory 文档格式并保存到 MongoDB
         doc = _convert_semantic_memory_to_doc(sem_mem, parent_doc, current_time)
         doc = await semantic_memory_repo.save(doc)
-        
+
         # 保存到 ES
         es_doc = PersonalSemanticMemoryConverter.from_mongo(doc)
         await es_doc.save()
-        
+
         # 保存到 Milvus
         milvus_entity = PersonalSemanticMemoryMilvusConverter.from_mongo(doc)
-        vector = milvus_entity.get("vector") if isinstance(milvus_entity, dict) else None
-        
+        vector = (
+            milvus_entity.get("vector") if isinstance(milvus_entity, dict) else None
+        )
+
         if not vector or (isinstance(vector, list) and len(vector) == 0):
             logger.warning(
                 "[mem_memorize] 跳过写入Milvus：个人语义记忆向量为空，id=%s",
@@ -566,35 +616,41 @@ async def save_memories(
             )
         else:
             await episodic_memory_milvus_repo.insert(milvus_entity)
-            logger.debug(f"✅ 保存 personal_semantic_memory 到 MongoDB/ES/Milvus: {doc.id}")
-    
+            logger.debug(
+                f"✅ 保存 personal_semantic_memory 到 MongoDB/ES/Milvus: {doc.id}"
+            )
+
     # 保存个人事件日志到 MongoDB/Milvus/ES
     event_log_repo = get_bean_by_type(PersonalEventLogRawRepository)
-    
+
     for event_log in event_logs:
         if not event_log.atomic_fact or not event_log.fact_embeddings:
             continue
-        
+
         parent_event_id = event_log.parent_event_id
-        parent_doc = await episodic_memory_repo.get_by_event_id(str(parent_event_id), event_log.user_id)
+        parent_doc = await episodic_memory_repo.get_by_event_id(
+            str(parent_event_id), event_log.user_id
+        )
         if not parent_doc:
             continue
-        
+
         # 转换为 PersonalEventLog 文档格式列表并保存到 MongoDB
         docs = _convert_event_log_to_docs(event_log, parent_doc, current_time)
-        
+
         for doc in docs:
             # 保存到 MongoDB
             doc = await event_log_repo.save(doc)
-            
+
             # 保存到 ES
             es_doc = PersonalEventLogConverter.from_mongo(doc)
             await es_doc.save()
-            
+
             # 保存到 Milvus
             milvus_entity = PersonalEventLogMilvusConverter.from_mongo(doc)
-            vector = milvus_entity.get("vector") if isinstance(milvus_entity, dict) else None
-            
+            vector = (
+                milvus_entity.get("vector") if isinstance(milvus_entity, dict) else None
+            )
+
             if not vector or (isinstance(vector, list) and len(vector) == 0):
                 logger.warning(
                     "[mem_memorize] 跳过写入Milvus：个人事件日志向量为空，id=%s",
@@ -602,9 +658,9 @@ async def save_memories(
                 )
             else:
                 await episodic_memory_milvus_repo.insert(milvus_entity)
-        
+
         logger.debug(f"✅ 保存 personal_event_log 到 MongoDB/ES/Milvus: {len(docs)} 条")
-    
+
     # 刷新 Milvus，确保数据立即可搜索
     if semantic_memories or event_logs or episode_memories:
         await episodic_memory_milvus_repo.flush()
@@ -696,8 +752,8 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
     # 定义需要提取的记忆类型：先提取个人 episode，再基于 episode 提取语义记忆和事件日志
     memory_types = [
         MemoryType.EPISODE_SUMMARY,
-        MemoryType.SEMANTIC_SUMMARY, 
-        MemoryType.EVENT_LOG
+        MemoryType.SEMANTIC_SUMMARY,
+        MemoryType.EVENT_LOG,
     ]
     if request.raw_data_type == RawDataType.CONVERSATION:
         request = await preprocess_conv_request(request, current_time)
@@ -710,19 +766,23 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
         #     if not acquired:
         #         logger.warning(f"[mem_memorize] 获取分布式锁失败: {request.group_id}")
         now = time.time()
-        
+
         # 添加详细调试日志
         logger.info(f"=" * 80)
         logger.info(f"[边界检测] 开始检测: group_id={request.group_id}")
         logger.info(f"[边界检测] 历史消息: {len(request.history_raw_data_list)} 条")
         logger.info(f"[边界检测] 新消息: {len(request.new_raw_data_list)} 条")
         if request.history_raw_data_list:
-            logger.info(f"[边界检测] 历史消息范围: {request.history_raw_data_list[0].content.get('timestamp')} ~ {request.history_raw_data_list[-1].content.get('timestamp')}")
+            logger.info(
+                f"[边界检测] 历史消息范围: {request.history_raw_data_list[0].content.get('timestamp')} ~ {request.history_raw_data_list[-1].content.get('timestamp')}"
+            )
         if request.new_raw_data_list:
             for idx, raw in enumerate(request.new_raw_data_list):
-                logger.info(f"[边界检测] 新消息[{idx}]: {raw.content.get('speaker_id')} - {raw.content.get('content')[:50]}... @ {raw.content.get('timestamp')}")
+                logger.info(
+                    f"[边界检测] 新消息[{idx}]: {raw.content.get('speaker_id')} - {raw.content.get('content')[:50]}... @ {raw.content.get('timestamp')}"
+                )
         logger.info(f"=" * 80)
-        
+
         logger.debug(
             f"[memorize memorize] 提取MemCell开始: group_id={request.group_id}, group_name={request.group_name}, "
             f"semantic_extraction={request.enable_semantic_extraction}"
@@ -767,13 +827,19 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
     # 添加边界检测结果日志
     logger.info(f"=" * 80)
     logger.info(f"[边界检测结果] memcell is None: {memcell is None}")
-    logger.info(f"[边界检测结果] should_wait: {status_result.should_wait if status_result else 'N/A'}")
+    logger.info(
+        f"[边界检测结果] should_wait: {status_result.should_wait if status_result else 'N/A'}"
+    )
     if memcell is None:
-        logger.info(f"[边界检测结果] 判断: {'需要等待更多消息' if status_result.should_wait else '非边界，继续累积'}")
+        logger.info(
+            f"[边界检测结果] 判断: {'需要等待更多消息' if status_result.should_wait else '非边界，继续累积'}"
+        )
     else:
         logger.info(f"[边界检测结果] 判断: 是边界！成功提取MemCell")
         logger.info(f"[边界检测结果] MemCell event_id: {memcell.event_id}")
-        logger.info(f"[边界检测结果] Episode: {memcell.episode[:100] if memcell.episode else 'None'}...")
+        logger.info(
+            f"[边界检测结果] Episode: {memcell.episode[:100] if memcell.episode else 'None'}..."
+        )
     logger.info(f"=" * 80)
 
     if memcell == None:
@@ -784,7 +850,7 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
         return None
     else:
         logger.info(f"[mem_memorize] 成功提取MemCell")
-        
+
         # 判断为边界，清空 Redis 历史消息（重新开始累积）
         redis_key = f"chat_history:{request.group_id}"
         try:
@@ -803,13 +869,11 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
     # 同步 MemCell 到 Milvus 和 ES（包括 episode/semantic_memories/event_log）
     memcell_repo = get_bean_by_type(MemCellRawRepository)
     doc_memcell = await memcell_repo.get_by_event_id(str(memcell.event_id))
-    
+
     if doc_memcell:
         sync_service = get_bean_by_type(MemCellMilvusSyncService)
         sync_stats = await sync_service.sync_memcell(
-            doc_memcell, 
-            sync_to_es=True, 
-            sync_to_milvus=True
+            doc_memcell, sync_to_es=True, sync_to_milvus=True
         )
         logger.info(
             f"[mem_memorize] MemCell 同步到 Milvus/ES 完成: {memcell.event_id}, "
@@ -826,7 +890,7 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
     #     logger.info(f"[mem_memorize] 打印MemCell: {memcell}")
 
     memcells = [memcell]
-    
+
     # 同步触发聚类（等待完成，确保 Profile 提取成功）
     if request.group_id:
         await _trigger_clustering(request.group_id, memcell, request.scene)
@@ -845,7 +909,7 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
         # 提取记忆
         memory_list = []
         episode_memories = []
-        
+
         # 第一阶段：提取个人 episode
         for memory_type in memory_types:
             if memory_type == MemoryType.EPISODE_SUMMARY:
@@ -860,11 +924,11 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
                 if extracted_memories:
                     episode_memories = extracted_memories
                     memory_list += extracted_memories
-        
+
         # 保存 episode 记忆到数据库
         if episode_memories:
             await save_memories(episode_memories, current_time)
-        
+
         # 第二阶段：基于已保存的 episode 提取语义记忆和事件日志
         for memory_type in memory_types:
             if memory_type in [MemoryType.SEMANTIC_SUMMARY, MemoryType.EVENT_LOG]:
@@ -889,7 +953,7 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
                             extracted_memories.user_id = episode_mem.user_id
                             extracted_memories.group_id = episode_mem.group_id
                             memory_list.append(extracted_memories)
-        
+
         # 保存语义记忆和事件日志
         semantic_and_eventlog = [m for m in memory_list if m not in episode_memories]
         if semantic_and_eventlog:
@@ -915,4 +979,3 @@ def get_version_from_request(request: MemorizeOfflineRequest) -> str:
 
     # 3. 格式化为 "YYYY-MM" 字符串
     return previous_day.strftime("%Y-%m")
-
