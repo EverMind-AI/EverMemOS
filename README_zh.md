@@ -733,7 +733,7 @@ Coming soon
 
 感谢以下项目和社区的灵感和支持：
 
-- [Memos](https://github.com/usememos/memos) - 感谢 Memos 项目提供了一个完善的、标准化的开源笔记服务，为我们的记忆系统设计提供了宝贵的启发。
+- [Memos](https://github.com/MemTensor/MemOS) - 感谢 Memos 项目提供了一个完善的、标准化的开源笔记服务，为我们的记忆系统设计提供了宝贵的启发。
 
 - [Nemori](https://github.com/nemori-ai/nemori) - 感谢 Nemori 项目提供了一个用于智能体 LLM 工作流的自组织长期记忆系统，为我们的记忆系统设计提供了宝贵的启发。
 
