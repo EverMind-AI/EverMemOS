@@ -37,7 +37,6 @@ from infra_layer.adapters.out.search.repository.semantic_memory_es_repository im
 from infra_layer.adapters.out.search.repository.event_log_es_repository import (
     EventLogEsRepository,
 )
-from agentic_layer.vectorize_service import DeepInfraVectorizeServiceInterface
 from core.di import get_bean_by_type, service
 from common_utils.datetime_utils import get_now_with_timezone
 
@@ -54,7 +53,6 @@ class MemorySyncService:
         eventlog_milvus_repo: Optional[EventLogMilvusRepository] = None,
         semantic_es_repo: Optional[SemanticMemoryEsRepository] = None,
         eventlog_es_repo: Optional[EventLogEsRepository] = None,
-        vectorize_service: Optional[DeepInfraVectorizeServiceInterface] = None,
     ):
         """初始化同步服务
         
@@ -63,7 +61,6 @@ class MemorySyncService:
             eventlog_milvus_repo: 事件日志 Milvus 仓库实例（可选，不提供则从 DI 获取）
             semantic_es_repo: 语义记忆 ES 仓库实例（可选，不提供则从 DI 获取）
             eventlog_es_repo: 事件日志 ES 仓库实例（可选，不提供则从 DI 获取）
-            vectorize_service: 向量化服务实例（可选，不提供则从 DI 获取）
         """
         self.semantic_milvus_repo = semantic_milvus_repo or get_bean_by_type(
             SemanticMemoryMilvusRepository
@@ -78,11 +75,6 @@ class MemorySyncService:
             EventLogEsRepository
         )
         
-        if vectorize_service is None:
-            from agentic_layer.vectorize_service import get_vectorize_service
-            self.vectorize_service = get_vectorize_service()
-        else:
-            self.vectorize_service = vectorize_service
         
         logger.info("MemorySyncService 初始化完成")
 
