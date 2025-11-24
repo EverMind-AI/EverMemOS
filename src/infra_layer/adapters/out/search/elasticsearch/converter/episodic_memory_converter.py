@@ -11,7 +11,6 @@ from core.observation.logger import get_logger
 
 # EpisodicMemory类型不再需要导入，因为参数类型已经简化为Any
 from core.nlp.stopwords_utils import filter_stopwords
-from memory_layer.memory_extractor.episode_memory_extractor import EpisodeMemory
 from infra_layer.adapters.out.search.elasticsearch.memory.episodic_memory import (
     EpisodicMemoryDoc,
 )
@@ -117,7 +116,13 @@ class EpisodicMemoryConverter(BaseEsConverter[EpisodicMemoryDoc]):
         """
         text_content = []
 
-        # 收集所有文本内容
+        # 收集所有文本内容 - 包含 subject, summary, episode
+        if hasattr(source_doc, 'subject') and source_doc.subject:
+            text_content.append(source_doc.subject)
+        
+        if hasattr(source_doc, 'summary') and source_doc.summary:
+            text_content.append(source_doc.summary)
+        
         if hasattr(source_doc, 'episode') and source_doc.episode:
             text_content.append(source_doc.episode)
 
@@ -133,7 +138,7 @@ class EpisodicMemoryConverter(BaseEsConverter[EpisodicMemoryDoc]):
         return search_content
 
     @classmethod
-    def from_memory(cls, episode_memory: EpisodeMemory) -> EpisodicMemoryDoc:
+    def from_memory(cls, episode_memory) -> EpisodicMemoryDoc:
         """
         从Memory对象转换为ES EpisodicMemoryDoc实例
 
@@ -153,70 +158,4 @@ class EpisodicMemoryConverter(BaseEsConverter[EpisodicMemoryDoc]):
         Raises:
             Exception: 当转换过程中发生错误时抛出异常
         """
-        raise NotImplementedError("from_memory方法不再使用")
-
-        from memory_layer.memory_extractor.episode_memory_extractor import EpisodeMemory
-
-        if not isinstance(episode_memory, EpisodeMemory):
-            # from gongjie
-            logger.warning("Memory对象必须是EpisodeMemory类型")
-            return None
-        # 基本验证
-        if episode_memory is None:
-            raise ValueError("Memory对象不能为空")
-
-        try:
-            # 使用jieba分词处理episode内容
-            episode_text = getattr(episode_memory, "episode", "") or ""
-            search_content = list(jieba.cut(episode_text))
-
-            query_words = filter_stopwords(search_content, min_length=2)
-            search_content = [word.strip() for word in query_words if word.strip()]
-
-            # 获取事件类型，如果是枚举则转换为字符串值
-            event_type = getattr(episode_memory, "type", None)
-            if event_type is not None and hasattr(event_type, 'value'):
-                event_type = event_type.value
-
-            # 创建ES文档实例
-            es_doc = EpisodicMemoryDoc(
-                # 基础标识字段
-                event_id=getattr(episode_memory, "event_id", ""),
-                user_id=getattr(episode_memory, "user_id", ""),
-                user_name=getattr(episode_memory, 'user_name', None),
-                # 时间字段
-                timestamp=getattr(episode_memory, "timestamp", ""),
-                # 核心内容字段
-                title=getattr(
-                    episode_memory, 'subject', None
-                ),  # Memory的subject映射到ES的title
-                episode=episode_text,
-                search_content=search_content,  # 使用jieba分词结果
-                summary=getattr(episode_memory, "summary", ""),
-                # 分类和标签字段
-                group_id=getattr(episode_memory, "group_id", ""),
-                participants=getattr(episode_memory, "participants", []),
-                type=event_type,
-                keywords=getattr(episode_memory, "keywords", None),
-                linked_entities=getattr(episode_memory, "linked_entities", None),
-                # Memory特有字段
-                subject=getattr(episode_memory, "subject", None),
-                memcell_event_id_list=getattr(
-                    episode_memory, "memcell_event_id_list", None
-                ),
-                # 扩展字段
-                extend=getattr(episode_memory, "extend", None),
-                # 审计字段 - Memory对象可能没有这些字段
-                created_at=getattr(episode_memory, 'created_at', None),
-                updated_at=getattr(episode_memory, 'updated_at', None),
-            )
-
-            # 设置ES文档ID
-            if hasattr(episode_memory, 'event_id') and episode_memory.event_id:
-                es_doc.meta.id = episode_memory.event_id
-
-            return es_doc
-
-        except Exception as e:
-            logger.error("从Memory对象转换为ES文档失败: %s", e)
-            raise
+        raise NotImplementedError("from_memory方法不再使用，请使用 from_mongo 方法从MongoDB文档转换")

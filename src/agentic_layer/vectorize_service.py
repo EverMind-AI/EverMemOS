@@ -304,6 +304,15 @@ class VectorizeService(VectorizeServiceInterface):
                 embeddings_batches.append(result)
         return embeddings_batches
 
+    def get_model_name(self) -> str:
+        """
+        获取当前使用的模型名称
+        
+        Returns:
+            str: 模型名称
+        """
+        return self.config.model
+
     def get_model_info(self) -> Dict[str, Any]:
         return {
             "provider": self.config.provider.value,

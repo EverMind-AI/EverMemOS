@@ -75,116 +75,132 @@ class SemanticMemoryExtractor(MemoryExtractor):
     ) -> List[SemanticMemoryItem]:
         """
         为MemCell生成语义记忆联想预测
-
+        
         这是新的策略：基于MemCell内容，大模型联想出10条对用户后续的生活、决策可能产生的影响
-
+        
         Args:
             memcell: MemCell对象
-
+        
         Returns:
             语义记忆联想项目列表（10条），包含时间信息
         """
-        try:
-            logger.info(f"🎯 为MemCell生成语义记忆联想: {memcell.subject}")
+        # 最多重试5次
+        for retry in range(5):
+            try:
+                logger.info(f"🎯 为MemCell生成语义记忆联想: {memcell.subject}，重试次数: {retry+1}/5")
 
-            # 构建提示词
-            prompt = get_group_semantic_generation_prompt(
-                memcell_summary=memcell.summary,
-                memcell_episode=memcell.episode or "",
-                user_ids=memcell.user_id_list,
-            )
-
-            # 调用LLM生成联想
-            logger.debug(f"📝 开始调用LLM生成语义记忆联想，提示词长度: {len(prompt)}")
-            response = await self.llm_provider.generate(prompt=prompt, temperature=0.3)
-            logger.debug(
-                f"✅ LLM调用完成，响应长度: {len(response) if response else 0}"
-            )
-
-            # 解析JSON响应
-            start_time = self._extract_start_time_from_timestamp(memcell.timestamp)
-            semantic_memories = await self._parse_semantic_memories_response(
-                response, memcell.event_id, start_time
-            )
-
-            # 确保返回恰好10条
-            if len(semantic_memories) > 10:
-                semantic_memories = semantic_memories[:10]
-            elif len(semantic_memories) < 10:
-                logger.warning(
-                    f"生成的语义记忆联想数量不足10条，实际生成: {len(semantic_memories)}"
+                # 构建提示词
+                prompt = get_group_semantic_generation_prompt(
+                    memcell_summary=memcell.summary,
+                    memcell_episode=memcell.episode or "",
+                    user_ids=memcell.user_id_list,
                 )
 
-            logger.info(f"成功生成 {len(semantic_memories)} 条语义记忆联想")
-            for i, memory in enumerate(semantic_memories[:3], 1):
-                logger.info(f"  联想{i}: {memory.content}")
+                # 调用LLM生成联想
+                logger.debug(f"📝 开始调用LLM生成语义记忆联想，提示词长度: {len(prompt)}")
+                response = await self.llm_provider.generate(prompt=prompt, temperature=0.3)
+                logger.debug(
+                    f"✅ LLM调用完成，响应长度: {len(response) if response else 0}"
+                )
 
-            return semantic_memories
+                # 解析JSON响应
+                start_time = self._extract_start_time_from_timestamp(memcell.timestamp)
+                semantic_memories = await self._parse_semantic_memories_response(
+                    response, memcell.event_id, start_time
+                )
 
-        except Exception as e:
-            logger.error(f"生成语义记忆联想时出错: {e}")
-            import traceback
+                # 验证必须至少有1条
+                if len(semantic_memories) == 0:
+                    raise ValueError("LLM返回的语义记忆列表为空")
 
-            traceback.print_exc()
-            return []
+                # 确保返回恰好10条（不足则警告，但不重试）
+                if len(semantic_memories) > 10:
+                    semantic_memories = semantic_memories[:10]
+                elif len(semantic_memories) < 10:
+                    logger.warning(
+                        f"生成的语义记忆联想数量不足10条，实际生成: {len(semantic_memories)}"
+                    )
+
+                logger.info(f"✅ 成功生成 {len(semantic_memories)} 条语义记忆联想")
+                for i, memory in enumerate(semantic_memories[:3], 1):
+                    logger.info(f"  联想{i}: {memory.content}")
+
+                return semantic_memories
+
+            except Exception as e:
+                logger.warning(f"生成语义记忆联想重试 {retry+1}/5: {e}")
+                if retry == 4:
+                    logger.error(f"生成语义记忆联想失败，已重试5次")
+                    return []
+                continue
+        
+        return []
 
     async def generate_semantic_memories_for_episode(
         self, episode: Memory
     ) -> List[SemanticMemoryItem]:
         """
         为EpisodeMemory生成语义记忆联想预测
-
+        
         这是个人模式：基于EpisodeMemory内容，大模型联想出10条对用户后续的生活、决策可能产生的影响
-
+        
         Args:
             episode: EpisodeMemory对象
-
+        
         Returns:
             语义记忆联想项目列表（10条），包含时间信息
         """
-        try:
-            logger.info(f"🎯 为EpisodeMemory生成语义记忆联想: {episode.subject}")
+        # 最多重试5次
+        for retry in range(5):
+            try:
+                logger.info(f"🎯 为EpisodeMemory生成语义记忆联想: {episode.subject}，重试次数: {retry+1}/5")
 
-            # 构建提示词
-            # 直接使用episode的user_id
-            prompt = get_semantic_generation_prompt(
-                episode_memory=episode.summary or "",
-                episode_content=episode.episode or "",
-                user_id=episode.user_id,
-            )
-
-            # 调用LLM生成联想
-            response = await self.llm_provider.generate(prompt=prompt, temperature=0.3)
-
-            # 解析JSON响应
-            source_episode_id = (
-                episode.ori_event_id_list[0] if episode.ori_event_id_list else None
-            )
-            start_time = self._extract_start_time_from_timestamp(episode.timestamp)
-            semantic_memories = await self._parse_semantic_memories_response(
-                response, source_episode_id, start_time
-            )
-
-            # 确保返回恰好10条
-            if len(semantic_memories) > 10:
-                semantic_memories = semantic_memories[:10]
-            elif len(semantic_memories) < 10:
-                logger.warning(
-                    f"生成的语义记忆联想数量不足10条，实际生成: {len(semantic_memories)}"
+                # 构建提示词
+                # 直接使用episode的user_id
+                prompt = get_semantic_generation_prompt(
+                    episode_memory=episode.summary or "",
+                    episode_content=episode.episode or "",
+                    user_id=episode.user_id,
                 )
 
-            logger.info(f"成功生成 {len(semantic_memories)} 条语义记忆联想")
-            for i, memory in enumerate(semantic_memories[:3], 1):
-                logger.info(f"  联想{i}: {memory.content}")
+                # 调用LLM生成联想
+                response = await self.llm_provider.generate(prompt=prompt, temperature=0.3)
 
-            return semantic_memories
+                # 解析JSON响应
+                source_episode_id = (
+                    episode.ori_event_id_list[0] if episode.ori_event_id_list else None
+                )
+                start_time = self._extract_start_time_from_timestamp(episode.timestamp)
+                semantic_memories = await self._parse_semantic_memories_response(
+                    response, source_episode_id, start_time
+                )
 
-        except Exception as e:
-            logger.error(f"生成语义记忆联想时出错: {e}")
-            import traceback
+                # 验证必须至少有1条
+                if len(semantic_memories) == 0:
+                    raise ValueError("LLM返回的语义记忆列表为空")
 
-            traceback.print_exc()
-            return []
+                # 确保返回恰好10条（不足则警告，但不重试）
+                if len(semantic_memories) > 10:
+                    semantic_memories = semantic_memories[:10]
+                elif len(semantic_memories) < 10:
+                    logger.warning(
+                        f"生成的语义记忆联想数量不足10条，实际生成: {len(semantic_memories)}"
+                    )
+
+                logger.info(f"✅ 成功生成 {len(semantic_memories)} 条语义记忆联想")
+                for i, memory in enumerate(semantic_memories[:3], 1):
+                    logger.info(f"  联想{i}: {memory.content}")
+
+                return semantic_memories
+
+            except Exception as e:
+                logger.warning(f"生成语义记忆联想重试 {retry+1}/5: {e}")
+                if retry == 4:
+                    logger.error(f"生成语义记忆联想失败，已重试5次")
+                    return []
+                continue
+        
+        return []
 
     @staticmethod
     def _clean_date_string(date_str: Optional[str]) -> Optional[str]:
@@ -247,11 +263,12 @@ class SemanticMemoryExtractor(MemoryExtractor):
             # 确保data是列表
             if isinstance(data, list):
                 semantic_memories = []
-
+                
+                # 先收集所有需要处理的数据
+                items_to_process = []
                 for item in data:
-
                     content = item.get('content', '')
-                    evidence = item.get('evidence', '')  # ← 读取 evidence
+                    evidence = item.get('evidence', '')
 
                     # 使用传入的start_time或LLM提供的时间
                     item_start_time = item.get('start_time', start_time)
@@ -276,21 +293,38 @@ class SemanticMemoryExtractor(MemoryExtractor):
                             )
                         # 如果LLM都没有提供，则保持为None（不进行额外提取）
 
-                    vs = get_vectorize_service()
-                    vec = await vs.get_embedding(content)
-                    # 创建SemanticMemoryItem对象
-                    memory_item = SemanticMemoryItem(
-                        content=content,
-                        evidence=evidence,  # ← 添加 evidence 字段
-                        start_time=item_start_time,
-                        end_time=item_end_time,
-                        duration_days=item_duration_days,
-                        source_episode_id=item.get(
-                            'source_episode_id', source_episode_id
-                        ),
-                        embedding=vec.tolist(),
-                    )
+                    items_to_process.append({
+                        'content': content,
+                        'evidence': evidence,
+                        'start_time': item_start_time,
+                        'end_time': item_end_time,
+                        'duration_days': item_duration_days,
+                        'source_episode_id': item.get('source_episode_id', source_episode_id),
+                    })
 
+                # 批量计算所有 content 的 embeddings（性能优化）
+                vs = get_vectorize_service()
+                contents = [item['content'] for item in items_to_process]
+                embeddings_batch = await vs.get_embeddings(contents)  # 使用 get_embeddings (List[str])
+                
+                # 创建SemanticMemoryItem对象
+                for i, item_data in enumerate(items_to_process):
+                    # 处理 embedding：可能是 numpy 数组或已经是列表
+                    embedding = embeddings_batch[i]
+                    if hasattr(embedding, 'tolist'):
+                        embedding = embedding.tolist()
+                    elif not isinstance(embedding, list):
+                        embedding = list(embedding)
+                    
+                    memory_item = SemanticMemoryItem(
+                        content=item_data['content'],
+                        evidence=item_data['evidence'],
+                        start_time=item_data['start_time'],
+                        end_time=item_data['end_time'],
+                        duration_days=item_data['duration_days'],
+                        source_episode_id=item_data['source_episode_id'],
+                        embedding=embedding,
+                    )
                     semantic_memories.append(memory_item)
 
                 return semantic_memories

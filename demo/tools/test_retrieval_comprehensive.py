@@ -18,6 +18,7 @@ import asyncio
 import httpx
 from typing import List, Dict, Any
 from datetime import datetime
+import time
 
 
 class RetrievalTester:
@@ -42,6 +43,13 @@ class RetrievalTester:
         self.successful_tests = 0
         self.failed_tests = 0
         self.test_results = []
+        
+        # 计时统计
+        self.start_time = None
+        self.end_time = None
+        self.total_request_time = 0.0  # 所有请求的累计耗时
+        self.max_latency = 0.0  # 最大延迟
+        self.min_latency = float('inf')  # 最小延迟
     
     async def test_retrieval(
         self,
@@ -72,6 +80,9 @@ class RetrievalTester:
         """
         self.total_tests += 1
         
+        # 记录单次请求开始时间
+        request_start_time = time.time()
+        
         # 构建请求参数
         payload = {
             "query": query,
@@ -94,10 +105,19 @@ class RetrievalTester:
                 response.raise_for_status()
                 result = response.json()
                 
+                # 计算单次请求耗时
+                request_elapsed = (time.time() - request_start_time) * 1000  # 转为毫秒
+                self.total_request_time += request_elapsed
+                
                 if result.get("status") == "ok":
                     memories = result.get("result", {}).get("memories", [])
                     metadata = result.get("result", {}).get("metadata", {})
                     latency = metadata.get("total_latency_ms", 0)
+                    
+                    # 更新最大/最小延迟
+                    if latency > 0:
+                        self.max_latency = max(self.max_latency, latency)
+                        self.min_latency = min(self.min_latency, latency)
                     
                     if len(memories) == 0:
                         if allow_empty:
@@ -142,6 +162,7 @@ class RetrievalTester:
                         "retrieval_mode": retrieval_mode,
                         "count": len(memories),
                         "latency_ms": latency,
+                        "request_time_ms": request_elapsed,  # 添加完整请求耗时
                         "metadata": metadata,
                         "memories": memories[:3],  # 只保存前3条
                     }
@@ -151,7 +172,7 @@ class RetrievalTester:
                     scores = [f"{m.get('score', 0):.4f}" for m in memories[:3]]
                     score_info = f"，分数: [{', '.join(scores)}]"
                     
-                    print(f"  ✅ {test_name}: 找到 {len(memories)} 条记忆，耗时 {latency:.2f}ms{score_info}")
+                    print(f"  ✅ {test_name}: 找到 {len(memories)} 条记忆，API耗时 {latency:.2f}ms，总耗时 {request_elapsed:.2f}ms{score_info}")
                     
                     if data_source == "profile" and memories:
                         profile_entry = memories[0]
@@ -225,6 +246,10 @@ class RetrievalTester:
             group_id: 群组ID
             current_time: 当前时间（YYYY-MM-DD格式）
         """
+        # 记录测试开始时间
+        if self.start_time is None:
+            self.start_time = time.time()
+        
         print("\n" + "="*80)
         print(f"🧪 开始全面检索测试")
         print(f"   查询: {query}")
@@ -291,6 +316,12 @@ class RetrievalTester:
     
     def print_summary(self):
         """打印测试总结"""
+        # 记录测试结束时间
+        if self.end_time is None:
+            self.end_time = time.time()
+        
+        total_elapsed = self.end_time - self.start_time if self.start_time else 0
+        
         print("\n" + "="*80)
         print("📊 测试总结")
         print("="*80)
@@ -299,6 +330,14 @@ class RetrievalTester:
         print(f"失败: {self.failed_tests} ❌")
         print(f"成功率: {(self.successful_tests/self.total_tests*100):.1f}%")
         
+        # ⏱️ 计时统计
+        print("\n⏱️  性能统计:")
+        print(f"  总测试耗时: {total_elapsed:.2f}秒")
+        print(f"  总请求耗时: {self.total_request_time/1000:.2f}秒")
+        print(f"  平均请求耗时: {self.total_request_time/self.total_tests:.2f}ms" if self.total_tests > 0 else "  平均请求耗时: N/A")
+        print(f"  最大API延迟: {self.max_latency:.2f}ms" if self.max_latency > 0 else "  最大API延迟: N/A")
+        print(f"  最小API延迟: {self.min_latency:.2f}ms" if self.min_latency != float('inf') else "  最小API延迟: N/A")
+        
         # 按数据源分组统计
         print("\n📈 按数据源分组:")
         for data_source in self.data_sources:
@@ -306,7 +345,8 @@ class RetrievalTester:
             success = len([r for r in source_results if r.get("status") == "✅ 成功"])
             total = len(source_results)
             avg_count = sum(r.get("count", 0) for r in source_results if r.get("count")) / total if total > 0 else 0
-            print(f"  {data_source}: {success}/{total} 成功，平均返回 {avg_count:.1f} 条记忆")
+            avg_latency = sum(r.get("latency_ms", 0) for r in source_results if r.get("latency_ms")) / total if total > 0 else 0
+            print(f"  {data_source}: {success}/{total} 成功，平均 {avg_count:.1f} 条，平均API耗时 {avg_latency:.2f}ms")
         
         # 按检索模式分组统计
         print("\n🔍 按检索模式分组:")
@@ -346,7 +386,7 @@ class RetrievalTester:
         output_path = Path(output_file)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # 构建导出数据
+        # 导出数据添加计时信息
         export_data = {
             "test_time": datetime.now().isoformat(),
             "summary": {
@@ -354,6 +394,11 @@ class RetrievalTester:
                 "successful_tests": self.successful_tests,
                 "failed_tests": self.failed_tests,
                 "success_rate": f"{(self.successful_tests/self.total_tests*100):.1f}%" if self.total_tests > 0 else "0%",
+                "total_elapsed_seconds": round(self.end_time - self.start_time, 2) if self.start_time and self.end_time else 0,
+                "total_request_time_ms": round(self.total_request_time, 2),
+                "avg_request_time_ms": round(self.total_request_time / self.total_tests, 2) if self.total_tests > 0 else 0,
+                "max_latency_ms": round(self.max_latency, 2) if self.max_latency > 0 else 0,
+                "min_latency_ms": round(self.min_latency, 2) if self.min_latency != float('inf') else 0,
             },
             "test_results": self.test_results,
         }
@@ -366,6 +411,9 @@ class RetrievalTester:
 
 async def main():
     """主测试函数"""
+    
+    # 记录整体测试开始时间
+    overall_start_time = time.time()
     
     print("="*80)
     print("🧪 全面的记忆检索测试")
@@ -386,9 +434,10 @@ async def main():
     print("\n" + "🔬"*40)
     print("测试场景 1: 个人记忆查询")
     print("🔬"*40)
+    test1_start = time.time()
     
     await tester.run_comprehensive_test(
-        query="北京",
+        query="运动",
         user_id="user_001",  # 使用实际数据库中的 user_id
         group_id=None,  # 不指定 group_id
         current_time=None,  # 不传 current_time,避免过滤掉已过期的群组语义记忆
@@ -398,14 +447,17 @@ async def main():
         },
         profile_group_id="chat_user_001_assistant",
     )
+    test1_elapsed = time.time() - test1_start
+    print(f"\n⏱️  场景 1 耗时: {test1_elapsed:.2f}秒")
     
     # ========== 测试 2: 群组记忆查询 ==========
     print("\n" + "🔬"*40)
     print("测试场景 2: 群组记忆查询")
     print("🔬"*40)
+    test2_start = time.time()
     
     await tester.run_comprehensive_test(
-        query="北京",
+        query="运动",
         user_id="user_001",  # 使用实际数据库中的 user_id
         group_id="chat_user_001_assistant",  # 使用实际数据库中的 group_id
         current_time=None,  # 不传 current_time,避免过滤掉已过期的群组语义记忆
@@ -415,16 +467,19 @@ async def main():
         },
         profile_group_id="chat_user_001_assistant",
     )
+    test2_elapsed = time.time() - test2_start
+    print(f"\n⏱️  场景 2 耗时: {test2_elapsed:.2f}秒")
     
     # ========== 测试 3: 语义记忆专项测试（有效期过滤） ==========
     print("\n" + "🔬"*40)
     print("测试场景 3: 语义记忆有效期过滤")
     print("🔬"*40)
+    test3_start = time.time()
     
     # 测试当前有效的语义记忆
     print("\n  📅 子测试 3.1: 检索当前有效的语义记忆")
     result_current = await tester.test_retrieval(
-        query="北京",
+        query="运动",
         data_source="semantic_memory",
         memory_scope="personal",
         retrieval_mode="rrf",
@@ -435,7 +490,7 @@ async def main():
     # 测试未来时间（应该返回更多记忆）
     print("\n  📅 子测试 3.2: 检索未来时间的语义记忆（包含更长期的预测）")
     result_future = await tester.test_retrieval(
-        query="北京",
+        query="运动",
         data_source="semantic_memory",
         memory_scope="personal",
         retrieval_mode="rrf",
@@ -447,7 +502,7 @@ async def main():
     # 测试过去时间（应该返回较少记忆）
     print("\n  📅 子测试 3.3: 检索过去时间的语义记忆（已过期的记忆）")
     result_past = await tester.test_retrieval(
-        query="北京",
+        query="运动",
         data_source="semantic_memory",
         memory_scope="personal",
         retrieval_mode="rrf",
@@ -456,13 +511,23 @@ async def main():
         allow_empty=True,
     )
     
+    test3_elapsed = time.time() - test3_start
+    
     print(f"\n  📊 时间过滤效果对比:")
     print(f"     过去时间(2024-01-01): {result_past.get('count', 0)} 条")
     print(f"     当前时间({datetime.now().strftime('%Y-%m-%d')}): {result_current.get('count', 0)} 条")
     print(f"     未来时间(2027-12-31): {result_future.get('count', 0)} 条")
+    print(f"\n⏱️  场景 3 耗时: {test3_elapsed:.2f}秒")
     
     # ========== 打印总结 ==========
     tester.print_summary()
+    
+    # 总体耗时
+    overall_elapsed = time.time() - overall_start_time
+    print(f"\n⏱️  总体测试耗时: {overall_elapsed:.2f}秒")
+    print(f"   场景 1: {test1_elapsed:.2f}秒 ({test1_elapsed/overall_elapsed*100:.1f}%)")
+    print(f"   场景 2: {test2_elapsed:.2f}秒 ({test2_elapsed/overall_elapsed*100:.1f}%)")
+    print(f"   场景 3: {test3_elapsed:.2f}秒 ({test3_elapsed/overall_elapsed*100:.1f}%)")
     
     # ========== 导出结果 ==========
     tester.export_results()
@@ -488,7 +553,7 @@ async def demo_semantic_memory_evidence():
     print("   当用户查询'推荐食物'时，可以看到推荐依据")
     
     payload = {
-        "query": "北京",
+        "query": "运动",
         "user_id": "robot_001",  # 使用实际数据库中的 user_id
         "data_source": "semantic_memory",
         "retrieval_mode": "rrf",

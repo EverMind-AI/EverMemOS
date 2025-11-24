@@ -605,8 +605,14 @@ class ProfileMemoryExtractor(MemoryExtractor):
                     print(f"[ProfileExtractor] ❌ episode 和 conversation_text 都为空！")
 
             # Collect user statistics
+            # 🔧 只统计 request.user_id_list 中的用户（已过滤 robot/assistant）
             # for user_id in getattr(memcell, "user_id_list", []) or []:
+            target_user_ids = set(request.user_id_list) if request.user_id_list else set(user_id_to_name.keys())
             for user_id in user_id_to_name.keys():
+                # 🔧 只处理目标用户列表中的用户
+                if user_id not in target_user_ids:
+                    continue
+                    
                 if user_id not in user_profiles:
                     user_profiles[user_id] = {
                         "user_id": user_id,

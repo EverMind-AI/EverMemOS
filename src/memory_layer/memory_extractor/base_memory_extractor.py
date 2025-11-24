@@ -15,8 +15,11 @@ from ..types import MemoryType, Memory, MemCell
 
 @dataclass
 class MemoryExtractRequest:
-    memcell_list: List[MemCell]
-    user_id_list: List[str]
+    """
+    记忆提取请求基类
+    """
+    memcell: MemCell
+    user_id: Optional[str] = None
     group_id: Optional[str] = None
     group_name: Optional[str] = None
     participants: Optional[List[str]] = None

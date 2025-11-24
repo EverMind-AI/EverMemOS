@@ -281,41 +281,16 @@ class ProfileManager:
         
         print(f"[ProfileManager] ✅ 找到 {len(memcells)} 个 MemCell")
         
-        # 🔧 关键修复：将字典格式的 memcell 转换为完整的 MemCell 对象
-        # 从 MongoDB 重新加载完整的 MemCell 数据
-        from infra_layer.adapters.out.persistence.document.memory.memcell import MemCell as MemCellDoc
+        # ✅ 直接使用传入的字典格式 MemCell
+        # biz_layer 已经准备好了完整数据,包含 episode (已保存到 MongoDB)
         
-        full_memcells = []
+        memcells = full_memcells = self._cluster_memcells.get(cluster_id, [])
+        
         for mc in memcells:
-            event_id = getattr(mc, 'event_id', None) or getattr(mc, '_id', None) or getattr(mc, 'id', None)
-            if event_id:
-                print(f"[ProfileManager] 正在从 MongoDB 加载 MemCell: {event_id} (类型: {type(event_id).__name__})")
-                # 从 MongoDB 加载完整的 MemCell
-                # 尝试多种方式查询
-                full_mc = None
-                
-                # 方式1: 用 event_id 字段查询
-                full_mc = await MemCellDoc.find_one({"event_id": str(event_id)})
-                
-                # 方式2: 如果没找到，尝试用 _id 查询
-                if not full_mc:
-                    try:
-                        from bson import ObjectId
-                        if isinstance(event_id, (str, ObjectId)):
-                            oid = ObjectId(str(event_id)) if isinstance(event_id, str) else event_id
-                            full_mc = await MemCellDoc.get(oid)
-                            if full_mc:
-                                print(f"[ProfileManager] ✅ 用 _id 找到了")
-                    except Exception as e:
-                        print(f"[ProfileManager] ⚠️  用 _id 查询失败: {e}")
-                
-                if full_mc:
-                    full_memcells.append(full_mc)
-                    print(f"[ProfileManager] ✅ 加载成功，包含 episode: {len(full_mc.episode) if full_mc.episode else 0} 字符")
-                else:
-                    print(f"[ProfileManager] ⚠️  未找到 MemCell: {event_id}，使用原始字典")
-                    # 如果找不到，使用原始的字典对象
-                    full_memcells.append(mc)
+            event_id = mc.get('event_id', 'unknown') if isinstance(mc, dict) else getattr(mc, 'event_id', 'unknown')
+            episode = mc.get('episode', '') if isinstance(mc, dict) else getattr(mc, 'episode', '')
+            episode_len = len(episode) if episode else 0
+            print(f"[ProfileManager] 使用 MemCell: {event_id}, episode 长度: {episode_len} 字符")
         
         if not full_memcells:
             print(f"[ProfileManager] ❌ 没有加载到任何完整的 MemCell")
@@ -511,12 +486,30 @@ class ProfileManager:
             
             mc_obj = MemCellWrapper(memcell)
             
-            print(f"[ProfileManager] 调用 on_memcell_clustered...")
+            # 🔧 优先使用 participants，如果为空则使用 user_id_list
+            user_id_list = memcell.get("participants", []) or memcell.get("user_id_list", [])
+            print(f"[ProfileManager] 原始参与者列表: {user_id_list}")
+            
+            # 🔧 如果是 assistant 场景，过滤掉 robot/assistant 用户
+            if self.config.scenario == ScenarioType.ASSISTANT:
+                # 过滤掉 robot 和 assistant 用户
+                filtered_user_ids = [
+                    uid for uid in user_id_list 
+                    if uid and not (uid.startswith("robot_") or uid.startswith("assistant_"))
+                ]
+                print(f"[ProfileManager] assistant 场景，过滤前: {user_id_list}, 过滤后: {filtered_user_ids}")
+                user_id_list = filtered_user_ids
+            
+            if not user_id_list:
+                print(f"[ProfileManager] ⚠️  过滤后 user_id_list 为空，跳过 Profile 提取")
+                return
+            
+            print(f"[ProfileManager] 调用 on_memcell_clustered，user_id_list={user_id_list}...")
             # Trigger profile update
             result = await self.on_memcell_clustered(
                 memcell=mc_obj,
                 cluster_id=cluster_id,
-                user_id_list=memcell.get("user_id_list", [])
+                user_id_list=user_id_list
             )
             print(f"[ProfileManager] on_memcell_clustered 返回: {result}")
         

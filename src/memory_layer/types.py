@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
-import datetime
+from datetime import datetime
 from common_utils.datetime_utils import to_iso_format
 
 from agentic_layer.memory_models import MemoryType
@@ -59,7 +59,7 @@ class MemCell:
     user_id_list: List[str]
     # For downstream consumers we store normalized dicts extracted from RawData
     original_data: List[Dict[str, Any]]
-    timestamp: datetime.datetime
+    timestamp: datetime
     summary: str
 
     # Optional fields
@@ -134,7 +134,7 @@ class Memory:
 
     memory_type: MemoryType
     user_id: str
-    timestamp: datetime.datetime
+    timestamp: datetime
     ori_event_id_list: List[str]
 
     subject: Optional[str] = None
@@ -205,16 +205,18 @@ class SemanticMemory:
     content: str
     knowledge_type: str = "knowledge"
     source_episodes: List[str] = None
-    created_at: datetime.datetime = None
+    created_at: datetime = None
     group_id: Optional[str] = None
     participants: Optional[List[str]] = None
     metadata: Optional[Dict[str, Any]] = None
 
     def __post_init__(self):
+        from common_utils.datetime_utils import get_now_with_timezone
+        
         if self.source_episodes is None:
             self.source_episodes = []
         if self.created_at is None:
-            self.created_at = datetime.datetime.now()
+            self.created_at = get_now_with_timezone()
         if self.metadata is None:
             self.metadata = {}
 

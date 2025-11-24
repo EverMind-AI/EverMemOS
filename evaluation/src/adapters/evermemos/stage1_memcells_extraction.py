@@ -31,10 +31,15 @@ from memory_layer.memcell_extractor.conv_memcell_extractor import (
     ConversationMemCellExtractRequest,
 )
 from memory_layer.memory_extractor.episode_memory_extractor import (
-    EpisodeMemoryExtractRequest,
     EpisodeMemoryExtractor,
 )
+from memory_layer.memory_extractor.base_memory_extractor import (
+    MemoryExtractRequest,
+)
 from memory_layer.memory_extractor.event_log_extractor import EventLogExtractor
+from memory_layer.memory_extractor.semantic_memory_extractor import (
+    SemanticMemoryExtractor,
+)
 from memory_layer.types import RawDataType
 
 # Clustering and Profile management components
@@ -150,6 +155,55 @@ def convert_conversation_to_raw_data_list(conversation: list) -> List[RawData]:
     return raw_data_list
 
 
+async def _extract_all_memories_for_memcell(
+    memcell: MemCell,
+    speakers: set,
+    episode_extractor,
+    semantic_extractor,
+    conv_id: str,
+):
+    """
+    串行提取一个 MemCell 的所有记忆
+    
+    流程：Episode → Semantic (可选)
+    注意：EventLog 在外部并发处理，因为需要所有 MemCell 收集完毕后统一处理
+    
+    Args:
+        memcell: 要提取记忆的 MemCell
+        speakers: 对话参与者
+        episode_extractor: Episode 提取器
+        semantic_extractor: Semantic 提取器（可选）
+        conv_id: 对话 ID（用于日志）
+    """
+    # 1. 提取 Episode（必须）
+    episode_request = MemoryExtractRequest(
+        memcell=memcell,
+        user_id=None,  # None 表示群组 episode
+        participants=list(speakers),
+        group_id=None,
+    )
+    
+    episode_memory = await episode_extractor.extract_memory(episode_request)
+    
+    if episode_memory and episode_memory.episode:
+        memcell.episode = episode_memory.episode
+        memcell.subject = episode_memory.subject if episode_memory.subject else ""
+        memcell.summary = episode_memory.episode[:200] + "..."
+        
+        # 2. 提取 Semantic（可选）
+        if semantic_extractor:
+            semantic_memories = await semantic_extractor.generate_semantic_memories_for_episode(
+                episode_text=episode_memory.episode,
+                timestamp=memcell.timestamp,
+                source_episode_id=memcell.event_id,
+            )
+            if semantic_memories:
+                memcell.semantic_memories = semantic_memories
+    else:
+        # Episode 提取失败 - 直接抛出异常，不要隐藏错误
+        raise ValueError(f"❌ Episode 提取失败！conv_id={conv_id}, memcell_id={memcell.event_id}")
+
+
 async def memcell_extraction_from_conversation(
     raw_data_list: List[RawData],
     llm_provider: LLMProvider = None,
@@ -158,12 +212,17 @@ async def memcell_extraction_from_conversation(
     conv_id: str = None,  # Add conversation ID for progress bar description
     progress: Progress = None,  # Add progress bar object
     task_id: int = None,  # Add task ID
-    use_semantic_extraction: bool = False,  # Enable semantic memory extraction
+    enable_semantic_extraction: bool = False,  # 是否提取语义记忆
 ) -> list:
 
     episode_extractor = EpisodeMemoryExtractor(
         llm_provider=llm_provider, use_eval_prompts=True
     )
+    # 如果启用语义记忆提取，创建 SemanticMemoryExtractor
+    semantic_extractor = None
+    if enable_semantic_extraction:
+        semantic_extractor = SemanticMemoryExtractor(llm_provider=llm_provider)
+    
     memcell_list = []
     speakers = {
         raw_data.content["speaker_id"]
@@ -199,18 +258,8 @@ async def memcell_extraction_from_conversation(
             smart_mask_flag=smart_mask_flag,
             # group_id="group_1",
         )
-        for i in range(10):
-            try:
-                result = await memcell_extractor.extract_memcell(
-                    request,
-                    use_semantic_extraction=use_semantic_extraction,  # Pass flag
-                )
-                break
-            except Exception as e:
-                print('retry: ', i)
-                if i == 9:
-                    raise Exception("Memcell extraction failed")
-                continue
+        # ❌ 删除重试机制，让错误直接暴露
+        result = await memcell_extractor.extract_memcell(request)
         memcell_result = result[0]
         # print(f"   ✅ Memcell result: {memcell_result}")  # Commented to avoid interrupting progress bar
         if memcell_result is None:
@@ -220,7 +269,17 @@ async def memcell_extraction_from_conversation(
                 history_raw_data_list = [history_raw_data_list[-1], raw_data]
             else:
                 history_raw_data_list = [raw_data]
-            memcell_result.summary = memcell_result.episode[:200] + "..."
+            
+            # ✅ 串行提取：检测到边界后，立即提取这个 MemCell 的所有记忆
+            # 这样 Clustering 和 Profile 可以立即使用完整的 MemCell
+            await _extract_all_memories_for_memcell(
+                memcell=memcell_result,
+                speakers=speakers,
+                episode_extractor=episode_extractor,
+                semantic_extractor=semantic_extractor,
+                conv_id=conv_id,
+            )
+            
             memcell_list.append(memcell_result)
         else:
             console = Console()
@@ -232,35 +291,30 @@ async def memcell_extraction_from_conversation(
     if progress and task_id is not None:
         progress.update(task_id, completed=total_messages)
 
+    # 处理剩余的 history（如果有）
     if history_raw_data_list:
         memcell = MemCell(
             type=RawDataType.CONVERSATION,
             event_id=str(uuid.uuid4()),
             user_id_list=list(speakers),
             original_data=history_raw_data_list,
-            timestamp=(memcell_list[-1].timestamp),
-            summary="111",
-        )
-        episode_request = EpisodeMemoryExtractRequest(
-            memcell_list=[memcell],
-            user_id_list=request.user_id_list,
-            participants=list(speakers),
-            group_id=request.group_id,
-        )
-
-        episode_result = await episode_extractor.extract_memory(
-            episode_request, use_group_prompt=True
-        )
-        memcell.episode = episode_result.episode
-        memcell.subject = episode_result.subject
-        memcell.summary = episode_result.episode[:200] + "..."
-        memcell.original_data = episode_extractor.get_conversation_text(
-            history_raw_data_list
+            timestamp=(memcell_list[-1].timestamp if memcell_list else get_now_with_timezone()),
+            summary="Final segment",
         )
         original_data_list = []
         for raw_data in history_raw_data_list:
             original_data_list.append(memcell_extractor._data_process(raw_data))
         memcell.original_data = original_data_list
+        
+        # 串行提取最后一个 MemCell 的所有记忆
+        await _extract_all_memories_for_memcell(
+            memcell=memcell,
+            speakers=speakers,
+            episode_extractor=episode_extractor,
+            semantic_extractor=semantic_extractor,
+            conv_id=conv_id,
+        )
+        
         memcell_list.append(memcell)
 
     return memcell_list
@@ -292,10 +346,10 @@ async def process_single_conversation(
     Returns:
         tuple: (conv_id, memcell_list)
     """
-    try:
-        # Update status to processing
-        if progress and task_id is not None:
-            progress.update(task_id, status="Processing")
+    # ❌ 删除最外层 try，让错误直接崩溃
+    # Update status to processing
+    if progress and task_id is not None:
+        progress.update(task_id, status="Processing")
 
         # Create components based on configuration
         cluster_mgr = None
@@ -360,8 +414,7 @@ async def process_single_conversation(
             # Connect components
             profile_mgr.attach_to_cluster_manager(cluster_mgr)
 
-        # Extract MemCells (enable semantic memory based on config)
-        use_semantic = config.enable_semantic_extraction if config else False
+        # Extract MemCells（传递语义记忆提取配置）
         memcell_list = await memcell_extraction_from_conversation(
             raw_data_list,
             llm_provider=llm_provider,
@@ -369,7 +422,7 @@ async def process_single_conversation(
             conv_id=conv_id,
             progress=progress,
             task_id=task_id,
-            use_semantic_extraction=use_semantic,  # Pass semantic memory flag
+            enable_semantic_extraction=config.enable_semantic_extraction if config else False,
         )
         # print(f"   ✅ Conv {conv_id}: {len(memcell_list)} memcells extracted")  # Commented to avoid interrupting progress bar
 
@@ -390,26 +443,22 @@ async def process_single_conversation(
         # Optimization: concurrent event log generation (10-20x faster)
         if event_log_extractor:
             # Prepare all memcells needing event log extraction
+            # 过滤掉 episode 提取失败的 MemCell
             memcells_with_episode = [
                 (idx, memcell)
                 for idx, memcell in enumerate(memcell_list)
-                if hasattr(memcell, 'episode') and memcell.episode
+                if hasattr(memcell, 'episode') 
+                and memcell.episode 
+                and memcell.episode != "Episode extraction failed"
             ]
 
             # Define single event log extraction task
             async def extract_single_event_log(idx: int, memcell):
-                try:
-                    event_log = await event_log_extractor.extract_event_log(
-                        episode_text=memcell.episode, timestamp=memcell.timestamp
-                    )
-                    return idx, event_log
-                except Exception as e:
-                    console = Console()
-                    console.print(
-                        f"\n⚠️  Event log generation failed (Conv {conv_id}, Memcell {idx}): {e}",
-                        style="yellow",
-                    )
-                    return idx, None
+                # ❌ 删除 try-except，让错误直接暴露
+                event_log = await event_log_extractor.extract_event_log(
+                    episode_text=memcell.episode, timestamp=memcell.timestamp
+                )
+                return idx, event_log
 
             # Concurrent extraction of all event logs (using Semaphore to control concurrency)
             sem = asyncio.Semaphore(
@@ -502,20 +551,6 @@ async def process_single_conversation(
             # No printing to avoid interrupting progress bar
 
         return conv_id, memcell_list
-
-    except Exception as e:
-        # Show error message so we know the specific issue
-        console = Console()
-        console.print(
-            f"\n❌ Error processing conversation {conv_id}: {e}", style="bold red"
-        )
-        if progress_counter:
-            progress_counter['completed'] += 1
-            progress_counter['failed'] += 1
-        import traceback
-
-        traceback.print_exc()
-        return conv_id, []
 
 
 async def main():

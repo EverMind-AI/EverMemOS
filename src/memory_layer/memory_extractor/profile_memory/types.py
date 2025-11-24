@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from ...types import Memory, MemoryType
+from ...types import Memory, MemoryType, MemCell
 from ..base_memory_extractor import MemoryExtractRequest
 
 
@@ -124,6 +124,20 @@ class ProfileMemory(Memory):
 
 @dataclass
 class ProfileMemoryExtractRequest(MemoryExtractRequest):
-    """Request payload used by ProfileMemoryExtractor."""
-
-    pass
+    """
+    Request payload used by ProfileMemoryExtractor.
+    
+    Profile 提取需要处理多个 MemCell (来自聚类),因此覆盖基类的单个 memcell,
+    使用 memcell_list 和 user_id_list
+    """
+    # 覆盖基类字段,设置为 None (Profile 不使用单个 memcell)
+    memcell: Optional[MemCell] = None
+    
+    # Profile 特有字段
+    memcell_list: List[MemCell] = None
+    user_id_list: Optional[List[str]] = None
+    
+    def __post_init__(self):
+        # 确保 memcell_list 不为 None
+        if self.memcell_list is None:
+            self.memcell_list = []

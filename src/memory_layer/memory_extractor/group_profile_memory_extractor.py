@@ -9,7 +9,7 @@ import os
 
 from ..llm.llm_provider import LLMProvider
 from .base_memory_extractor import MemoryExtractor, MemoryExtractRequest
-from ..types import Memory, MemoryType
+from ..types import Memory, MemoryType, MemCell
 from common_utils.datetime_utils import (
     get_now_with_timezone,
     from_timestamp,
@@ -159,9 +159,25 @@ class GroupProfileMemory(Memory):
 
 @dataclass
 class GroupProfileMemoryExtractRequest(MemoryExtractRequest):
-    """Request for group profile memory extraction."""
-
-    pass
+    """
+    Request for group profile memory extraction.
+    
+    Group Profile 提取也可能需要处理多个 MemCell (来自聚类),
+    因此也提供 memcell_list 支持
+    """
+    # 覆盖基类字段,可选的单个 memcell
+    memcell: Optional[MemCell] = None
+    
+    # Group Profile 特有字段
+    memcell_list: Optional[List[MemCell]] = None
+    user_id_list: Optional[List[str]] = None
+    
+    def __post_init__(self):
+        # 如果提供了 memcell_list,则使用它;否则使用单个 memcell
+        if self.memcell_list is None and self.memcell is not None:
+            self.memcell_list = [self.memcell]
+        elif self.memcell_list is None:
+            self.memcell_list = []
 
 
 # ============================================================================
