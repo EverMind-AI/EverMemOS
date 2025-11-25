@@ -1,5 +1,3 @@
-
-
 from dataclasses import dataclass
 import random
 import time
@@ -34,10 +32,10 @@ from component.redis_provider import RedisProvider
 from infra_layer.adapters.out.persistence.repository.episodic_memory_raw_repository import (
     EpisodicMemoryRawRepository,
 )
-from infra_layer.adapters.out.persistence.repository.semantic_memory_record_repository import (
+from infra_layer.adapters.out.persistence.repository.semantic_memory_record_raw_repository import (
     SemanticMemoryRecordRawRepository,
 )
-from infra_layer.adapters.out.persistence.repository.event_log_record_repository import (
+from infra_layer.adapters.out.persistence.repository.event_log_record_raw_repository import (
     EventLogRecordRawRepository,
 )
 from infra_layer.adapters.out.persistence.repository.conversation_status_raw_repository import (
@@ -108,6 +106,7 @@ from biz_layer.mem_sync import MemorySyncService
 
 logger = get_logger(__name__)
 
+
 @dataclass
 class MemoryDocPayload:
     memory_type: MemoryType
@@ -160,6 +159,7 @@ def _clone_event_log(raw_event_log: Any) -> Optional[EventLog]:
         return EventLog.from_dict(raw_event_log)
 
     return None
+
 
 async def _trigger_clustering(
     group_id: str, memcell: MemCell, scene: Optional[str] = None
@@ -573,7 +573,6 @@ async def save_memory_docs(
                     getattr(saved_doc, "event_id", None),
                 )
 
-    
         saved_result[MemoryType.EPISODIC_MEMORY] = saved_episodic
 
     # Semantic
@@ -603,9 +602,7 @@ async def save_memory_docs(
     # Profile
     profile_docs = grouped_docs.get(MemoryType.PROFILE, [])
     if profile_docs:
-        group_user_profile_repo = get_bean_by_type(
-            GroupUserProfileMemoryRawRepository
-        )
+        group_user_profile_repo = get_bean_by_type(GroupUserProfileMemoryRawRepository)
         saved_profiles = []
         for profile_mem in profile_docs:
             try:
@@ -934,17 +931,13 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
                 for doc in episodic_docs
             ]
             saved_docs_map = await save_memory_docs(episodic_payloads)
-            saved_episode_docs = saved_docs_map.get(
-                MemoryType.EPISODIC_MEMORY, []
-            )
+            saved_episode_docs = saved_docs_map.get(MemoryType.EPISODIC_MEMORY, [])
             for idx, (episode_mem, saved_doc) in enumerate(
                 zip(episodic_source_memories, saved_episode_docs)
             ):
                 episode_mem.event_id = str(saved_doc.event_id)
                 parent_docs_map[str(saved_doc.event_id)] = saved_doc
-                if group_parent_event_id is None and idx < len(
-                    group_episode_memories
-                ):
+                if group_parent_event_id is None and idx < len(group_episode_memories):
                     group_parent_event_id = str(saved_doc.event_id)
         else:
             group_parent_event_id = None
@@ -962,8 +955,10 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
                     # 跳过群组 Episode (user_id=None),因为群组的 semantic/eventlog 直接从 MemCell 提取
                     if episode_mem.user_id is None or episode_mem.user_id == "":
                         continue
-                    
-                    logger.info(f"🔍 为 user_id={episode_mem.user_id} 提取 {memory_type}")
+
+                    logger.info(
+                        f"🔍 为 user_id={episode_mem.user_id} 提取 {memory_type}"
+                    )
                     extracted_memories = await memory_manager.extract_memory(
                         memcell_list=[],
                         memory_type=memory_type,
@@ -971,9 +966,13 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
                         episode_memory=episode_mem,
                     )
                     if not extracted_memories:
-                        logger.warning(f"⚠️  提取失败或为空: user_id={episode_mem.user_id}, memory_type={memory_type}")
+                        logger.warning(
+                            f"⚠️  提取失败或为空: user_id={episode_mem.user_id}, memory_type={memory_type}"
+                        )
                         continue
-                    logger.info(f"✅ 成功提取: user_id={episode_mem.user_id}, memory_type={memory_type}, 数量={len(extracted_memories) if isinstance(extracted_memories, list) else 1}")
+                    logger.info(
+                        f"✅ 成功提取: user_id={episode_mem.user_id}, memory_type={memory_type}, 数量={len(extracted_memories) if isinstance(extracted_memories, list) else 1}"
+                    )
 
                     if memory_type == MemoryType.SEMANTIC_MEMORY:
                         for mem in extracted_memories:
@@ -981,7 +980,7 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
                             mem.user_id = episode_mem.user_id
                             mem.group_id = episode_mem.group_id
                             mem.group_name = episode_mem.group_name
-                            #TODO:添加 username
+                            # TODO:添加 username
                             if getattr(mem, "user_name", None) is None:
                                 mem.user_name = episode_mem.user_name
                             semantic_memories.append(mem)
@@ -990,7 +989,7 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
                         extracted_memories.user_id = episode_mem.user_id
                         extracted_memories.group_id = episode_mem.group_id
                         extracted_memories.group_name = episode_mem.group_name
-                        #TODO:添加 username
+                        # TODO:添加 username
                         if getattr(extracted_memories, "user_name", None) is None:
                             extracted_memories.user_name = episode_mem.user_name
                         event_logs.append(extracted_memories)
@@ -1061,7 +1060,7 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
         # TODO: 实际项目中应该加锁避免并发问题
         # 释放锁
         return episode_memories + semantic_memories + event_logs
-       
+
     else:
         return None
 

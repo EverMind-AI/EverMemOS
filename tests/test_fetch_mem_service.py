@@ -4,10 +4,7 @@
 
 import pytest
 
-from agentic_layer.fetch_mem_service import (
-    get_fetch_memory_service,
-    find_memories_by_user_id,
-)
+from agentic_layer.fetch_mem_service import get_fetch_memory_service
 from agentic_layer.memory_models import (
     MemoryType,
     BaseMemoryModel,
@@ -191,13 +188,16 @@ class TestFakeFetchMemoryService:
         assert profile1.user_id != profile2.user_id
 
 
-class TestConvenienceFunction:
-    """测试便捷函数"""
+class TestGetFetchMemoryService:
+    """测试获取服务实例"""
 
     @pytest.mark.asyncio
-    async def test_find_memories_by_user_id(self):
-        """测试便捷函数"""
-        response = await find_memories_by_user_id(
+    async def test_get_fetch_memory_service(self):
+        """测试通过工厂函数获取服务实例"""
+        service = get_fetch_memory_service()
+
+        # 验证服务实例可用
+        response = await service.find_by_user_id(
             "user_001", MemoryType.BASE_MEMORY, limit=3
         )
 

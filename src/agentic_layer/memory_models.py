@@ -32,7 +32,7 @@ class MemoryType(str, Enum):
     CORE = "core"  # 核心记忆
 
     EPISODIC_MEMORY = "episodic_memory"
-    SEMANTIC_MEMORY = "semantic_memory"
+    SEMANTIC_MEMORY = "semantic_memory"  # 暂时先不删除等着xinze确认
     ENTITY = "entity"
     RELATION = "relation"
     BEHAVIOR_HISTORY = "behavior_history"

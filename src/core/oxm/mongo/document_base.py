@@ -6,9 +6,13 @@ MongoDB 文档基类
 
 from datetime import datetime
 from common_utils.datetime_utils import to_timezone
-from beanie import Document
+from beanie import Document, WriteRules
 from pydantic import model_validator, BaseModel
-from typing import Self
+from typing import Self, List, Optional
+from motor.motor_asyncio import AsyncIOMotorClientSession
+from pymongo.results import InsertManyResult
+
+from core.oxm.mongo.audit_base import AuditBase
 
 MAX_RECURSION_DEPTH = 4
 DEFAULT_DATABASE = "default"
@@ -153,6 +157,40 @@ class DocumentBase(Document):
                 # 使用 __dict__ 直接更新值，避免触发验证器
                 self.__dict__[field_name] = new_value
         return self
+
+    @classmethod
+    async def insert_many(
+        cls,
+        documents: List["DocumentBase"],
+        session: Optional[AsyncIOMotorClientSession] = None,
+        link_rule: WriteRules = WriteRules.DO_NOTHING,
+        **pymongo_kwargs,
+    ) -> InsertManyResult:
+        """
+        重写批量插入方法，委托审计逻辑给 AuditBase
+
+        作为技术入口，检查模型是否继承了 AuditBase，如果是则委托审计字段处理。
+        这样保持了职责内聚：DocumentBase 负责协调，AuditBase 负责审计逻辑。
+
+        Args:
+            documents: 待插入的文档列表
+            session: 可选的 MongoDB 会话，用于事务支持
+            link_rule: 关联文档的写入规则
+            **pymongo_kwargs: 其他传递给 PyMongo 的参数
+
+        Returns:
+            InsertManyResult: 插入结果，包含 inserted_ids
+        """
+        # 检查模型是否继承了 AuditBase，如果是则委托审计处理
+
+        if issubclass(cls, AuditBase):
+            # 委托给 AuditBase 处理审计字段
+            AuditBase.prepare_for_insert_many(documents)
+
+        # 调用父类的 insert_many 方法
+        return await super().insert_many(
+            documents, session=session, link_rule=link_rule, **pymongo_kwargs
+        )
 
     class Settings:
         """文档设置"""
