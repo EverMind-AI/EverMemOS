@@ -34,7 +34,6 @@ from infra_layer.adapters.out.persistence.repository.conversation_meta_raw_repos
     ConversationMetaRawRepository,
 )
 from component.redis_provider import RedisProvider
-import json
 
 logger = logging.getLogger(__name__)
 
