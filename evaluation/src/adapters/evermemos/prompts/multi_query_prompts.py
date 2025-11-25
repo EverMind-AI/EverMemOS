@@ -51,14 +51,14 @@ When the question involves time or order:
 7. Keep queries < 25 words, same language as original.
 
 ### Output Format (STRICT JSON):
-{
+{{
   "queries": [
     "Refined query 1",
     "Refined query 2",
     "Refined query 3 (optional)"
   ],
   "reasoning": "Brief explanation of how temporal boundaries and expressions were expanded."
-}
+}}
 
 Now generate:
 """

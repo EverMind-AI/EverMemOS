@@ -532,9 +532,12 @@ class EverMemOSAdapter(BaseAdapter):
             )
             metadata = {}
 
-        # Convert to evaluation framework format
+        # Get response_top_k from config (use early for consistency)
+        response_top_k = exp_config.response_top_k
+
+        # Convert to evaluation framework format (use response_top_k to be consistent with formatted_context)
         results = []
-        for doc, score in top_results:
+        for doc, score in top_results[:response_top_k]:
             results.append(
                 {
                     "content": doc.get("episode", ""),
@@ -554,14 +557,9 @@ class EverMemOSAdapter(BaseAdapter):
             speaker_a = conversation.metadata.get("speaker_a", "Speaker A")
             speaker_b = conversation.metadata.get("speaker_b", "Speaker B")
 
-            # Use config.response_top_k instead of hardcoded 10
-            response_top_k = exp_config.response_top_k
-
-            # Build context
+            # Build context using response_top_k
             retrieved_docs_text = []
-            for doc, score in top_results[
-                :response_top_k
-            ]:  # Use response_top_k from config
+            for doc, score in top_results[:response_top_k]:
                 subject = doc.get('subject', 'N/A')
                 episode = doc.get('episode', 'N/A')
                 doc_text = f"{subject}: {episode}\n---"

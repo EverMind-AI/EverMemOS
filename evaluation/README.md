@@ -7,10 +7,10 @@ A unified, modular evaluation framework for benchmarking memory systems on stand
 ### Evaluation Scope
 
 In addition to **EvermemOS**, this framework supports evaluation of several influential memory systems in the industry:
-- **mem0** 
+- **Mem0** 
 - **MemOS** 
-- **memU** 
 - **Zep** 
+- **MemU** 
 
 These systems were selected based on recent industry benchmarks and their prominence in global markets. Since many commercial systems have web-based optimizations not available in their open-source versions, we evaluate them through their **online API interfaces** to ensure fair comparison with production-grade capabilities.
 
@@ -25,7 +25,20 @@ Our adapter implementations are based on:
 
 ### Evaluation Results
 
+| Locomo    | single hop | multi hop | temporal | open domain | Overall | Average Tokens | Version                                         | Answer LLM |
+|-----------|------------|-----------|----------|-------------|---------|----------------|----------------------------------------------|-----------------|
+| Mem0      | 68.97      | 61.70     | 58.26    | 50.00       | 64.20   | 1016           | web API/v1.0.0 (2025.11)                   | gpt-4.1-mini    |
+| MemU      | 74.91      | 72.34     | 43.61    | 54.17       | 66.67   | 3964           | web API/v1 (2025.11)                      | gpt-4.1-mini    |
+| MemOS     | 85.37      | 79.43     | 75.08    | 64.58       | 80.76   | 2498           | web API/v1 (2025.11)                       | gpt-4.1-mini    |
+| Zep       | 90.84      | 81.91     | 77.26    | 75.00       | 85.22   | 1411           | web API/v3 (2025.11)                       | gpt-4.1-mini    |
+| Full-text | 94.93      | 90.43     | 87.95    | 71.88       | 91.21   | 20281          |                                              | gpt-4.1-mini    |
+| EverMemOS | 96.08      | 91.13     | 89.72    | 70.83       | 92.32   | 2298           | open-source EverMemOS v1.0.0 companion | gpt-4.1-mini    |
 
+
+
+| Longmemeval | Single-session-user  | Single-session-assistant  | Single-session-preference  | Multi-session  | Knowledge-update  | Temporal-reasoning  | Overall |
+|-------------|----------------------|---------------------------|----------------------------|----------------|-------------------|---------------------|---------|
+| EverMemOS   | 100.00               | 78.57                     | 96.67                      | 78.45          | 87.18             | 71.18               | 82.00   |
 
 
 
@@ -135,12 +148,11 @@ uv sync --group evaluation-full
 
 The evaluation framework reuses most environment variables from the main EvermemOS `.env` file:
 - `LLM_API_KEY`, `LLM_BASE_URL` (for answer generation with GPT-4.1-mini)
-- `DEEPINFRA_API_KEY` (for embeddings/reranker)
+- `VECTORIZE_API_KEY` and  `RERANK_API_KEY` (for embeddings/reranker)
 
 **⚠️ Important**: For OpenRouter API (used by gpt-4.1-mini), make sure `LLM_API_KEY` is set to your OpenRouter API key (format: `sk-or-v1-xxx`). The system will look for API keys in this order:
 1. Explicit `api_key` parameter in config
 2. `LLM_API_KEY` environment variable
-3. `OPENROUTER_API_KEY` environment variable (legacy)
 
 For testing EvermemOS, please first configure the whole .env file.
 
@@ -324,23 +336,6 @@ cp evaluation/config/systems/evermemos.yaml evaluation/config/systems/evermemos_
 # Run with custom config
 uv run python -m evaluation.cli --dataset locomo --system evermemos_custom
 ```
-
-
-## 🔌 Supported Systems
-
-### Local Systems
-- **evermemos** - EvermemOS with MemCell extraction and dual-mode retrieval
-
-### Online API Systems
-- **mem0** 
-- **memos** 
-- **memu** 
-
-## 📚 Supported Datasets
-
-- **locomo** - LoCoMo: Long-term Conversation Memory benchmark
-- **longmemeval** - LongMemEval: Extended conversation evaluation
-- **personamem** - PersonaMem: Persona consistency evaluation
 
 ## 📄 License
 

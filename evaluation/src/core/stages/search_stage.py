@@ -85,7 +85,50 @@ async def run_search_stage(
         async with semaphore:
             conv_id = qa.metadata.get("conversation_id", "0")
             conversation = conv_id_to_conv.get(conv_id)
-            result = await adapter.search(qa.question, conv_id, index, conversation=conversation)
+            
+            # Search with timeout and retry (similar to answer_stage.py)
+            max_retries = 3
+            timeout_seconds = 120.0  # 2 minutes timeout per attempt
+            result = None
+            
+            for attempt in range(max_retries):
+                try:
+                    result = await asyncio.wait_for(
+                        adapter.search(qa.question, conv_id, index, conversation=conversation),
+                        timeout=timeout_seconds
+                    )
+                    break  # Success, exit retry loop
+                    
+                except asyncio.TimeoutError:
+                    if attempt < max_retries - 1:
+                        tqdm.write(f"  ⏱️  Search timeout ({timeout_seconds}s) for question in {conv_id}, retry {attempt + 1}/{max_retries}...")
+                        await asyncio.sleep(2)  # Short delay before retry
+                    else:
+                        tqdm.write(f"  ❌ Search timeout after {max_retries} attempts for question in {conv_id}: {qa.question[:60]}...")
+                        # Return empty search result on timeout
+                        from evaluation.src.core.data_models import SearchResult
+                        result = SearchResult(
+                            query=qa.question,
+                            conversation_id=conv_id,
+                            results=[],
+                            retrieval_metadata={"error": "Search timeout after retries"}
+                        )
+                
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        tqdm.write(f"  ⚠️  Search failed for question in {conv_id}: {str(e)}, retry {attempt + 1}/{max_retries}...")
+                        await asyncio.sleep(2)
+                    else:
+                        tqdm.write(f"  ❌ Search failed after {max_retries} attempts for question in {conv_id}: {str(e)}")
+                        # Return empty search result on error
+                        from evaluation.src.core.data_models import SearchResult
+                        result = SearchResult(
+                            query=qa.question,
+                            conversation_id=conv_id,
+                            results=[],
+                            retrieval_metadata={"error": f"Search error: {str(e)}"}
+                        )
+            
             pbar.update(1)  # Update progress bar after each question
             return result
     

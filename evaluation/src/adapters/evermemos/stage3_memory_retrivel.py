@@ -697,11 +697,10 @@ async def agentic_retrieval(
     if key_info:  # 新增：打印已找到的关键信息
         print(f"  [LLM] Key Info Found: {', '.join(key_info)}")
     
-    # If sufficient: return original Round 1 Top 20
     if is_sufficient:
-        print(f"  [Decision] Sufficient! Using original Round 1 Top 20 results")
+        print(f"  [Decision] Sufficient! Using reranked Top 10 results")
         
-        final_results = round1_top20  # Return original Top 20 (not reranked)
+        final_results = reranked_top10
         metadata["final_count"] = len(final_results)
         metadata["total_latency_ms"] = (time.time() - start_time) * 1000
         
