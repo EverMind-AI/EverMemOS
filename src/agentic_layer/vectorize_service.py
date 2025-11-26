@@ -20,6 +20,7 @@ from openai import AsyncOpenAI, BadRequestError
 
 from core.di.utils import get_bean
 from core.di.decorators import service
+from memory_layer.constants import VECTORIZE_DIMENSIONS
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ class VectorizeConfig:
         if self.encoding_format == "float":
             self.encoding_format = os.getenv("VECTORIZE_ENCODING_FORMAT", "float")
         if self.dimensions == 1024:
-            self.dimensions = int(os.getenv("VECTORIZE_DIMENSIONS", "1024"))
+            self.dimensions = VECTORIZE_DIMENSIONS
 
 
 class VectorizeError(Exception):

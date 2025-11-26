@@ -11,12 +11,13 @@ from core.oxm.milvus.milvus_collection_base import (
     MilvusCollectionWithSuffix,
     IndexConfig,
 )
+from memory_layer.constants import VECTORIZE_DIMENSIONS
 
 
 class SemanticMemoryCollection(MilvusCollectionWithSuffix):
     """
     语义记忆 Milvus Collection
-    
+
     同时支持个人语义记忆和群组语义记忆，通过 group_id 字段区分。
 
     使用方式：
@@ -42,7 +43,7 @@ class SemanticMemoryCollection(MilvusCollectionWithSuffix):
             FieldSchema(
                 name="vector",
                 dtype=DataType.FLOAT_VECTOR,
-                dim=1024,  # BAAI/bge-m3 模型的向量维度
+                dim=VECTORIZE_DIMENSIONS,  # BAAI/bge-m3 模型的向量维度
                 description="文本向量",
             ),
             FieldSchema(
@@ -77,14 +78,10 @@ class SemanticMemoryCollection(MilvusCollectionWithSuffix):
                 description="语义记忆开始时间戳",
             ),
             FieldSchema(
-                name="end_time",
-                dtype=DataType.INT64,
-                description="语义记忆结束时间戳",
+                name="end_time", dtype=DataType.INT64, description="语义记忆结束时间戳"
             ),
             FieldSchema(
-                name="duration_days",
-                dtype=DataType.INT64,
-                description="持续天数",
+                name="duration_days", dtype=DataType.INT64, description="持续天数"
             ),
             FieldSchema(
                 name="content",
@@ -142,4 +139,3 @@ class SemanticMemoryCollection(MilvusCollectionWithSuffix):
         IndexConfig(field_name="start_time", index_type="AUTOINDEX"),
         IndexConfig(field_name="end_time", index_type="AUTOINDEX"),
     ]
-

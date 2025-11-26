@@ -10,6 +10,7 @@ from core.oxm.milvus.milvus_collection_base import (
     MilvusCollectionWithSuffix,
     IndexConfig,
 )
+from memory_layer.constants import VECTORIZE_DIMENSIONS
 
 
 class EpisodicMemoryCollection(MilvusCollectionWithSuffix):
@@ -39,7 +40,7 @@ class EpisodicMemoryCollection(MilvusCollectionWithSuffix):
             FieldSchema(
                 name="vector",
                 dtype=DataType.FLOAT_VECTOR,
-                dim=1024,  # BAAI/bge-m3 模型的向量维度
+                dim=VECTORIZE_DIMENSIONS,  # BAAI/bge-m3 模型的向量维度
                 description="文本向量",
             ),
             FieldSchema(

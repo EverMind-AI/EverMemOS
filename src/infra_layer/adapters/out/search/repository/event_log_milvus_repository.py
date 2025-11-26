@@ -30,7 +30,7 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
     - 相似性搜索和过滤功能
     - 文档创建和管理
     - 向量索引管理
-    
+
     同时支持个人和群组事件日志。
     """
 
@@ -66,7 +66,7 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
             atomic_fact: 原子事实内容（必需）
             parent_episode_id: 父情景记忆ID（必需）
             timestamp: 事件发生时间（必需）
-            vector: 文本向量（必需，维度必须为1024）
+            vector: 文本向量（必需，维度必须为VECTORIZE_DIMENSIONS）
             group_id: 群组ID
             participants: 相关参与者列表
             event_type: 事件类型（如 Conversation, Email 等）
@@ -92,10 +92,7 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
                 search_content = [atomic_fact]
 
             # 准备元数据
-            metadata = {
-                "vector_model": vector_model or "",
-                "extend": extend or {},
-            }
+            metadata = {"vector_model": vector_model or "", "extend": extend or {}}
 
             # 准备实体数据
             entity = {
@@ -117,9 +114,7 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
             # 插入数据
             await self.insert(entity)
 
-            logger.debug(
-                "✅ 创建事件日志文档成功: id=%s, user_id=%s", id, user_id
-            )
+            logger.debug("✅ 创建事件日志文档成功: id=%s, user_id=%s", id, user_id)
 
             return {
                 "id": id,
@@ -172,7 +167,7 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
         try:
             # 构建过滤表达式
             filter_expr = []
-            
+
             if user_id:
                 filter_expr.append(f'user_id == "{user_id}"')
             else:
@@ -180,7 +175,7 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
                 filter_expr.append('user_id == ""')
             if group_id:
                 filter_expr.append(f'group_id == "{group_id}"')
-            
+
             if participant_user_id:
                 filter_expr.append(
                     f'array_contains(participants, "{participant_user_id}")'
@@ -198,19 +193,21 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
 
             filter_str = " and ".join(filter_expr) if filter_expr else None
 
-            similarity_threshold: Optional[float] = radius if radius is not None else None
+            similarity_threshold: Optional[float] = (
+                radius if radius is not None else None
+            )
 
             # 执行搜索
             # 动态调整 ef 参数：必须 >= limit，通常设为 limit 的 1.5-2 倍
             ef_value = max(128, limit * 2)  # 确保 ef >= limit，至少 128
             search_params = {"metric_type": "COSINE", "params": {"ef": ef_value}}
-            
+
             # 不设置 radius 参数!
             # Milvus 的 radius 是相似度下限,设置 -1.0 反而可能导致问题
             # 我们通过后置过滤来控制相似度阈值
             if radius is not None and radius > -1.0:
                 search_params["params"]["radius"] = radius
-            
+
             logger.info(
                 f"Milvus 搜索参数: limit={limit}, "
                 f"radius={search_params['params'].get('radius', 'None')}, "
@@ -233,27 +230,25 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
                 f"Milvus 原始返回: {raw_hit_count} 条结果, "
                 f"limit={limit}, filter_str={filter_str}, "
             )
-            
+
             for hits in results:
                 for hit in hits:
                     threshold = (
-                        similarity_threshold if similarity_threshold is not None else score_threshold
+                        similarity_threshold
+                        if similarity_threshold is not None
+                        else score_threshold
                     )
                     keep = hit.score >= threshold
 
                     if keep:
                         # 解析元数据
                         metadata_json = hit.entity.get("metadata", "{}")
-                        metadata = (
-                            json.loads(metadata_json) if metadata_json else {}
-                        )
+                        metadata = json.loads(metadata_json) if metadata_json else {}
 
                         # 解析 search_content（统一为 JSON 数组格式）
                         search_content_raw = hit.entity.get("search_content", "[]")
                         search_content = (
-                            json.loads(search_content_raw)
-                            if search_content_raw
-                            else []
+                            json.loads(search_content_raw) if search_content_raw else []
                         )
 
                         # 构建结果
@@ -325,7 +320,8 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
                 await self.collection.delete(expr)
 
             logger.debug(
-                "✅ 根据parent_episode_id删除事件日志成功: 删除了 %d 条记录", delete_count
+                "✅ 根据parent_episode_id删除事件日志成功: 删除了 %d 条记录",
+                delete_count,
             )
             return delete_count
 
@@ -389,4 +385,3 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
         except Exception as e:
             logger.error("❌ 根据过滤条件批量删除事件日志失败: %s", e)
             raise
-

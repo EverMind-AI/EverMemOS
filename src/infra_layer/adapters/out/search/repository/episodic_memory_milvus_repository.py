@@ -73,7 +73,7 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
             timestamp: 事件发生时间（必需）
             episode: 情景描述（必需）
             search_content: 搜索内容列表（必需）
-            vector: 文本向量（必需，维度必须为1024）
+            vector: 文本向量（必需，维度必须为VECTORIZE_DIMENSIONS）
             user_name: 用户名称
             title: 事件标题
             summary: 事件摘要
@@ -115,7 +115,8 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
                     "extend": extend or {},
                     "created_at": created_at.isoformat(),
                     "updated_at": updated_at.isoformat(),
-                    "parent_event_id": parent_event_id or "",  # 父事件ID，用于关联拆分的记录
+                    "parent_event_id": parent_event_id
+                    or "",  # 父事件ID，用于关联拆分的记录
                 }
                 metadata_json = json.dumps(metadata_dict, ensure_ascii=False)
             else:
@@ -145,9 +146,7 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
             # 插入数据
             await self.insert(entity)
 
-            logger.debug(
-                "✅ 创建情景记忆文档成功: id=%s, user_id=%s", id, user_id
-            )
+            logger.debug("✅ 创建情景记忆文档成功: id=%s, user_id=%s", id, user_id)
 
             return {
                 "id": id,
@@ -197,8 +196,7 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
         try:
             # 构建过滤表达式
             filter_expr = []
-            
-            
+
             if user_id:
                 filter_expr.append(f'user_id == "{user_id}"')
             else:
@@ -228,13 +226,10 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
             ef_value = max(128, limit * 2)  # 确保 ef >= limit，至少 128
             # 使用 COSINE 相似度，radius 表示只返回相似度 >= 阈值的结果
             # 优先使用传入的 radius 参数，否则使用默认配置
-            similarity_radius = radius if radius is not None else MILVUS_SIMILARITY_RADIUS
-            search_params = {
-                "metric_type": "COSINE",
-                "params": {
-                    "ef": ef_value,
-                }
-            }
+            similarity_radius = (
+                radius if radius is not None else MILVUS_SIMILARITY_RADIUS
+            )
+            search_params = {"metric_type": "COSINE", "params": {"ef": ef_value}}
             # 不设置 radius 参数!
             # Milvus 的 radius 是相似度下限,设置过低的值反而可能导致问题
             # 只在明确指定且 > -1.0 时才设置
@@ -257,7 +252,7 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
                 f"Milvus 原始返回: {raw_hit_count} 条结果, "
                 f"limit={limit}, filter_str={filter_str}, "
             )
-            
+
             for hits in results:
                 for hit in hits:
                     if hit.score >= score_threshold:
@@ -267,7 +262,9 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
 
                         # 解析 search_content（统一为 JSON 数组格式）
                         search_content_raw = hit.entity.get("search_content", "[]")
-                        search_content = json.loads(search_content_raw) if search_content_raw else []
+                        search_content = (
+                            json.loads(search_content_raw) if search_content_raw else []
+                        )
 
                         result = {
                             "id": hit.entity.get("id"),

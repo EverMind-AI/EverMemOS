@@ -1,0 +1,4 @@
+import os
+
+
+VECTORIZE_DIMENSIONS = int(os.getenv("VECTORIZE_DIMENSIONS", "1024"))

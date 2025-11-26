@@ -11,12 +11,13 @@ from core.oxm.milvus.milvus_collection_base import (
     MilvusCollectionWithSuffix,
     IndexConfig,
 )
+from memory_layer.constants import VECTORIZE_DIMENSIONS
 
 
 class EventLogCollection(MilvusCollectionWithSuffix):
     """
     事件日志 Milvus Collection
-    
+
     存储原子事实（atomic facts），支持细粒度的事实检索。
     同时支持个人和群组事件日志，通过 group_id 字段区分。
 
@@ -43,7 +44,7 @@ class EventLogCollection(MilvusCollectionWithSuffix):
             FieldSchema(
                 name="vector",
                 dtype=DataType.FLOAT_VECTOR,
-                dim=1024,  # BAAI/bge-m3 模型的向量维度
+                dim=VECTORIZE_DIMENSIONS,  # BAAI/bge-m3 模型的向量维度
                 description="文本向量",
             ),
             FieldSchema(
@@ -79,9 +80,7 @@ class EventLogCollection(MilvusCollectionWithSuffix):
                 description="事件类型（如 Conversation, Email 等）",
             ),
             FieldSchema(
-                name="timestamp",
-                dtype=DataType.INT64,
-                description="事件发生时间戳",
+                name="timestamp", dtype=DataType.INT64, description="事件发生时间戳"
             ),
             FieldSchema(
                 name="atomic_fact",
@@ -133,4 +132,3 @@ class EventLogCollection(MilvusCollectionWithSuffix):
         IndexConfig(field_name="event_type", index_type="AUTOINDEX"),
         IndexConfig(field_name="timestamp", index_type="AUTOINDEX"),
     ]
-
