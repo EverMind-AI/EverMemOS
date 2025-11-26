@@ -146,7 +146,7 @@ def from_iso_format(create_time, target_timezone: ZoneInfo = None) -> datetime.d
     将时间转换为带时区信息的datetime对象
 
     Args:
-        create_time: 时间对象或字符串，如 datetime对象 或 "2025-09-15T13:11:15.588000"
+        create_time: 时间对象或字符串，如 datetime对象 或 "2025-09-15T13:11:15.588000" 或 "2025-09-15T13:11:15.588000Z"
         target_timezone: 时区对象，如果为None，则使用TZ环境变量
 
     Returns:
@@ -158,11 +158,22 @@ def from_iso_format(create_time, target_timezone: ZoneInfo = None) -> datetime.d
             # 如果已经是datetime对象，直接使用
             dt = create_time
         elif isinstance(create_time, str):
+            # 兼容以 "Z" 结尾的 UTC 时间格式（如 "2025-09-15T13:11:15.588000Z"）
+            # Python 3.11 之前的 fromisoformat 不支持 "Z" 后缀，需要替换为 "+00:00"
+            time_str = (
+                create_time.replace("Z", "+00:00")
+                if create_time.endswith("Z")
+                else create_time
+            )
             # 如果是字符串，解析为datetime对象
-            dt = datetime.datetime.fromisoformat(create_time)
+            dt = datetime.datetime.fromisoformat(time_str)
         else:
             # 其他类型，尝试转换为字符串再解析
-            dt = datetime.datetime.fromisoformat(str(create_time))
+            time_str = str(create_time)
+            time_str = (
+                time_str.replace("Z", "+00:00") if time_str.endswith("Z") else time_str
+            )
+            dt = datetime.datetime.fromisoformat(time_str)
 
         # 如果datetime对象没有时区信息，默认为指定时区
         if dt.tzinfo is None:
