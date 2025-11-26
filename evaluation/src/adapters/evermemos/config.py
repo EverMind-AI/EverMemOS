@@ -29,7 +29,7 @@ class ExperimentConfig:
 
     # Retrieval mode: 'agentic' or 'lightweight'
     # - agentic: Multi-round retrieval with LLM guidance, high quality but slower
-    # - lightweight: Fast hybrid retrieval with BM25+Embedding, faster but slightly lower quality
+    # - lightweight: Fast retrieval without LLM, faster but slightly lower quality
     retrieval_mode: str = "agentic"  # 'agentic' | 'lightweight'
 
     # Retrieval configuration
@@ -38,6 +38,11 @@ class ExperimentConfig:
     reranker_top_n: int = 20
 
     # Lightweight retrieval parameters (only effective when retrieval_mode='lightweight')
+    # lightweight_search_mode: controls which search method to use in lightweight mode
+    # - "bm25_only": Only use BM25 search (fast, lexical matching)
+    # - "hybrid": BM25 + Embedding + RRF fusion (balanced)
+    # - "emb_only": Only use Embedding search (semantic matching)
+    lightweight_search_mode: str = "bm25_only"  # 'bm25_only' | 'hybrid' | 'emb_only'
     lightweight_bm25_top_n: int = 50
     lightweight_emb_top_n: int = 50
     lightweight_final_top_n: int = 20

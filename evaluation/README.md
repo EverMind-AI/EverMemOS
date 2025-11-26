@@ -25,22 +25,32 @@ Our adapter implementations are based on:
 
 ### Evaluation Results
 
-| Locomo    | single hop | multi hop | temporal | open domain | Overall | Average Tokens | Version                                         | Answer LLM |
-|-----------|------------|-----------|----------|-------------|---------|----------------|----------------------------------------------|-----------------|
-| Mem0      | 68.97      | 61.70     | 58.26    | 50.00       | 64.20   | 1016           | web API/v1.0.0 (2025.11)                   | gpt-4.1-mini    |
-| MemU      | 74.91      | 72.34     | 43.61    | 54.17       | 66.67   | 3964           | web API/v1 (2025.11)                      | gpt-4.1-mini    |
-| MemOS     | 85.37      | 79.43     | 75.08    | 64.58       | 80.76   | 2498           | web API/v1 (2025.11)                       | gpt-4.1-mini    |
-| Zep       | 90.84      | 81.91     | 77.26    | 75.00       | 85.22   | 1411           | web API/v3 (2025.11)                       | gpt-4.1-mini    |
-| Full-text | 94.93      | 90.43     | 87.95    | 71.88       | 91.21   | 20281          |                                              | gpt-4.1-mini    |
-| EverMemOS | 96.08      | 91.13     | 89.72    | 70.83       | 92.32   | 2298           | open-source EverMemOS v1.0.0 companion | gpt-4.1-mini    |
+| Locomo         | Base LLM     | single hop | multi hop | temporal | open domain | Overall   | Average Tokens | Version                          |
+|----------------|--------------|------------|-----------|----------|-------------|-----------|----------------|----------------------------------|
+| Mem0           | gpt-4.1-mini | 68.97      | 61.70     | 58.26    | 50.00       | 64.20     | 1016           | web API/v1.0.0 (2025.11)         |
+| MemU           | gpt-4.1-mini | 74.91      | 72.34     | 43.61    | 54.17       | 66.67     | 3964           | web API/v1 (2025.11)             |
+| MemOS          | gpt-4.1-mini | 85.37      | 79.43     | 75.08    | 64.58       | 80.76     | 2498           | web API/v1 (2025.11)             |
+| Zep            | gpt-4.1-mini | 90.84      | 81.91     | 77.26    | 75.00       | 85.22     | **1411**           | web API/v3 (2025.11)             |
+| Full-text      | gpt-4.1-mini | 94.93      | 90.43     | 87.95    | 71.88       | 91.21     | 20281          |                                  |
+| EverMemOS-Lite | gpt-4.1-mini | 85.11      | 85.98     | 68.75    | **93.58**   | 88.90     | 2368           | open-source v1.0.0 (Lite)   |
+| EverMemOS      | gpt-4.1-mini | **96.08**  | **91.13** | **89.72**| 70.83       | **92.32** | 2298           | open-source v1.0.0 (Agentic)     |
 
 
 
-| Longmemeval | Single-session-user  | Single-session-assistant  | Single-session-preference  | Multi-session  | Knowledge-update  | Temporal-reasoning  | Overall |
-|-------------|----------------------|---------------------------|----------------------------|----------------|-------------------|---------------------|---------|
-| EverMemOS   | 100.00               | 78.57                     | 96.67                      | 78.45          | 87.18             | 71.18               | 82.00   |
+| Longmemeval | Base LLM     | Single-session-user  | Single-session-assistant  | Single-session-preference  | Multi-session  | Knowledge-update  | Temporal-reasoning  | Overall |
+|-------------|--------------|----------------------|---------------------------|----------------------------|----------------|-------------------|---------------------|---------|
+| EverMemOS   | gpt-4.1-mini | **100.00**           | 78.57                     | **96.67**                  | 78.45          | **87.18**         | 71.18               | **82.00**   |
 
+### Retrieval Performance
 
+Search stage performance on LoCoMo dataset (1,540 questions):
+
+| Mode | Wall Clock (concurrency) | Avg Latency/Query | Notes |
+|------|----------------------------|-------------------|-------|
+| Agentic | ~37 min | ~27s | Multi-round LLM-guided retrieval |
+| Lightweight | ~1.5 min | ~0.6s | Pure BM25 algorithmic |
+
+> ⚠️ **Note**: Agentic mode retrieval speed depends primarily on LLM API call latency. The above data is based on OpenRouter API; actual performance varies by LLM provider and network conditions.
 
 ## 🌟 Key Features
 
@@ -323,6 +333,28 @@ If you have already done search, and you want to do it again, please remove the 
   ]
 ```
 
+
+### Switch Retrieval Mode
+
+EverMemOS supports two retrieval modes. You can quickly switch by modifying the config file:
+
+Edit `evaluation/config/systems/evermemos.yaml`:
+
+```yaml
+search:
+  mode: "agentic"     # or "lightweight"
+```
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `agentic` | Multi-round intelligent retrieval with LLM | Best quality |
+| `lightweight` | Fast retrieval without LLM calls | Speed & low cost |
+
+After switching, re-run the search stage:
+
+```bash
+uv run python -m evaluation.cli --dataset locomo --system evermemos --stages search answer evaluate
+```
 
 ### Custom Configuration
 

@@ -61,8 +61,8 @@ class ExperimentConfig:
 - **Embedding Parameters**: Choose appropriate embedding model and parameters
 - **Reranker Parameters**: Configure reranker model (only for agentic mode)
 - **Retrieval Mode**:
-  - `agentic`: Complex multi-round retrieval, high quality but slower
-  - `lightweight`: Fast hybrid retrieval, faster but slightly lower quality
+  - `agentic`: Multi-round intelligent retrieval, high quality but slower
+  - `lightweight`: Fast retrieval, faster but slightly lower quality
 
 ### 3. Run Complete Pipeline
 

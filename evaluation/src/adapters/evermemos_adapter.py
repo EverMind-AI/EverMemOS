@@ -658,6 +658,11 @@ class EverMemOSAdapter(BaseAdapter):
         if "mode" in search_config:
             exp_config.retrieval_mode = search_config["mode"]
             exp_config.use_agentic_retrieval = exp_config.retrieval_mode == "agentic"
+        
+        # Map lightweight_search_mode (controls search method in lightweight mode)
+        # Options: "bm25_only" | "hybrid" | "emb_only"
+        if "lightweight_search_mode" in search_config:
+            exp_config.lightweight_search_mode = search_config["lightweight_search_mode"]
 
         return exp_config
 

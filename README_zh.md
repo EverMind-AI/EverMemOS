@@ -1,13 +1,12 @@
 <div align="center">
 
 <h1>
-  <img src="figs/logo.png" alt="EverMemOS Logo" height="40" style="vertical-align: middle; margin-right: 12px;"/>
   EverMemOS
 </h1>
 
 <p>
   <a href="https://everm.ai/" target="_blank">
-    <img alt="Website" src="https://img.shields.io/badge/Website-everm.ai-4A90E2?style=flat-square&logo=link&logoColor=white" />
+    <img src="figs/evermind_logo.svg" alt="EverMind" height="34" />
   </a>
 </p>
 
@@ -177,19 +176,19 @@ EverMemOS 围绕两条主线运行：**记忆构筑**与**记忆感知**。它�
   批量并发处理 + 指数退避重试，在高吞吐下保持稳定性  
   对候选记忆按深度相关性重新排序，让最关键的信息优先呈现
 
-#### 🤖 Agentic 智能检索
-
-- **🎓 LLM 引导的多轮召回**  
-  对于不充分的情况，生成 2-3 个互补查询，并行检索并融合
-  自动识别缺失信息，主动补足检索盲区
-
-- **🔀 多查询并行策略**  
-  当单一查询无法完整表达意图时，生成多个互补视角的查询  
-  通过多路 RRF 融合，提升复杂意图的理解覆盖度
+#### 🚀 灵活检索策略
 
 - **⚡ 轻量级快速模式**  
-  对延迟敏感的场景，跳过 LLM 调用，RRF融合混合检索
-  在速度与质量间灵活平衡
+  针对延迟敏感场景，跳过 LLM 调用，直接使用关键词检索（BM25）  
+  实现极致的毫秒级响应速度
+
+- **🎓 Agentic 多轮召回**  
+  对于信息不充分的情况，生成 2-3 个互补查询，并行检索并融合  
+  自动识别缺失信息，主动补足检索盲区
+
+- **🔀 Agentic 多查询策略**  
+  当单一查询无法完整表达意图时，生成多个互补视角的查询  
+  通过多路 RRF 融合，提升复杂意图的理解覆盖度
 
 #### 🧠 推理融合
 
@@ -476,7 +475,7 @@ curl -X POST http://localhost:8001/api/v3/agentic/memorize \
 **API 功能说明**：
 
 - **`/api/v3/agentic/memorize`**: 存储单条消息记忆
-- **`/api/v3/agentic/retrieve_lightweight`**: 轻量级记忆检索（Embedding + BM25 + RRF）
+- **`/api/v3/agentic/retrieve_lightweight`**: 轻量级记忆检索（快速检索模式）
 - **`/api/v3/agentic/retrieve_agentic`**: Agentic 记忆检索（LLM 引导的多轮智能检索）
 
 更多 API 详情请参考 [Agentic V3 API 文档](docs/api_docs/agentic_v3_api_zh.md)。

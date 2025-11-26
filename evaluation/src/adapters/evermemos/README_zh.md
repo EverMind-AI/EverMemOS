@@ -61,8 +61,8 @@ class ExperimentConfig:
 - **Embedding 参数**：选择适合的 Embedding 模型和参数
 - **Reranker 参数**：配置 Reranker 模型（仅 agentic 模式需要）
 - **检索模式**：
-  - `agentic`：复杂的多轮检索，质量高但速度慢
-  - `lightweight`：快速混合检索，速度快但质量略低
+  - `agentic`：多轮智能检索，质量高但速度慢
+  - `lightweight`：快速检索，速度快但质量略低
 
 ### 3. 运行完整 Pipeline
 

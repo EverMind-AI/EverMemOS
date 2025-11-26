@@ -327,11 +327,10 @@ async def lightweight_retrieval(
     """
     Lightweight fast retrieval (no LLM calls, pure algorithmic retrieval).
     
-    Process:
-    1. Execute Embedding and BM25 retrieval in parallel
-    2. Each retrieves Top-50 candidates
-    3. Fuse using RRF
-    4. Return Top-20 results
+    Supports three search modes (controlled by config.lightweight_search_mode):
+    - "bm25_only": Only use BM25 search (fast, lexical matching)
+    - "hybrid": BM25 + Embedding + RRF fusion (balanced)
+    - "emb_only": Only use Embedding search (semantic matching)
     
     Advantages:
     - Fast: no LLM calls, pure vector/lexical retrieval
@@ -355,49 +354,77 @@ async def lightweight_retrieval(
     """
     start_time = time.time()
     
+    # Get search mode from config (default to "bm25_only")
+    search_mode = getattr(config, 'lightweight_search_mode', 'bm25_only')
+    
     metadata = {
         "retrieval_mode": "lightweight",
+        "lightweight_search_mode": search_mode,
         "emb_count": 0,
         "bm25_count": 0,
         "final_count": 0,
         "total_latency_ms": 0.0,
     }
     
-    # Execute Embedding and BM25 retrieval in parallel
-    emb_task = search_with_emb_index(
-        query, 
-        emb_index, 
-        top_n=config.lightweight_emb_top_n  # Default 50
-    )
-    bm25_task = asyncio.to_thread(
-        search_with_bm25_index, 
-        query, 
-        bm25, 
-        docs, 
-        config.lightweight_bm25_top_n  # Default 50
-    )
-    
-    emb_results, bm25_results = await asyncio.gather(emb_task, bm25_task)
-    
-    metadata["emb_count"] = len(emb_results)
-    metadata["bm25_count"] = len(bm25_results)
-    
-    # RRF fusion
-    if not emb_results and not bm25_results:
-        metadata["total_latency_ms"] = (time.time() - start_time) * 1000
-        return [], metadata
-    elif not emb_results:
-        final_results = bm25_results[:config.lightweight_final_top_n]
-    elif not bm25_results:
-        final_results = emb_results[:config.lightweight_final_top_n]
-    else:
-        # Use RRF fusion
-        fused_results = reciprocal_rank_fusion(
-            emb_results, 
-            bm25_results, 
-            k=60  # Standard RRF parameter
+    # Execute retrieval based on search mode
+    if search_mode == "bm25_only":
+        # BM25 only mode: fast lexical matching
+        bm25_results = await asyncio.to_thread(
+            search_with_bm25_index, 
+            query, 
+            bm25, 
+            docs, 
+            config.lightweight_bm25_top_n
         )
-        final_results = fused_results[:config.lightweight_final_top_n]  # Default 20
+        metadata["bm25_count"] = len(bm25_results)
+        final_results = bm25_results[:config.lightweight_final_top_n]
+        
+    elif search_mode == "emb_only":
+        # Embedding only mode: semantic matching
+        emb_results = await search_with_emb_index(
+            query, 
+            emb_index, 
+            top_n=config.lightweight_emb_top_n
+        )
+        metadata["emb_count"] = len(emb_results)
+        final_results = emb_results[:config.lightweight_final_top_n]
+        
+    else:
+        # Hybrid mode (default fallback): BM25 + Embedding + RRF fusion
+        # Execute Embedding and BM25 retrieval in parallel
+        emb_task = search_with_emb_index(
+            query, 
+            emb_index, 
+            top_n=config.lightweight_emb_top_n
+        )
+        bm25_task = asyncio.to_thread(
+            search_with_bm25_index, 
+            query, 
+            bm25, 
+            docs, 
+            config.lightweight_bm25_top_n
+        )
+        
+        emb_results, bm25_results = await asyncio.gather(emb_task, bm25_task)
+        
+        metadata["emb_count"] = len(emb_results)
+        metadata["bm25_count"] = len(bm25_results)
+        
+        # RRF fusion
+        if not emb_results and not bm25_results:
+            final_results = []
+        elif not emb_results:
+            final_results = bm25_results[:config.lightweight_final_top_n]
+        elif not bm25_results:
+            final_results = emb_results[:config.lightweight_final_top_n]
+        else:
+            # Use RRF fusion
+            fused_results = reciprocal_rank_fusion(
+                emb_results, 
+                bm25_results, 
+                k=60  # Standard RRF parameter
+            )
+            final_results = fused_results[:config.lightweight_final_top_n]
     
     metadata["final_count"] = len(final_results)
     metadata["total_latency_ms"] = (time.time() - start_time) * 1000

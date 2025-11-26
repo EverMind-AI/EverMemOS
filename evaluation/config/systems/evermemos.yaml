@@ -14,5 +14,9 @@ llm:
   base_url: "${LLM_BASE_URL:https://openrouter.ai/api/v1}"
 
 search:
-  mode: "agentic"  # agentic | lightweight
+  mode: "lightweight"  # agentic | lightweight
+  # When mode="lightweight", the search method defaults to "bm25_only".
+  # Uncomment and set the following to override:
+  # lightweight_search_mode: "hybrid"   # BM25 + Embedding + RRF fusion
+  # lightweight_search_mode: "emb_only" # Only Embedding search
 
