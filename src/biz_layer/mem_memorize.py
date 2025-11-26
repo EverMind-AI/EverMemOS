@@ -406,18 +406,6 @@ async def preprocess_conv_request(
             f"[preprocess] 从 conversation_data_repo 读取 {len(history_raw_data_list)} 条历史消息"
         )
 
-        # 第二步：保存新消息到 conversation_data_repo
-        save_success = await conversation_data_repo.save_conversation_data(
-            request.new_raw_data_list, request.group_id
-        )
-
-        if save_success:
-            logger.info(
-                f"[preprocess] 成功保存 {len(request.new_raw_data_list)} 条新消息"
-            )
-        else:
-            logger.warning(f"[preprocess] 保存新消息失败")
-
         # 更新 request
         request.history_raw_data_list = history_raw_data_list
         # new_raw_data_list 保持不变（就是新传入的消息）
@@ -692,7 +680,7 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
     logger.info(f"[mem_memorize] 当前时间: {current_time}")
 
     memory_manager = MemoryManager()
-
+    conversation_data_repo = get_bean_by_type(ConversationDataRepository)
     # 定义需要提取的记忆类型：先提取个人 episode，再基于 episode 提取语义记忆和事件日志
     memory_types = [
         MemoryType.EPISODIC_MEMORY,
@@ -701,8 +689,8 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
     ]
     if request.raw_data_type == RawDataType.CONVERSATION:
         request = await preprocess_conv_request(request, current_time)
-        if request == None:
-            return None
+        # if request == None and request.new_raw_data_list == None:
+        #     return None
 
     if request.raw_data_type == RawDataType.CONVERSATION:
         # async with distributed_lock(f"memcell_extract_{request.group_id}") as acquired:
@@ -787,6 +775,10 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
     logger.info(f"=" * 80)
 
     if memcell == None:
+        # 保存新消息到 conversation_data_repo
+        await conversation_data_repo.save_conversation_data(
+            request.new_raw_data_list, request.group_id
+        )
         await update_status_when_no_memcell(
             request, status_result, current_time, request.raw_data_type
         )
@@ -809,14 +801,13 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
                 logger.warning(
                     f"[mem_memorize] 清空对话历史失败: group_id={request.group_id}"
                 )
-            # 将新消息作为历史
+            # 保存新消息到 conversation_data_repo
             await conversation_data_repo.save_conversation_data(
                 request.new_raw_data_list, request.group_id
             )
         except Exception as e:
             logger.error(f"[mem_memorize] 清空对话历史异常: {e}")
             traceback.print_exc()
-
     # TODO: 读状态表，读取累积的MemCell数据表，判断是否要做memorize计算
 
     # MemCell存表
