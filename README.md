@@ -184,10 +184,6 @@ Memory perception layer: quickly recalls relevant memories through multi-round r
 
 - **🎓 Agentic Multi-Round Recall**  
   For insufficient cases, generate 2-3 complementary queries, retrieve and fuse in parallel  
-  Automatically identifies missing information, proactively filling retrieval blind spots
-
-- **🔀 Agentic Multi-Query Strategy**  
-  When a single query cannot fully express intent, generate multiple complementary perspective queries  
   Enhance coverage of complex intents through multi-path RRF fusion
 
 #### 🧠 Reasoning Fusion
