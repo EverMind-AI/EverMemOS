@@ -1,4 +1,7 @@
-# EvermemOS 评估框架
+# EverMemOS 评估框架
+<p>
+  <a href="README.md">English</a> | <a href="README_zh.md">简体中文</a>
+</p>
 
 统一的模块化评估框架，用于在标准数据集上对记忆系统进行基准测试。
 
@@ -6,7 +9,7 @@
 
 ### 评估范围
 
-除了 **EvermemOS** 之外，本框架还支持评估业界几个有影响力的记忆系统：
+除了 **EverMemOS** 之外，本框架还支持评估业界几个有影响力的记忆系统：
 - **Mem0** 
 - **MemOS** 
 - **MemU** 
@@ -17,22 +20,38 @@
 ### 实现
 
 我们的适配器实现基于：
-- **官方开源仓库**：GitHub 上的 mem0、MemOS (Memos)
-- **官方文档**：memU 快速入门指南和 API 文档
-- **Zep 评估参考**：改编自 Zep 的开源评估代码和官方文档，并从 API v2 迁移到 v3
+- **官方开源仓库**：GitHub 上的 Mem0、MemOS、Zep
+- **官方文档**：Mem0、MemOS、MemU、Zep 快速入门指南和 API 文档
 - **一致的方法论**：所有系统使用相同的流程、数据集和指标进行评估
 - **统一的答案生成模型**：所有系统使用 **GPT-4.1-mini** 作为答案 LLM
 
+在评估过程中，我们发现现有用于评测这些系统的开源参考实现中存在一些可能影响其性能表现的问题。我们对这些实现进行了修复，以确保每个系统都能展现其最佳潜力：
+
+- **Mem0 时区处理**：最新版本在搜索结果中返回的时间戳为 PDT 格式，需要进行额外的时区转换以确保时间推理的准确性。
+
+- **MemU 检索增强**：虽然某些记忆在后台控制面板中可见，但 `/memory/retrieve/related-memory-items` API 可能依赖简单的基于向量的检索，导致遗漏相关上下文。根据官方文档示例，我们将类别摘要作为额外上下文传入以提高召回率。
+
+- **Zep API 迁移**：Zep 的官方开源评估实现基于较早的 v2 API。由于 Zep 已正式升级到 v3 API，我们根据官方文档将评估代码迁移到 v3，以评测最新功能。
+
+- **Zep 时间戳语义**：与大多数记录对话时间戳的记忆系统不同，Zep 记录的是事件发生时间戳。例如，3月2日的对话中提到"安娜昨天吃了汉堡"，时间戳会记为3月1日，而记忆内容保留原始措辞。使用标准答案提示词会导致时间类问题出现大量错误。Zep 团队在其开源评估代码中提供了优化的提示词来处理此问题。这也确立了我们的评估原则之一：**每个记忆系统使用其官方的答案提示词**，而非统一的提示词模板，以确保公平评估每个系统的预期使用方式。
+
 ### 评估结果
+
+**Locomo 结果**
 
 | Locomo    | single hop | multi hop | temporal | open domain | Overall | Average Tokens | Version                                         | Answer LLM |
 |-----------|------------|-----------|----------|-------------|---------|----------------|----------------------------------------------|-----------------|
-| Mem0      | 68.97      | 61.70     | 58.26    | 50.00       | 64.20   | 1016           | web API/v1.0.0 (2025.11)                   | gpt-4.1-mini    |
-| MemU      | 74.91      | 72.34     | 43.61    | 54.17       | 66.67   | 3964           | web API/v1 (2025.11)                      | gpt-4.1-mini    |
-| MemOS     | 85.37      | 79.43     | 75.08    | 64.58       | 80.76   | 2498           | web API/v1 (2025.11)                       | gpt-4.1-mini    |
-| Zep       | 90.84      | 81.91     | 77.26    | 75.00       | 85.22   | 1411           | web API/v3 (2025.11)                       | gpt-4.1-mini    |
 | Full-text | 94.93      | 90.43     | 87.95    | 71.88       | 91.21   | 20281          |                                              | gpt-4.1-mini    |
+| Mem0      | 68.97      | 61.70     | 58.26    | 50.00       | 64.20   | 1016           | web API/v1.0.0 (2025.11)                   | gpt-4.1-mini    |
+| Zep       | 90.84      | 81.91     | 77.26    | 75.00       | 85.22   | 1411           | web API/v3 (2025.11)                       | gpt-4.1-mini    |
+| MemOS     | 85.37      | 79.43     | 75.08    | 64.58       | 80.76   | 2498           | web API/v1 (2025.11)                       | gpt-4.1-mini    |
+| MemU      | 74.91      | 72.34     | 43.61    | 54.17       | 66.67   | 3964           | web API/v1 (2025.11)                      | gpt-4.1-mini    |
 | EverMemOS | 96.08      | 91.13     | 89.72    | 70.83       | 92.32   | 2298           | open-source EverMemOS v1.0.0 companion | gpt-4.1-mini    |
+
+*Full-text: 把完整对话作为上下文，用于回答问题。
+
+
+**Longmemeval 结果**
 
 | Longmemeval | Single-session-user  | Single-session-assistant  | Single-session-preference  | Multi-session  | Knowledge-update  | Temporal-reasoning  | Overall |
 |-------------|----------------------|---------------------------|----------------------------|----------------|-------------------|---------------------|---------|
@@ -47,7 +66,7 @@
 
 ### 统一且模块化的框架
 - **一个代码库适用于所有场景**：无需为每个数据集或系统编写单独的代码
-- **即插即用的系统支持**：支持多种记忆系统（EvermemOS、mem0、memOS、memU 等）
+- **即插即用的系统支持**：支持多种记忆系统（EverMemOS、Mem0、MemOS、MemU 等）
 - **多种基准测试**：开箱即用支持 LoCoMo、LongMemEval、PersonaMem
 - **一致的评估**：所有系统使用相同的流程和指标进行评估
 
@@ -98,7 +117,7 @@ evaluation/
 ### 前置要求
 
 - Python 3.10+
-- EvermemOS 环境已配置（参见主项目的 `env.template`）
+- EverMemOS 环境已配置（参见主项目的 `env.template`）
 
 ### 数据准备
 
@@ -138,16 +157,16 @@ evaluation/data/personamem/
 安装评估专用依赖：
 
 ```bash
-# 用于评估本地系统（EvermemOS）
+# 用于评估本地系统（EverMemOS）
 uv sync --group evaluation
 
-# 用于评估在线 API 系统（mem0、memOS、memU 等）
+# 用于评估在线 API 系统（Mem0、MemOS、MemU 等）
 uv sync --group evaluation-full
 ```
 
 ### 环境配置
 
-评估框架重用主 EvermemOS `.env` 文件中的大部分环境变量：
+评估框架重用主 EverMemOS `.env` 文件中的大部分环境变量：
 - `LLM_API_KEY`、`LLM_BASE_URL`（用于使用 GPT-4.1-mini 生成答案）
 - `VECTORIZE_API_KEY` 和 `RERANK_API_KEY`（用于嵌入向量/重排序）
 
@@ -155,7 +174,7 @@ uv sync --group evaluation-full
 1. 配置中的显式 `api_key` 参数
 2. `LLM_API_KEY` 环境变量
 
-要测试 EvermemOS，请先配置完整的 .env 文件。
+要测试 EverMemOS，请先配置完整的 .env 文件。
 
 **在线 API 系统的额外变量**（如测试这些系统，请添加到 `.env`）：
 
@@ -163,10 +182,10 @@ uv sync --group evaluation-full
 # Mem0
 MEM0_API_KEY=your_mem0_api_key
 
-# memOS
+# MemOS
 MEMOS_KEY=your_memos_api_key
 
-# memU
+# MemU
 MEMU_API_KEY=your_memu_api_key
 ```
 
@@ -192,13 +211,13 @@ uv run python -m evaluation.cli --dataset locomo --system evermemos \
 运行完整基准测试：
 
 ```bash
-# 在 LoCoMo 上评估 EvermemOS
+# 在 LoCoMo 上评估 EverMemOS
 uv run python -m evaluation.cli --dataset locomo --system evermemos
 
 # 评估其他系统
 uv run python -m evaluation.cli --dataset locomo --system memos
 uv run python -m evaluation.cli --dataset locomo --system memu
-# 对于 mem0，建议先运行 add，在 Web 控制台检查记忆状态以确保完成，然后运行后续阶段。
+# 对于 Mem0，建议先运行 add，在 Web 控制台检查记忆状态以确保完成，然后运行后续阶段。
 uv run python -m evaluation.cli --dataset locomo --system mem0 --stages add
 uv run python -m evaluation.cli --dataset locomo --system mem0 --stages search answer evaluate
 
@@ -244,9 +263,8 @@ cat evaluation/results/locomo-evermemos/pipeline.log
 
 ### 指标
 
-- **准确率（Accuracy）**：正确答案的百分比（由 LLM 评判）
-- **总问题数（Total Questions）**：评估的问题数量
-- **正确数（Correct）**：正确回答的问题数量
+- **准确率（Accuracy）**：正确答案的百分比（问答题由 LLM 评判，选择题由规则评判）
+
 
 ### 详细结果
 
