@@ -48,6 +48,9 @@ Adding data migration scripts, adding/upgrading/downgrading third-party dependen
 **💾 Data Migration Standards**  
 For new features involving data fixes or Schema migration, discuss feasibility and implementation timing with development and operations as early as possible
 
+**🏛️ Data Access Standards**  
+All database, search engine and other external storage read/write operations must be converged to infra layer repository methods. Direct calls to external repositories in upper layers are prohibited
+
 ### 📖 Quick Navigation
 
 - Don't know how to install dependencies? → [Dependency Management Standards](#dependency-management-standards)
@@ -56,6 +59,7 @@ For new features involving data fixes or Schema migration, discuss feasibility a
 - Not sure if you can use threads? → [Async Programming Standards](#async-programming-standards)
 - Can I do database queries in loops? → [Prohibit I/O Operations in for Loops](#7-prohibit-io-operations-in-for-loops-)
 - How to handle time fields? → [Timezone Awareness Standards](#timezone-awareness-standards)
+- Where should database queries be written? → [Data Access Standards](#data-access-standards)
 - Import path errors? → [Import Standards](#import-standards)
 - Don't know which branch to use? → [Branch Management Standards](#branch-management-standards)
 - Need to submit MR? → [Code Review Process](#code-review-process)
@@ -71,6 +75,7 @@ For new features involving data fixes or Schema migration, discuss feasibility a
 - [Code Style Standards](#code-style-standards)
 - [Async Programming Standards](#async-programming-standards)
 - [Timezone Awareness Standards](#timezone-awareness-standards)
+- [Data Access Standards](#data-access-standards)
 - [Import Standards](#import-standards)
   - [PYTHONPATH Management](#pythonpath-management)
   - [Prefer Absolute Imports](#prefer-absolute-imports)
@@ -787,6 +792,446 @@ During code review, please confirm the following:
 - [ ] Database schema uses timezone-aware types (e.g. `timestamptz`)
 - [ ] Time strings returned by API include timezone information (ISO 8601 format)
 - [ ] Test data used in unit tests all have timezone information
+
+---
+
+## 🏛️ Data Access Standards
+
+### Core Principles
+
+**💡 Important Note: All external storage access must go through infra layer repositories**
+
+When handling databases, search engines and other external storage systems, must follow strict layered architecture principles. All data read/write operations must be converged to the `repository` layer in `infra_layer`. Direct calls to external repository capabilities in business layers or other upper layers are prohibited.
+
+**⚠️ Prohibited from directly accessing external storage in the following layers**
+- ❌ `biz_layer` (Business layer)
+- ❌ `memory_layer` (Memory layer)
+- ❌ `agentic_layer` (Agent layer)
+- ❌ API interface layer (`api_specs`)
+- ❌ Application layer (`app.py`, controllers, etc.)
+
+**✅ Must access through the following methods**
+- `infra_layer/adapters/out/persistence/repository/` - Database access
+- `infra_layer/adapters/out/search/repository/` - Search engine access
+
+### Why This Standard?
+
+#### 1. Separation of Concerns
+
+Following Hexagonal Architecture and Clean Architecture principles:
+- **Business layer**: Focus on business logic, doesn't care where data comes from
+- **Infrastructure layer**: Responsible for all interaction details with external systems
+- **Isolate changes**: When replacing database or search engine, only need to modify infra layer
+
+#### 2. Testability
+
+```python
+# ✅ Benefit: Business layer depends on abstract interface, easy to mock for testing
+async def process_user_memory(user_id: str, memory_repo: MemoryRepository):
+    """Business logic doesn't depend on concrete implementation"""
+    memories = await memory_repo.find_by_user_id(user_id)
+    # Business processing...
+    
+# Can easily replace with mock during testing
+mock_repo = MockMemoryRepository()
+await process_user_memory("user_1", mock_repo)
+```
+
+#### 3. Code Reuse and Consistency
+
+- Avoid repeating same database query logic in multiple places
+- Unified handling of exceptions, logging, performance monitoring
+- Unified handling of data conversion and validation
+
+#### 4. Centralized Performance Optimization
+
+- Index optimization and query optimization uniformly implemented in repository layer
+- Cache strategy uniformly managed
+- Batch operation optimization done in one place, benefits entire project
+
+### Correct Architectural Layering
+
+```
+┌─────────────────────────────────────────┐
+│  API Layer (api_specs, app.py)         │
+│  - Receive requests, return responses   │
+└─────────────┬───────────────────────────┘
+              │ Calls
+              ▼
+┌─────────────────────────────────────────┐
+│  Business Layer (biz_layer)             │
+│  - Business logic processing            │
+│  - Depends on abstract interfaces (Port)│
+└─────────────┬───────────────────────────┘
+              │ Dependency Injection
+              ▼
+┌─────────────────────────────────────────┐
+│  Memory Layer (memory_layer)            │
+│  - Memory management logic              │
+│  - Depends on abstract interfaces (Port)│
+└─────────────┬───────────────────────────┘
+              │ Dependency Injection
+              ▼
+┌─────────────────────────────────────────┐
+│  Infrastructure Layer (infra_layer)     │
+│  - Repository implementations (Adapter) │
+│  - Directly operate DB/search engines   │
+│  - MongoDB, PostgreSQL, ES, Milvus     │
+└─────────────────────────────────────────┘
+```
+
+### Implementation Standards
+
+#### ✅ Correct Example: Access through Repository
+
+**Define Repository Interface (Port)**
+
+```python
+# core/ports/memory_repository.py
+from abc import ABC, abstractmethod
+from typing import List, Optional
+
+class MemoryRepository(ABC):
+    """Memory repository interface (abstract)"""
+    
+    @abstractmethod
+    async def save(self, memory: Memory) -> str:
+        """Save memory"""
+        pass
+    
+    @abstractmethod
+    async def find_by_id(self, memory_id: str) -> Optional[Memory]:
+        """Find memory by ID"""
+        pass
+    
+    @abstractmethod
+    async def find_by_user_id(self, user_id: str, limit: int = 100) -> List[Memory]:
+        """Find memory list by user ID"""
+        pass
+    
+    @abstractmethod
+    async def search_semantic(self, query: str, user_id: str, top_k: int = 10) -> List[Memory]:
+        """Semantic search"""
+        pass
+```
+
+**Implement Repository (Adapter)**
+
+```python
+# infra_layer/adapters/out/persistence/repository/memory_mongo_repository.py
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from core.ports.memory_repository import MemoryRepository
+from core.domain.memory import Memory
+
+class MemoryMongoRepository(MemoryRepository):
+    """MongoDB memory repository implementation"""
+    
+    def __init__(self, db: AsyncIOMotorDatabase):
+        self._collection = db["memories"]
+    
+    async def save(self, memory: Memory) -> str:
+        result = await self._collection.insert_one(memory.to_dict())
+        return str(result.inserted_id)
+    
+    async def find_by_id(self, memory_id: str) -> Optional[Memory]:
+        doc = await self._collection.find_one({"_id": memory_id})
+        return Memory.from_dict(doc) if doc else None
+    
+    async def find_by_user_id(self, user_id: str, limit: int = 100) -> List[Memory]:
+        cursor = self._collection.find({"user_id": user_id}).limit(limit)
+        docs = await cursor.to_list(length=limit)
+        return [Memory.from_dict(doc) for doc in docs]
+    
+    async def search_semantic(self, query: str, user_id: str, top_k: int = 10) -> List[Memory]:
+        # Call vector search (encapsulated in infra layer)
+        # May also call ElasticSearch or Milvus here
+        ...
+```
+
+**Business Layer Uses Repository**
+
+```python
+# biz_layer/services/memory_service.py
+from core.ports.memory_repository import MemoryRepository
+from core.domain.memory import Memory
+
+class MemoryService:
+    """Memory business service"""
+    
+    def __init__(self, memory_repo: MemoryRepository):
+        # ✅ Dependency injection: depend on abstract interface, not concrete implementation
+        self._memory_repo = memory_repo
+    
+    async def create_memory(self, user_id: str, content: str) -> str:
+        """Create memory (business logic)"""
+        # Business logic: construct domain object
+        memory = Memory(user_id=user_id, content=content)
+        
+        # ✅ Correct: save through repository
+        memory_id = await self._memory_repo.save(memory)
+        return memory_id
+    
+    async def get_user_memories(self, user_id: str) -> List[Memory]:
+        """Get user memory list"""
+        # ✅ Correct: query through repository
+        return await self._memory_repo.find_by_user_id(user_id)
+    
+    async def search_memories(self, user_id: str, query: str) -> List[Memory]:
+        """Search memories"""
+        # ✅ Correct: semantic search through repository
+        return await self._memory_repo.search_semantic(query, user_id)
+```
+
+#### ❌ Wrong Example: Business Layer Directly Accesses Database
+
+```python
+# ❌ Wrong: Business layer directly uses MongoDB driver
+from motor.motor_asyncio import AsyncIOMotorClient
+
+class MemoryService:
+    def __init__(self, db_uri: str):
+        # ❌ Business layer should not directly connect to database
+        self._client = AsyncIOMotorClient(db_uri)
+        self._db = self._client["memsys"]
+    
+    async def create_memory(self, user_id: str, content: str) -> str:
+        # ❌ Business layer should not directly operate collection
+        result = await self._db.memories.insert_one({
+            "user_id": user_id,
+            "content": content
+        })
+        return str(result.inserted_id)
+```
+
+```python
+# ❌ Wrong: memory_layer directly uses ElasticSearch
+from elasticsearch import AsyncElasticsearch
+
+class MemoryRetriever:
+    def __init__(self, es_hosts: list):
+        # ❌ Should not directly create ES client at this layer
+        self._es = AsyncElasticsearch(hosts=es_hosts)
+    
+    async def search(self, query: str) -> list:
+        # ❌ Should not directly call ES API
+        result = await self._es.search(index="memories", body={
+            "query": {"match": {"content": query}}
+        })
+        return result["hits"]["hits"]
+```
+
+```python
+# ❌ Wrong: API layer directly accesses database
+from fastapi import APIRouter
+from motor.motor_asyncio import AsyncIOMotorClient
+
+router = APIRouter()
+db_client = AsyncIOMotorClient("mongodb://localhost")
+
+@router.get("/memories/{user_id}")
+async def get_memories(user_id: str):
+    # ❌ API layer should not directly query database
+    db = db_client["memsys"]
+    memories = await db.memories.find({"user_id": user_id}).to_list(100)
+    return {"data": memories}
+```
+
+### Dependency Injection Configuration
+
+**Use dependency injection container to manage dependencies**
+
+```python
+# application_startup.py or bootstrap.py
+from dependency_injector import containers, providers
+from infra_layer.adapters.out.persistence.repository.memory_mongo_repository import MemoryMongoRepository
+from biz_layer.services.memory_service import MemoryService
+
+class Container(containers.DeclarativeContainer):
+    """Dependency injection container"""
+    
+    # Configuration
+    config = providers.Configuration()
+    
+    # Database connection
+    mongodb_client = providers.Singleton(
+        AsyncIOMotorClient,
+        config.mongodb.uri
+    )
+    
+    mongodb_database = providers.Singleton(
+        lambda client: client[config.mongodb.database],
+        client=mongodb_client
+    )
+    
+    # Repository layer (infrastructure)
+    memory_repository = providers.Factory(
+        MemoryMongoRepository,
+        db=mongodb_database
+    )
+    
+    # Service layer (business logic)
+    memory_service = providers.Factory(
+        MemoryService,
+        memory_repo=memory_repository
+    )
+```
+
+### Search Engine Access Standards
+
+**ElasticSearch / Milvus also follow Repository pattern**
+
+```python
+# infra_layer/adapters/out/search/repository/semantic_memory_es_repository.py
+from elasticsearch import AsyncElasticsearch
+from typing import List
+
+class SemanticMemoryESRepository:
+    """ElasticSearch semantic memory repository"""
+    
+    def __init__(self, es_client: AsyncElasticsearch, index_name: str):
+        self._es = es_client
+        self._index = index_name
+    
+    async def index_memory(self, memory_id: str, content: str, embedding: List[float]):
+        """Index memory to ES"""
+        await self._es.index(
+            index=self._index,
+            id=memory_id,
+            body={
+                "content": content,
+                "embedding": embedding
+            }
+        )
+    
+    async def search_by_vector(self, query_vector: List[float], top_k: int = 10) -> List[dict]:
+        """Vector search"""
+        result = await self._es.search(
+            index=self._index,
+            body={
+                "query": {
+                    "script_score": {
+                        "query": {"match_all": {}},
+                        "script": {
+                            "source": "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
+                            "params": {"query_vector": query_vector}
+                        }
+                    }
+                },
+                "size": top_k
+            }
+        )
+        return result["hits"]["hits"]
+```
+
+**Business Layer Calls Search Repository**
+
+```python
+# memory_layer/retrievers/semantic_retriever.py
+from infra_layer.adapters.out.search.repository.semantic_memory_es_repository import SemanticMemoryESRepository
+
+class SemanticRetriever:
+    """Semantic retriever (business logic layer)"""
+    
+    def __init__(self, search_repo: SemanticMemoryESRepository):
+        # ✅ Depend on abstraction, get repository through dependency injection
+        self._search_repo = search_repo
+    
+    async def retrieve_similar_memories(self, query_embedding: List[float], top_k: int = 10):
+        """Retrieve similar memories"""
+        # ✅ Access search engine through repository
+        results = await self._search_repo.search_by_vector(query_embedding, top_k)
+        # Business logic: filtering, sorting, formatting, etc.
+        return self._process_results(results)
+```
+
+### Multiple Data Source Scenarios
+
+**Repository can encapsulate access to multiple data sources**
+
+```python
+# infra_layer/adapters/out/persistence/repository/memory_hybrid_repository.py
+class MemoryHybridRepository(MemoryRepository):
+    """Hybrid memory repository: MongoDB + ElasticSearch"""
+    
+    def __init__(
+        self,
+        mongo_repo: MemoryMongoRepository,
+        es_repo: SemanticMemoryESRepository
+    ):
+        self._mongo = mongo_repo
+        self._es = es_repo
+    
+    async def save(self, memory: Memory) -> str:
+        """Save to MongoDB and ES"""
+        # Save to MongoDB
+        memory_id = await self._mongo.save(memory)
+        
+        # Sync to ElasticSearch (async task or immediate sync)
+        await self._es.index_memory(
+            memory_id=memory_id,
+            content=memory.content,
+            embedding=memory.embedding
+        )
+        
+        return memory_id
+    
+    async def search_semantic(self, query: str, user_id: str, top_k: int = 10) -> List[Memory]:
+        """Semantic search: ES query + MongoDB supplement details"""
+        # 1. ES search to get relevant IDs
+        es_results = await self._es.search_by_text(query, top_k)
+        memory_ids = [hit["_id"] for hit in es_results]
+        
+        # 2. MongoDB batch query for complete data
+        memories = await self._mongo.find_by_ids(memory_ids)
+        return memories
+```
+
+### Checklist
+
+When writing or reviewing code, please confirm the following:
+
+- [ ] **Are database operations in infra_layer/repository?**
+- [ ] **Are search engine operations in infra_layer/repository?**
+- [ ] **Does business layer depend on abstract interfaces (Port) rather than concrete implementations?**
+- [ ] **Is dependency injection used to pass repositories?**
+- [ ] **Avoid directly creating database connections in business/API/application layers?**
+- [ ] **Avoid directly using MongoDB/PostgreSQL/ES/Milvus clients in business layer?**
+- [ ] **Are newly added Repositories registered in dependency injection container?**
+- [ ] **Do Repository methods have clear business semantics (rather than exposing underlying implementation details)?**
+
+### Common Questions
+
+**Q: Why can't I directly use MongoDB driver in business layer?**  
+A: It violates architectural layering principles, causing business logic to be coupled with infrastructure, making it difficult to test and replace data sources.
+
+**Q: Do simple queries also need to go through Repository?**  
+A: Yes. Even simple queries should be encapsulated in Repository. This allows:
+   - Unified management of all data access
+   - Only need to modify one place for subsequent optimization
+   - Keep code style consistent
+
+**Q: Should Repository methods return dict or domain objects?**  
+A: Recommend returning domain objects (like `Memory`, `User`), so business layer doesn't need to care about underlying data format.
+
+**Q: How to handle complex join queries?**  
+A: Encapsulate complex query logic in Repository layer, provide semantic methods externally. For example:
+```python
+async def find_memories_with_user_info(self, user_id: str) -> List[MemoryWithUser]:
+    # Handle join or multiple queries inside Repository
+    ...
+```
+
+**Q: Can I call other Repositories within a Repository?**  
+A: Yes, but be careful:
+   - Avoid circular dependencies
+   - Complex cross-data-source logic should be coordinated in business layer
+   - Repository responsibilities should be single
+
+### Related Documentation
+
+- [Hexagonal Architecture](https://en.wikipedia.org/wiki/Hexagonal_architecture_(software))
+- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+- [Dependency Injection Pattern](https://python-dependency-injector.ets-labs.org/)
 
 ---
 

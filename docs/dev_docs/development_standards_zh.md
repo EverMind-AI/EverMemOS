@@ -48,6 +48,9 @@ pre-commit install           # 安装代码检查钩子
 **💾 数据迁移规范**  
 涉及数据修复或 Schema 迁移的新功能，尽早与研发、运维讨论方案可行性和实施时间安排
 
+**🏛️ 数据访问规范**  
+所有数据库、搜索引擎等外部存储的读写操作必须收敛到 infra 层的 repository 方法中，禁止在业务层直接调用外部仓储
+
 ### 📖 快速导航
 
 - 不知道怎么装依赖？→ [依赖管理规范](#依赖管理规范)
@@ -56,6 +59,7 @@ pre-commit install           # 安装代码检查钩子
 - 不确定能不能用线程？→ [异步编程规范](#异步编程规范)
 - 循环中能做数据库查询吗？→ [禁止在 for 循环中进行 I/O 操作](#7-禁止在-for-循环中进行-io-操作-)
 - 时间字段怎么处理？→ [时区意识规范](#时区意识规范)
+- 数据库查询应该写在哪？→ [数据访问规范](#数据访问规范)
 - 导入路径报错？→ [导入规范](#导入规范)
 - 不知道切什么分支？→ [分支管理规范](#分支管理规范)
 - 需要提 MR？→ [Code Review 流程](#code-review-流程)
@@ -71,6 +75,7 @@ pre-commit install           # 安装代码检查钩子
 - [代码风格规范](#代码风格规范)
 - [异步编程规范](#异步编程规范)
 - [时区意识规范](#时区意识规范)
+- [数据访问规范](#数据访问规范)
 - [导入规范](#导入规范)
   - [PYTHONPATH 管理](#pythonpath-管理)
   - [优先使用绝对导入](#优先使用绝对导入)
@@ -787,6 +792,446 @@ A: 需要编写数据迁移脚本，为所有 naive datetime 添加上海时区�
 - [ ] 数据库 schema 使用了时区感知的类型（如 `timestamptz`）
 - [ ] API 返回的时间字符串包含时区信息（ISO 8601 格式）
 - [ ] 单元测试中使用的测试数据都带有时区信息
+
+---
+
+## 🏛️ 数据访问规范
+
+### 核心原则
+
+**💡 重要提示：所有外部存储访问必须通过 infra 层的 repository**
+
+在处理数据库、搜索引擎等外部存储系统时，必须遵循严格的分层架构原则。所有数据读写操作都必须收敛到 `infra_layer` 的 `repository` 层，禁止在业务层或其他上层直接调用外部仓储能力。
+
+**⚠️ 禁止在以下层级直接访问外部存储**
+- ❌ `biz_layer`（业务层）
+- ❌ `memory_layer`（记忆层）
+- ❌ `agentic_layer`（Agent层）
+- ❌ API 接口层（`api_specs`）
+- ❌ 应用层（`app.py`、控制器等）
+
+**✅ 必须通过以下方式访问**
+- `infra_layer/adapters/out/persistence/repository/` - 数据库访问
+- `infra_layer/adapters/out/search/repository/` - 搜索引擎访问
+
+### 为什么需要这个规范？
+
+#### 1. 职责分离
+
+遵循六边形架构（Hexagonal Architecture）和整洁架构（Clean Architecture）原则：
+- **业务层**：专注于业务逻辑，不关心数据来自何处
+- **基础设施层**：负责所有外部系统的交互细节
+- **隔离变化**：更换数据库或搜索引擎时，只需修改 infra 层
+
+#### 2. 可测试性
+
+```python
+# ✅ 好处：业务层依赖抽象接口，易于 mock 测试
+async def process_user_memory(user_id: str, memory_repo: MemoryRepository):
+    """业务逻辑不依赖具体实现"""
+    memories = await memory_repo.find_by_user_id(user_id)
+    # 业务处理...
+    
+# 测试时可以轻松替换为 mock
+mock_repo = MockMemoryRepository()
+await process_user_memory("user_1", mock_repo)
+```
+
+#### 3. 代码复用与一致性
+
+- 避免在多处重复编写相同的数据库查询逻辑
+- 统一处理异常、日志、性能监控
+- 统一处理数据转换、验证
+
+#### 4. 性能优化集中管理
+
+- 索引优化、查询优化在 repository 层统一实现
+- 缓存策略统一管理
+- 批量操作优化在一处完成，全项目受益
+
+### 正确的架构分层
+
+```
+┌─────────────────────────────────────────┐
+│  API Layer (api_specs, app.py)         │
+│  - 接收请求，返回响应                      │
+└─────────────┬───────────────────────────┘
+              │ 调用
+              ▼
+┌─────────────────────────────────────────┐
+│  Business Layer (biz_layer)             │
+│  - 业务逻辑处理                           │
+│  - 依赖抽象接口（Port）                    │
+└─────────────┬───────────────────────────┘
+              │ 依赖注入
+              ▼
+┌─────────────────────────────────────────┐
+│  Memory Layer (memory_layer)            │
+│  - 记忆管理逻辑                           │
+│  - 依赖抽象接口（Port）                    │
+└─────────────┬───────────────────────────┘
+              │ 依赖注入
+              ▼
+┌─────────────────────────────────────────┐
+│  Infrastructure Layer (infra_layer)     │
+│  - Repository 实现（Adapter）             │
+│  - 直接操作数据库/搜索引擎                  │
+│  - MongoDB, PostgreSQL, ES, Milvus     │
+└─────────────────────────────────────────┘
+```
+
+### 实现规范
+
+#### ✅ 正确示例：通过 Repository 访问
+
+**定义 Repository 接口（Port）**
+
+```python
+# core/ports/memory_repository.py
+from abc import ABC, abstractmethod
+from typing import List, Optional
+
+class MemoryRepository(ABC):
+    """记忆仓储接口（抽象）"""
+    
+    @abstractmethod
+    async def save(self, memory: Memory) -> str:
+        """保存记忆"""
+        pass
+    
+    @abstractmethod
+    async def find_by_id(self, memory_id: str) -> Optional[Memory]:
+        """根据ID查询记忆"""
+        pass
+    
+    @abstractmethod
+    async def find_by_user_id(self, user_id: str, limit: int = 100) -> List[Memory]:
+        """根据用户ID查询记忆列表"""
+        pass
+    
+    @abstractmethod
+    async def search_semantic(self, query: str, user_id: str, top_k: int = 10) -> List[Memory]:
+        """语义搜索"""
+        pass
+```
+
+**实现 Repository（Adapter）**
+
+```python
+# infra_layer/adapters/out/persistence/repository/memory_mongo_repository.py
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from core.ports.memory_repository import MemoryRepository
+from core.domain.memory import Memory
+
+class MemoryMongoRepository(MemoryRepository):
+    """MongoDB 记忆仓储实现"""
+    
+    def __init__(self, db: AsyncIOMotorDatabase):
+        self._collection = db["memories"]
+    
+    async def save(self, memory: Memory) -> str:
+        result = await self._collection.insert_one(memory.to_dict())
+        return str(result.inserted_id)
+    
+    async def find_by_id(self, memory_id: str) -> Optional[Memory]:
+        doc = await self._collection.find_one({"_id": memory_id})
+        return Memory.from_dict(doc) if doc else None
+    
+    async def find_by_user_id(self, user_id: str, limit: int = 100) -> List[Memory]:
+        cursor = self._collection.find({"user_id": user_id}).limit(limit)
+        docs = await cursor.to_list(length=limit)
+        return [Memory.from_dict(doc) for doc in docs]
+    
+    async def search_semantic(self, query: str, user_id: str, top_k: int = 10) -> List[Memory]:
+        # 调用向量搜索（在 infra 层封装）
+        # 这里可能还会调用 ElasticSearch 或 Milvus
+        ...
+```
+
+**业务层使用 Repository**
+
+```python
+# biz_layer/services/memory_service.py
+from core.ports.memory_repository import MemoryRepository
+from core.domain.memory import Memory
+
+class MemoryService:
+    """记忆业务服务"""
+    
+    def __init__(self, memory_repo: MemoryRepository):
+        # ✅ 依赖注入：依赖抽象接口，不依赖具体实现
+        self._memory_repo = memory_repo
+    
+    async def create_memory(self, user_id: str, content: str) -> str:
+        """创建记忆（业务逻辑）"""
+        # 业务逻辑：构建领域对象
+        memory = Memory(user_id=user_id, content=content)
+        
+        # ✅ 正确：通过 repository 保存
+        memory_id = await self._memory_repo.save(memory)
+        return memory_id
+    
+    async def get_user_memories(self, user_id: str) -> List[Memory]:
+        """获取用户记忆列表"""
+        # ✅ 正确：通过 repository 查询
+        return await self._memory_repo.find_by_user_id(user_id)
+    
+    async def search_memories(self, user_id: str, query: str) -> List[Memory]:
+        """搜索记忆"""
+        # ✅ 正确：通过 repository 进行语义搜索
+        return await self._memory_repo.search_semantic(query, user_id)
+```
+
+#### ❌ 错误示例：业务层直接访问数据库
+
+```python
+# ❌ 错误：在业务层直接使用 MongoDB 驱动
+from motor.motor_asyncio import AsyncIOMotorClient
+
+class MemoryService:
+    def __init__(self, db_uri: str):
+        # ❌ 业务层不应该直接连接数据库
+        self._client = AsyncIOMotorClient(db_uri)
+        self._db = self._client["memsys"]
+    
+    async def create_memory(self, user_id: str, content: str) -> str:
+        # ❌ 业务层不应该直接操作 collection
+        result = await self._db.memories.insert_one({
+            "user_id": user_id,
+            "content": content
+        })
+        return str(result.inserted_id)
+```
+
+```python
+# ❌ 错误：在 memory_layer 直接使用 ElasticSearch
+from elasticsearch import AsyncElasticsearch
+
+class MemoryRetriever:
+    def __init__(self, es_hosts: list):
+        # ❌ 不应该在这一层直接创建 ES 客户端
+        self._es = AsyncElasticsearch(hosts=es_hosts)
+    
+    async def search(self, query: str) -> list:
+        # ❌ 不应该直接调用 ES API
+        result = await self._es.search(index="memories", body={
+            "query": {"match": {"content": query}}
+        })
+        return result["hits"]["hits"]
+```
+
+```python
+# ❌ 错误：在 API 层直接访问数据库
+from fastapi import APIRouter
+from motor.motor_asyncio import AsyncIOMotorClient
+
+router = APIRouter()
+db_client = AsyncIOMotorClient("mongodb://localhost")
+
+@router.get("/memories/{user_id}")
+async def get_memories(user_id: str):
+    # ❌ API 层不应该直接查询数据库
+    db = db_client["memsys"]
+    memories = await db.memories.find({"user_id": user_id}).to_list(100)
+    return {"data": memories}
+```
+
+### 依赖注入配置
+
+**使用依赖注入容器管理依赖关系**
+
+```python
+# application_startup.py 或 bootstrap.py
+from dependency_injector import containers, providers
+from infra_layer.adapters.out.persistence.repository.memory_mongo_repository import MemoryMongoRepository
+from biz_layer.services.memory_service import MemoryService
+
+class Container(containers.DeclarativeContainer):
+    """依赖注入容器"""
+    
+    # 配置
+    config = providers.Configuration()
+    
+    # 数据库连接
+    mongodb_client = providers.Singleton(
+        AsyncIOMotorClient,
+        config.mongodb.uri
+    )
+    
+    mongodb_database = providers.Singleton(
+        lambda client: client[config.mongodb.database],
+        client=mongodb_client
+    )
+    
+    # Repository 层（基础设施）
+    memory_repository = providers.Factory(
+        MemoryMongoRepository,
+        db=mongodb_database
+    )
+    
+    # Service 层（业务逻辑）
+    memory_service = providers.Factory(
+        MemoryService,
+        memory_repo=memory_repository
+    )
+```
+
+### 搜索引擎访问规范
+
+**ElasticSearch / Milvus 同样遵循 Repository 模式**
+
+```python
+# infra_layer/adapters/out/search/repository/semantic_memory_es_repository.py
+from elasticsearch import AsyncElasticsearch
+from typing import List
+
+class SemanticMemoryESRepository:
+    """ElasticSearch 语义记忆仓储"""
+    
+    def __init__(self, es_client: AsyncElasticsearch, index_name: str):
+        self._es = es_client
+        self._index = index_name
+    
+    async def index_memory(self, memory_id: str, content: str, embedding: List[float]):
+        """索引记忆到 ES"""
+        await self._es.index(
+            index=self._index,
+            id=memory_id,
+            body={
+                "content": content,
+                "embedding": embedding
+            }
+        )
+    
+    async def search_by_vector(self, query_vector: List[float], top_k: int = 10) -> List[dict]:
+        """向量搜索"""
+        result = await self._es.search(
+            index=self._index,
+            body={
+                "query": {
+                    "script_score": {
+                        "query": {"match_all": {}},
+                        "script": {
+                            "source": "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
+                            "params": {"query_vector": query_vector}
+                        }
+                    }
+                },
+                "size": top_k
+            }
+        )
+        return result["hits"]["hits"]
+```
+
+**业务层调用搜索 Repository**
+
+```python
+# memory_layer/retrievers/semantic_retriever.py
+from infra_layer.adapters.out.search.repository.semantic_memory_es_repository import SemanticMemoryESRepository
+
+class SemanticRetriever:
+    """语义检索器（业务逻辑层）"""
+    
+    def __init__(self, search_repo: SemanticMemoryESRepository):
+        # ✅ 依赖抽象，通过依赖注入获得 repository
+        self._search_repo = search_repo
+    
+    async def retrieve_similar_memories(self, query_embedding: List[float], top_k: int = 10):
+        """检索相似记忆"""
+        # ✅ 通过 repository 访问搜索引擎
+        results = await self._search_repo.search_by_vector(query_embedding, top_k)
+        # 业务逻辑：过滤、排序、格式化等
+        return self._process_results(results)
+```
+
+### 多数据源场景
+
+**Repository 可以封装多个数据源的访问**
+
+```python
+# infra_layer/adapters/out/persistence/repository/memory_hybrid_repository.py
+class MemoryHybridRepository(MemoryRepository):
+    """混合记忆仓储：MongoDB + ElasticSearch"""
+    
+    def __init__(
+        self,
+        mongo_repo: MemoryMongoRepository,
+        es_repo: SemanticMemoryESRepository
+    ):
+        self._mongo = mongo_repo
+        self._es = es_repo
+    
+    async def save(self, memory: Memory) -> str:
+        """保存到 MongoDB 和 ES"""
+        # 保存到 MongoDB
+        memory_id = await self._mongo.save(memory)
+        
+        # 同步到 ElasticSearch（异步任务或立即同步）
+        await self._es.index_memory(
+            memory_id=memory_id,
+            content=memory.content,
+            embedding=memory.embedding
+        )
+        
+        return memory_id
+    
+    async def search_semantic(self, query: str, user_id: str, top_k: int = 10) -> List[Memory]:
+        """语义搜索：ES 查询 + MongoDB 补充详情"""
+        # 1. ES 搜索得到相关 ID
+        es_results = await self._es.search_by_text(query, top_k)
+        memory_ids = [hit["_id"] for hit in es_results]
+        
+        # 2. MongoDB 批量查询完整数据
+        memories = await self._mongo.find_by_ids(memory_ids)
+        return memories
+```
+
+### 检查清单
+
+在编写或审查代码时，请确认以下事项：
+
+- [ ] **数据库操作是否在 infra_layer/repository 中？**
+- [ ] **搜索引擎操作是否在 infra_layer/repository 中？**
+- [ ] **业务层是否依赖抽象接口（Port）而非具体实现？**
+- [ ] **是否使用依赖注入传递 repository？**
+- [ ] **是否避免在业务层/API层/应用层直接创建数据库连接？**
+- [ ] **是否避免在业务层直接使用 MongoDB/PostgreSQL/ES/Milvus 的客户端？**
+- [ ] **新增的 Repository 是否已注册到依赖注入容器？**
+- [ ] **Repository 方法是否具有清晰的业务语义（而非暴露底层实现细节）？**
+
+### 常见问题
+
+**Q: 为什么不能在业务层直接用 MongoDB 驱动？**  
+A: 违反了架构分层原则，导致业务逻辑与基础设施耦合，难以测试、难以替换数据源。
+
+**Q: 简单的查询也要通过 Repository 吗？**  
+A: 是的。即使是简单查询，也应该在 Repository 中封装。这样可以：
+   - 统一管理所有数据访问
+   - 后续优化时只需修改一处
+   - 保持代码风格一致
+
+**Q: Repository 方法应该返回 dict 还是领域对象？**  
+A: 建议返回领域对象（如 `Memory`、`User`），这样业务层不需要关心数据的底层格式。
+
+**Q: 如何处理复杂的联表查询？**  
+A: 在 Repository 层封装复杂查询逻辑，对外提供语义化的方法。例如：
+```python
+async def find_memories_with_user_info(self, user_id: str) -> List[MemoryWithUser]:
+    # Repository 内部处理联表或多次查询
+    ...
+```
+
+**Q: 可以在 Repository 中调用其他 Repository 吗？**  
+A: 可以，但要注意：
+   - 避免循环依赖
+   - 复杂的跨数据源逻辑建议放在业务层协调
+   - Repository 职责应该单一
+
+### 相关文档
+
+- [六边形架构（Hexagonal Architecture）](https://en.wikipedia.org/wiki/Hexagonal_architecture_(software))
+- [整洁架构（Clean Architecture）](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+- [依赖注入模式](https://python-dependency-injector.ets-labs.org/)
 
 ---
 
