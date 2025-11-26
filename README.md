@@ -180,7 +180,7 @@ Memory perception layer: quickly recalls relevant memories through multi-round r
 
 - **⚡ Lightweight Fast Mode**  
   For latency-sensitive scenarios, skip LLM calls and use pure keyword retrieval (BM25)  
-  Achieve extreme speed with millisecond-level response times
+  Achieve a faster response speed
 
 - **🎓 Agentic Multi-Round Recall**  
   For insufficient cases, generate 2-3 complementary queries, retrieve and fuse in parallel  
