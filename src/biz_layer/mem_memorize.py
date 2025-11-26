@@ -809,6 +809,10 @@ async def memorize(request: MemorizeRequest) -> List[Memory]:
                 logger.warning(
                     f"[mem_memorize] 清空对话历史失败: group_id={request.group_id}"
                 )
+            # 将新消息作为历史
+            await conversation_data_repo.save_conversation_data(
+                request.new_raw_data_list, request.group_id
+            )
         except Exception as e:
             logger.error(f"[mem_memorize] 清空对话历史异常: {e}")
             traceback.print_exc()

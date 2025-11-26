@@ -341,15 +341,15 @@ class ConvMemCellExtractor(MemCellExtractor):
         if should_end:
             # TODO 重构专项：转为int逻辑不对 应该保持为datetime
             ts_value = history_message_dict_list[-1].get("timestamp")
-
-            if isinstance(ts_value, str):
+            if isinstance(ts_value, datetime):
+                timestamp = ts_value
+            elif isinstance(ts_value, str):
                 # 统一解析为带时区的 datetime
                 timestamp = dt_from_iso_format(ts_value.replace("Z", "+00:00"))
             elif isinstance(ts_value, (int, float)):
                 timestamp = dt_from_timestamp(ts_value)
             else:
                 timestamp = get_now_with_timezone()
-
             participants = self._extract_participant_ids(history_message_dict_list)
             # 创建 MemCell
             # 优先使用边界检测的主题摘要；若为空，回退到最后一条新消息的文本；再不行用占位摘要
@@ -374,7 +374,6 @@ class ConvMemCellExtractor(MemCellExtractor):
                 participants=participants,  # 使用合并后的participants
                 type=self.raw_data_type,
             )
-
             # 自动触发情景记忆提取
             max_retries = 5
             for attempt in range(max_retries):

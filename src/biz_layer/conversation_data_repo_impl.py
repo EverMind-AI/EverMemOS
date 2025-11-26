@@ -182,6 +182,8 @@ class ConversationDataRepositoryImpl(ConversationDataRepository):
 
                 logger.debug("从Redis按时间范围获取到 %d 条消息", len(cache_data_list))
 
+                # 逆序，确保先入 Redis 的在前
+                cache_data_list = list(reversed(cache_data_list))
                 # 反序列化消息为RawData对象
                 for cache_data in cache_data_list:
                     try:
