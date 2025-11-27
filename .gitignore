@@ -212,4 +212,4 @@ docs/api_docs/profile_extraction_fields.md
 #tmp_data
 demo/memcell_outputs/
 evaluation/locomo_evaluation/results/
-evaluation/locomo_evaluation/results_ref/
+evaluation/locomo_evaluation/results_ref/demo/results/
