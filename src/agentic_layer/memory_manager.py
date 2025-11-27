@@ -1337,6 +1337,8 @@ class MemoryManager:
                     # 所有数据源统一使用 COSINE，相似度即 score
                     similarity = score
                     embedding_results.append((result, similarity))
+                    if result.get('content'):
+                        result['semantic'] = result['content']
 
                 # 按相似度排序
                 embedding_results.sort(key=lambda x: x[1], reverse=True)
@@ -1402,11 +1404,14 @@ class MemoryManager:
                     metadata = source.get('extend', {})
                     result = {
                         'score': bm25_score,
-                        'event_id': source.get('event_id', ''),
+                        'id': hit.get('_id', ''),
                         'user_id': source.get('user_id', ''),
                         'group_id': source.get('group_id', ''),
                         'timestamp': source.get('timestamp', ''),
                         'episode': source.get('episode', ''),
+                        'semantic': source.get('semantic', ''),
+                        'evidence': source.get('evidence', ''),
+                        'atomic_fact': source.get('atomic_fact', ''),
                         'search_content': source.get('search_content', []),
                         'metadata': metadata,
                     }
@@ -1417,7 +1422,6 @@ class MemoryManager:
                         result['start_time'] = None
                         result['end_time'] = None
                     bm25_results.append((result, bm25_score))
-
                 logger.debug(
                     f"ES 检索完成: data_source={data_source}, 结果数={len(bm25_results)}"
                 )
@@ -1430,26 +1434,16 @@ class MemoryManager:
                 memories = [
                     {
                         'score': score,
-                        'event_id': result.get('id', ''),
+                        'id': result.get('id', ''),
                         'user_id': result.get('user_id', ''),
                         'group_id': result.get('group_id', ''),
                         'timestamp': result.get('timestamp', ''),
                         'subject': result.get('metadata', {}).get('title', ''),
-                        'episode': (
-                            result.get('episode', '')
-                            if data_source == "episode"
-                            else (
-                                result.get('content', '')
-                                if data_source == "semantic_memory"
-                                else result.get('atomic_fact', '')
-                            )
-                        ),
+                        'episode': result.get('episode', ''),
+                        'semantic': result.get('semantic', ''),
                         'summary': result.get('metadata', {}).get('summary', ''),
-                        'evidence': (
-                            result.get('evidence', '')
-                            if data_source == "semantic_memory"
-                            else ''
-                        ),
+                        'evidence': result.get('evidence', ''),
+                        'atomic_fact': result.get('atomic_fact', ''),
                         'metadata': result.get('metadata', {}),
                     }
                     for result, score in final_results
@@ -1496,62 +1490,22 @@ class MemoryManager:
                 memories = []
                 for doc, rrf_score in final_results:
                     # doc 可能来自 Milvus 或 ES，需要统一格式
-                    # 区分方法：Milvus 有 'id' 字段，ES 有 'event_id' 字段
-                    if 'event_id' in doc and 'id' not in doc:
-                        # 来自 ES 的结果（已经是标准格式）
-                        memory = {
-                            'score': rrf_score,
-                            'event_id': doc.get('event_id', ''),
-                            'user_id': doc.get('user_id', ''),
-                            'group_id': doc.get('group_id', ''),
-                            'timestamp': doc.get('timestamp', ''),
-                            'subject': '',
-                            'episode': doc.get('episode', ''),
-                            'summary': '',
-                            'evidence': doc.get('evidence', ''),
-                            'metadata': doc.get('metadata', {}),
-                            'start_time': doc.get('start_time'),
-                            'end_time': doc.get('end_time'),
-                        }
-                    else:
-                        # 来自 Milvus 的结果（需要转换字段名）
-                        # 根据 data_source 获取正确的内容字段
-                        content_field = 'episode'  # 默认
-                        evidence_field = ''
-                        if data_source == "semantic_memory":
-                            content_field = 'content'
-                            evidence_field = doc.get('evidence', '')
-                        elif data_source == "event_log":
-                            content_field = 'atomic_fact'
-
-                        start_val = doc.get('start_time')
-                        end_val = doc.get('end_time')
-                        memory = {
-                            'score': rrf_score,
-                            'event_id': doc.get('id', ''),  # Milvus 用 'id'
-                            'user_id': doc.get('user_id', ''),
-                            'group_id': doc.get('group_id', ''),
-                            'timestamp': doc.get('timestamp', ''),
-                            'subject': (
-                                doc.get('metadata', {}).get('title', '')
-                                if isinstance(doc.get('metadata'), dict)
-                                else ''
-                            ),
-                            'episode': doc.get(content_field, ''),
-                            'summary': (
-                                doc.get('metadata', {}).get('summary', '')
-                                if isinstance(doc.get('metadata'), dict)
-                                else ''
-                            ),
-                            'evidence': evidence_field,
-                            'metadata': (
-                                doc.get('metadata', {})
-                                if isinstance(doc.get('metadata'), dict)
-                                else {}
-                            ),
-                            'start_time': self._format_datetime_field(start_val),
-                            'end_time': self._format_datetime_field(end_val),
-                        }
+                    memory = {
+                        'score': rrf_score,
+                        'id': doc.get('id', ''),
+                        'user_id': doc.get('user_id', ''),
+                        'group_id': doc.get('group_id', ''),
+                        'timestamp': doc.get('timestamp', ''),
+                        'subject': doc.get('metadata', {}).get('title', ''),
+                        'episode': doc.get('episode', ''),
+                        'summary': doc.get('metadata', {}).get('summary', ''),
+                        'semantic': doc.get('semantic', ''),
+                        'evidence': doc.get('evidence', ''),
+                        'atomic_fact': doc.get('atomic_fact', ''),
+                        'metadata': doc.get('metadata', {}),
+                        'start_time': doc.get('start_time'),
+                        'end_time': doc.get('end_time'),
+                    }
                     memories.append(memory)
 
                 metadata = {
