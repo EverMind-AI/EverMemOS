@@ -131,14 +131,14 @@ def reciprocal_rank_fusion(
     
     # 处理第一个结果集
     for rank, (doc, score) in enumerate(results1, start=1):
-        doc_id = id(doc)
+        doc_id = doc.get('id')
         if doc_id not in doc_map:
             doc_map[doc_id] = doc
         doc_rrf_scores[doc_id] = doc_rrf_scores.get(doc_id, 0.0) + 1.0 / (k + rank)
     
     # 处理第二个结果集
     for rank, (doc, score) in enumerate(results2, start=1):
-        doc_id = id(doc)
+        doc_id = doc.get('id')
         if doc_id not in doc_map:
             doc_map[doc_id] = doc
         doc_rrf_scores[doc_id] = doc_rrf_scores.get(doc_id, 0.0) + 1.0 / (k + rank)
