@@ -44,14 +44,14 @@ During our evaluation, we identified several issues in existing open-source refe
 
 | Locomo    | single hop | multi hop | temporal | open domain | Overall | Average Tokens | Version                                         | Answer LLM |
 |-----------|------------|-----------|----------|-------------|---------|----------------|----------------------------------------------|-----------------|
-| Full-text | 94.93      | 90.43     | 87.95    | 71.88       | 91.21   | 20281          |                                              | gpt-4.1-mini    |
+| Full-context | 94.93      | 90.43     | 87.95    | 71.88       | 91.21   | 20281          |                                              | gpt-4.1-mini    |
 | Mem0      | 68.97      | 61.70     | 58.26    | 50.00       | 64.20   | 1016           | web API/v1.0.0 (2025.11)                   | gpt-4.1-mini    |
 | Zep       | 90.84      | 81.91     | 77.26    | 75.00       | 85.22   | 1411           | web API/v3 (2025.11)                       | gpt-4.1-mini    |
 | MemOS     | 85.37      | 79.43     | 75.08    | 64.58       | 80.76   | 2498           | web API/v1 (2025.11)                       | gpt-4.1-mini    |
 | MemU      | 74.91      | 72.34     | 43.61    | 54.17       | 66.67   | 3964           | web API/v1 (2025.11)                      | gpt-4.1-mini    |
 | EverMemOS | 96.08      | 91.13     | 89.72    | 70.83       | 92.32   | 2298           | open-source EverMemOS v1.0.0 companion | gpt-4.1-mini    |
 
-*Full-text: using the whole conversation as context for answering questions.
+*Full-context: using the whole conversation as context for answering questions.
 
 
 **Results on Longmemeval**
