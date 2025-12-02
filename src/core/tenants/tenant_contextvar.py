@@ -8,7 +8,11 @@
 from contextvars import ContextVar
 from typing import Optional
 
-from src.core.tenants.tenant_models import TenantInfo
+from core.tenants.tenant_models import TenantInfo
+from core.tenants.tenant_config import get_tenant_config
+from core.tenants.tenant_info_provider import TenantInfoProvider
+from core.di.container import get_container
+from core.di.exceptions import BeanNotFoundError
 
 
 # 全局的租户上下文变量
@@ -45,7 +49,12 @@ def get_current_tenant() -> Optional[TenantInfo]:
     获取当前请求的租户信息
 
     此方法从当前上下文中获取租户信息。如果当前上下文中没有设置租户信息，
-    则返回 None。
+    会尝试从租户配置中获取单租户ID，并通过租户信息提供者获取租户信息。
+
+    获取逻辑：
+    1. 首先从 contextvar 中获取租户信息
+    2. 如果 contextvar 中没有，检查配置中是否设置了 SINGLE_TENANT_ID
+    3. 如果配置了 SINGLE_TENANT_ID，通过DI容器获取 TenantInfoProvider 并获取租户信息
 
     Returns:
         当前上下文中的租户信息，如果未设置则返回 None
@@ -57,7 +66,30 @@ def get_current_tenant() -> Optional[TenantInfo]:
         ... else:
         ...     print("未设置租户信息")
     """
-    return current_tenant_contextvar.get()
+    # 1. 首先尝试从 contextvar 中获取
+    tenant_info = current_tenant_contextvar.get()
+    if tenant_info is not None:
+        return tenant_info
+
+    # 2. 如果 contextvar 中没有，尝试从配置中获取 single_tenant_id
+    tenant_config = get_tenant_config()
+    single_tenant_id = tenant_config.single_tenant_id
+
+    # 3. 如果配置了 single_tenant_id，通过DI容器获取 TenantInfoProvider
+    if single_tenant_id:
+        try:
+            # 从DI容器获取 TenantInfoProvider 实例（会自动选择 primary 实现）
+            provider = get_container().get_bean_by_type(TenantInfoProvider)
+            tenant_info = provider.get_tenant_info(single_tenant_id)
+            set_current_tenant(tenant_info)
+            return tenant_info
+        except BeanNotFoundError:
+            # 如果DI容器中没有注册 TenantInfoProvider，返回 None
+            # 这种情况通常出现在应用启动早期或测试环境
+            return None
+
+    # 4. 如果都没有，返回 None
+    return None
 
 
 def clear_current_tenant() -> None:

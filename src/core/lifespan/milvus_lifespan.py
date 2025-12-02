@@ -89,11 +89,6 @@ class MilvusLifespanProvider(LifespanProvider):
                             e,
                         )
                         raise
-
-            # 将 Milvus 客户端存储到 app.state 中，供业务逻辑使用
-            app.state.milvus_clients = self._milvus_clients
-            app.state.milvus_factory = self._milvus_factory
-
             logger.info("✅ Milvus 连接初始化完成")
 
         except Exception as e:

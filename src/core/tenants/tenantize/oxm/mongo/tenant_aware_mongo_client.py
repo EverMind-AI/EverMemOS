@@ -21,6 +21,7 @@ from core.tenants.tenantize.oxm.mongo.config_utils import (
     load_mongo_config_from_env,
     get_default_database_name,
 )
+from core.tenants.tenantize.tenant_cache_utils import get_or_compute_tenant_cache
 
 logger = get_logger(__name__)
 
@@ -120,7 +121,7 @@ class TenantAwareMongoClient(AsyncMongoClient):
 
         优化策略：
         - 主体缓存：self._client_cache 存储真正的客户端实例（基于连接参数）
-        - 快捷引用：tenant_info_patch 存储 cache_key，用于快速定位应该使用哪个缓存客户端
+        - 快捷引用：tenant_info_patch 存储客户端引用，用于快速访问
         - 相同连接配置的不同租户会复用同一个客户端实例
 
         注意：创建 AsyncMongoClient 对象本身是同步的，只是后续调用它的方法才是异步的。
@@ -131,82 +132,46 @@ class TenantAwareMongoClient(AsyncMongoClient):
         Raises:
             RuntimeError: 在非租户模式下但未提供连接参数，或租户配置缺失
         """
-        # 检查是否为非租户模式 或 租户模式下无租户上下文
-        # 这两种情况都使用后备客户端
-        if self._config.non_tenant_mode:
-            logger.debug("⚠️ 非租户模式，使用后备客户端")
-            return self._get_fallback_client()
 
-        # 租户模式：获取当前租户信息
-        tenant_info = get_current_tenant()
-        if not tenant_info:
-            # 没有租户上下文时，使用后备客户端（从环境变量读取）
-            logger.debug("⚠️ 租户模式下未设置租户上下文，使用后备客户端")
-            return self._get_fallback_client()
-
-        tenant_id = tenant_info.tenant_id
-
-        # 从租户配置中获取 MongoDB 配置
-        mongo_config = get_tenant_mongo_config()
-        if not mongo_config:
-            raise RuntimeError(
-                f"租户 {tenant_id} 缺少 MongoDB 配置信息。"
-                f"请确保租户信息中包含 storage_info.mongodb 配置。"
-            )
-
-        # 基于连接参数生成缓存键
-        cache_key = get_mongo_client_cache_key(mongo_config)
-
-        # 先从 tenant_info_patch 快捷引用检查（避免重复计算 cache_key）
-        patch_key = TenantPatchKey.MONGO_CLIENT_CACHE_KEY
-        cached_cache_key = tenant_info.get_patch_value(patch_key)
-
-        if cached_cache_key == cache_key:
-            # 快捷引用命中，直接从主体缓存获取
-            if cache_key in self._client_cache:
-                logger.debug(
-                    "🔍 通过 tenant_info_patch 快捷引用命中主体缓存 [tenant_id=%s, cache_key=%s]",
-                    tenant_id,
-                    cache_key,
+        def compute_client() -> AsyncMongoClient:
+            """计算（获取或创建）租户的 MongoDB 客户端"""
+            # 从租户配置中获取 MongoDB 配置
+            mongo_config = get_tenant_mongo_config()
+            if not mongo_config:
+                tenant_info = get_current_tenant()
+                raise RuntimeError(
+                    f"租户 {tenant_info.tenant_id} 缺少 MongoDB 配置信息。"
+                    f"请确保租户信息中包含 storage_info.mongodb 配置。"
                 )
+
+            # 基于连接参数生成缓存键
+            cache_key = get_mongo_client_cache_key(mongo_config)
+
+            # 从主体缓存获取
+            if cache_key in self._client_cache:
+                logger.debug("🔍 主体缓存命中 [cache_key=%s]", cache_key)
                 return self._client_cache[cache_key]
 
-        # 检查主体缓存
-        if cache_key in self._client_cache:
-            logger.debug(
-                "🔍 主体缓存命中 [tenant_id=%s, cache_key=%s]", tenant_id, cache_key
-            )
-            # 更新快捷引用
-            tenant_info.set_patch_value(patch_key, cache_key)
-            return self._client_cache[cache_key]
+            # 双重检查（防止并发创建）
+            if cache_key in self._client_cache:
+                return self._client_cache[cache_key]
 
-        # 创建新的客户端
-        # 注意：在 asyncio 单线程环境中，不需要锁
-        # 即使有并发调用，Python 的 GIL 也会保证字典操作的原子性
-        # 最坏情况是重复创建客户端，但会立即被后续的检查覆盖
+            # 创建新的客户端
+            logger.info("🔧 创建 MongoDB 客户端 [cache_key=%s]", cache_key)
+            client = self._create_client_from_config(mongo_config)
 
-        # 双重检查（防止并发创建）
-        if cache_key in self._client_cache:
-            # 更新快捷引用
-            tenant_info.set_patch_value(patch_key, cache_key)
-            return self._client_cache[cache_key]
+            # 缓存到主体缓存
+            self._client_cache[cache_key] = client
+            logger.info("✅ MongoDB 客户端已缓存 [cache_key=%s]", cache_key)
 
-        # 创建 MongoDB 客户端
-        logger.info(
-            "🔧 创建 MongoDB 客户端 [tenant_id=%s, cache_key=%s]", tenant_id, cache_key
+            return client
+
+        return get_or_compute_tenant_cache(
+            patch_key=TenantPatchKey.MONGO_CLIENT_CACHE_KEY,
+            compute_func=compute_client,
+            fallback=lambda: self._get_fallback_client(),
+            cache_description="MongoDB 客户端",
         )
-        client = self._create_client_from_config(mongo_config)
-
-        # 缓存到主体缓存（基于连接参数）
-        self._client_cache[cache_key] = client
-        # 设置快捷引用到 tenant_info_patch
-        tenant_info.set_patch_value(patch_key, cache_key)
-
-        logger.info(
-            "✅ MongoDB 客户端已缓存 [tenant_id=%s, cache_key=%s]", tenant_id, cache_key
-        )
-
-        return client
 
     def _get_fallback_client(self) -> AsyncMongoClient:
         """
@@ -227,10 +192,6 @@ class TenantAwareMongoClient(AsyncMongoClient):
             RuntimeError: 非租户模式下未提供连接参数，且无法从环境变量读取
         """
         # 检查缓存
-        if self._fallback_client is not None:
-            return self._fallback_client
-
-        # 双重检查（防止并发创建）
         if self._fallback_client is not None:
             return self._fallback_client
 
@@ -425,131 +386,72 @@ class TenantAwareDatabase(AsyncDatabase):
 
         优化：数据库对象会缓存在 tenant_info_patch 中，避免重复创建
 
+        注意：一个租户只有一个数据库配置，所以使用固定的 patch_key
+
         Returns:
             AsyncDatabase: 真实的 MongoDB Database 对象
         """
-        # 检查是否在租户模式下
-        config = get_tenant_config()
 
-        # 非租户模式：直接创建数据库对象（不缓存）
-        if config.non_tenant_mode:
-            real_client = self._tenant_aware_client.get_real_client()
+        def compute_database() -> AsyncDatabase:
+            """计算数据库对象"""
             actual_database_name = self._get_actual_database_name()
-            logger.debug(
-                "🔍 非租户模式，获取真实的 MongoDB 数据库对象: 实际=%s",
-                actual_database_name,
-            )
+            real_client = self._tenant_aware_client.get_real_client()
             return real_client[actual_database_name]
 
-        # 租户模式：尝试从 tenant_info_patch 缓存获取
-        tenant_info = get_current_tenant()
-        if tenant_info:
-            # 获取实际的数据库名称（这个也会缓存）
-            actual_database_name = self._get_actual_database_name()
-
-            # 缓存键包含数据库名称，因为同一个租户可能访问不同的数据库
-            patch_cache_key = TenantPatchKey.get_real_database_key(actual_database_name)
-            cached_database = tenant_info.get_patch_value(patch_cache_key)
-
-            if cached_database is not None:
-                logger.debug(
-                    "🔍 数据库对象已从 tenant_info_patch 缓存命中 [tenant_id=%s, db_name=%s]",
-                    tenant_info.tenant_id,
-                    actual_database_name,
-                )
-                return cached_database
-
-            # 缓存未命中，创建新的数据库对象
-            real_client = self._tenant_aware_client.get_real_client()
-            logger.debug(
-                "🔍 获取真实的 MongoDB 数据库对象: 实际=%s", actual_database_name
-            )
-            real_database = real_client[actual_database_name]
-
-            # 缓存到 tenant_info_patch
-            tenant_info.set_patch_value(patch_cache_key, real_database)
-            logger.debug(
-                "💾 数据库对象已缓存到 tenant_info_patch [tenant_id=%s, db_name=%s]",
-                tenant_info.tenant_id,
-                actual_database_name,
-            )
-
-            return real_database
-
-        # 没有租户上下文：使用默认客户端和数据库（不缓存）
-        real_client = self._tenant_aware_client.get_real_client()
-        actual_database_name = self._get_actual_database_name()
-        logger.debug(
-            "⚠️ 无租户上下文，获取真实的 MongoDB 数据库对象: 实际=%s",
-            actual_database_name,
+        return get_or_compute_tenant_cache(
+            patch_key=TenantPatchKey.MONGO_REAL_DATABASE,
+            compute_func=compute_database,
+            fallback=compute_database,  # fallback 逻辑相同，直接复用
+            cache_description="MongoDB 数据库对象",
         )
-        return real_client[actual_database_name]
 
     def _get_actual_database_name(self) -> str:
         """
         获取实际的数据库名称（动态获取，带缓存）
 
         根据当前租户配置动态获取真实的数据库名称：
-        1. 如果在租户模式下，从租户配置中读取数据库名称
+        1. 如果在租户模式下，从租户配置中读取数据库名称（必须指定，不回退）
         2. 如果在非租户模式下，从环境变量读取默认数据库名称
-        3. 如果租户配置中没有指定数据库，使用环境变量的默认值
+        3. 如果无租户上下文，从环境变量读取默认数据库名称
 
         优化：数据库名称会缓存在 tenant_info_patch 中，避免重复计算
 
         Returns:
             str: 实际的数据库名称
+
+        Raises:
+            RuntimeError: 租户模式下如果租户配置缺失或未指定数据库名称
         """
-        config = get_tenant_config()
 
-        # 非租户模式：使用默认数据库（从环境变量）
-        if config.non_tenant_mode:
-            default_db = get_default_database_name()
-            logger.debug("⚠️ 非租户模式，使用默认数据库: %s", default_db)
-            return default_db
+        def compute_database_name() -> str:
+            """计算数据库名称"""
+            # 使用公共函数获取租户 MongoDB 配置
+            mongo_config = get_tenant_mongo_config()
+            if not mongo_config:
+                tenant_info = get_current_tenant()
+                raise RuntimeError(
+                    f"租户 {tenant_info.tenant_id} 缺少 MongoDB 配置信息。"
+                    f"请确保租户信息中包含 storage_info.mongodb 配置。"
+                )
 
-        # 租户模式：尝试从租户配置中获取数据库名称
-        tenant_info = get_current_tenant()
-        if not tenant_info:
-            # 没有租户上下文，使用默认数据库（从环境变量）
-            default_db = get_default_database_name()
-            logger.debug("⚠️ 无租户上下文，使用默认数据库: %s", default_db)
-            return default_db
-
-        # 检查 tenant_info_patch 缓存
-        patch_cache_key = TenantPatchKey.ACTUAL_DATABASE_NAME
-        cached_db_name = tenant_info.get_patch_value(patch_cache_key)
-        if cached_db_name is not None:
-            logger.debug(
-                "🔍 数据库名称已从 tenant_info_patch 缓存命中 [tenant_id=%s, db_name=%s]",
-                tenant_info.tenant_id,
-                cached_db_name,
-            )
-            return cached_db_name
-
-        # 使用公共函数获取租户 MongoDB 配置
-        mongo_config = get_tenant_mongo_config()
-        database_name = None
-
-        if mongo_config:
-            # 尝试从配置中获取数据库名称
+            # 从配置中获取数据库名称
             database_name = mongo_config.get("database")
-            if database_name:
-                logger.debug("📋 从租户配置中获取数据库名称: %s", database_name)
+            if not database_name:
+                # 租户模式下必须指定数据库名称，不能回退到默认值
+                tenant_info = get_current_tenant()
+                raise RuntimeError(
+                    f"租户 {tenant_info.tenant_id} 的 MongoDB 配置中未指定数据库名称。"
+                    f"请在租户配置的 storage_info.mongodb.database 中指定数据库名称。"
+                )
 
-        # 后备方案：使用默认数据库（从环境变量）
-        if not database_name:
-            database_name = get_default_database_name()
-            logger.debug("⚠️ 租户配置中未指定数据库，使用默认数据库: %s", database_name)
+            return database_name
 
-        # 缓存到 tenant_info_patch
-        tenant_info.set_patch_value(patch_cache_key, database_name)
-        logger.debug(
-            "✅ 数据库名称已缓存到 tenant_info_patch [tenant_id=%s, db_name=%s]",
-            tenant_info.tenant_id,
-            database_name,
+        return get_or_compute_tenant_cache(
+            patch_key=TenantPatchKey.ACTUAL_DATABASE_NAME,
+            compute_func=compute_database_name,
+            fallback=lambda: get_default_database_name(),  # 延迟计算，只在需要时调用
+            cache_description="数据库名称",
         )
-
-        return database_name
 
     def __getitem__(self, key: str) -> AsyncCollection:
         """

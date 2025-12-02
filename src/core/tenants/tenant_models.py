@@ -31,25 +31,10 @@ class TenantPatchKey(str, Enum):
 
     # MongoDB 数据库相关
     ACTUAL_DATABASE_NAME = "actual_database_name"
-    REAL_DATABASE_PREFIX = "real_database_"
+    MONGO_REAL_DATABASE = "mongo_real_database"  # 真实的 MongoDB 数据库对象
 
-    @classmethod
-    def get_real_database_key(cls, database_name: str) -> str:
-        """
-        生成特定数据库的缓存键
-
-        Args:
-            database_name: 数据库名称
-
-        Returns:
-            完整的数据库缓存键
-
-        Examples:
-            >>> key = TenantPatchKey.get_real_database_key("my_db")
-            >>> print(key)
-            'real_database_my_db'
-        """
-        return f"{cls.REAL_DATABASE_PREFIX.value}{database_name}"
+    # Milvus 连接相关
+    MILVUS_CONNECTION_CACHE_KEY = "milvus_connection_cache_key"
 
 
 @dataclass

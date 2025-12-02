@@ -17,11 +17,6 @@ import logging
 # 这里环境变量还没加载，所以不能使用get_logger
 logger = logging.getLogger(__name__)
 
-# 添加src目录到Python路径
-from import_parent_dir import add_parent_path
-
-add_parent_path(0)
-
 # 应用信息
 APP_NAME = "Memory System"
 APP_VERSION = "1.0.0"
@@ -63,6 +58,11 @@ def main():
         service_name = "longjob_" + args.longjob
     else:
         service_name = "web"
+
+    # 添加src目录到Python路径
+    from import_parent_dir import add_parent_path
+
+    add_parent_path(0)
 
     # 使用统一的环境加载工具
     from common_utils.load_env import setup_environment

@@ -6,14 +6,14 @@
 """
 
 from pymilvus import DataType, FieldSchema, CollectionSchema
-from core.oxm.milvus.milvus_collection_base import (
-    MilvusCollectionWithSuffix,
-    IndexConfig,
+from core.oxm.milvus.milvus_collection_base import IndexConfig
+from core.tenants.tenantize.oxm.milvus.tenant_aware_collection_with_suffix import (
+    TenantAwareMilvusCollectionWithSuffix,
 )
 from memory_layer.constants import VECTORIZE_DIMENSIONS
 
 
-class EpisodicMemoryCollection(MilvusCollectionWithSuffix):
+class EpisodicMemoryCollection(TenantAwareMilvusCollectionWithSuffix):
     """
     情景记忆 Milvus Collection
 

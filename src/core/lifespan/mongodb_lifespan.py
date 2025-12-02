@@ -73,10 +73,6 @@ class MongoDBLifespanProvider(LifespanProvider):
             for db_name, db_client in db_clients.items():
                 await db_client.initialize_beanie(db_document_models[db_name])
 
-            # 将 MongoDB 客户端存储到 app.state 中，供业务逻辑使用
-            app.state.mongodb_clients = db_clients
-            app.state.mongodb_factory = self._mongodb_factory
-
             logger.info("✅ MongoDB 连接初始化完成")
 
         except Exception as e:
@@ -98,8 +94,3 @@ class MongoDBLifespanProvider(LifespanProvider):
                 logger.info("✅ MongoDB 连接关闭完成")
             except Exception as e:
                 logger.error("❌ 关闭 MongoDB 连接时出错: %s", str(e))
-
-        # 清理 app.state 中的 MongoDB 相关属性
-        for attr in ['mongodb_clients', 'mongodb_factory']:
-            if hasattr(app.state, attr):
-                delattr(app.state, attr)
