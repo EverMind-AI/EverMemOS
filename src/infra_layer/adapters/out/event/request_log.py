@@ -27,7 +27,9 @@ class RequestLogEvent(BaseEvent):
         time_ms: 请求处理耗时（毫秒）
         timestamp: 请求发生的时间戳（可选，Unix 时间戳毫秒）
         status: 自定义状态（如 "success"、"failed"、"timeout" 等）
-        api_key: API 密钥标识
+        api_key: API 密钥标识（可选）
+        organization_id: 组织 ID（可选）
+        space_id: 空间 ID（可选）
         error_message: 错误信息（可选）
         extend: 扩展字段，用于存储额外信息（可选）
     """
@@ -40,7 +42,9 @@ class RequestLogEvent(BaseEvent):
     time_ms: Optional[int] = None
     timestamp: Optional[int] = None
     status: Optional[str] = None
-    api_key: str = ""
+    api_key: Optional[str] = None
+    organization_id: Optional[str] = None
+    space_id: Optional[str] = None
     error_message: Optional[str] = None
     extend: Optional[Dict[str, Any]] = field(default_factory=dict)
 
@@ -73,7 +77,9 @@ class RequestLogEvent(BaseEvent):
             time_ms=data.get("time_ms"),
             timestamp=data.get("timestamp"),
             status=data.get("status"),
-            api_key=data.get("api_key", ""),
+            api_key=data.get("api_key"),
+            organization_id=data.get("organization_id"),
+            space_id=data.get("space_id"),
             error_message=data.get("error_message"),
             extend=data.get("extend", {}),
         )
@@ -90,6 +96,8 @@ class RequestLogEvent(BaseEvent):
             f"time_ms={self.time_ms}, "
             f"timestamp={self.timestamp}, "
             f"status={self.status!r}, "
-            f"api_key={self.api_key!r}"
+            f"api_key={self.api_key!r}, "
+            f"organization_id={self.organization_id!r}, "
+            f"space_id={self.space_id!r}"
             f")"
         )
