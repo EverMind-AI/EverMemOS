@@ -141,6 +141,64 @@ def to_timestamp_ms_universal(time_value) -> int:
         return 0
 
 
+def from_datetime_str_strict(time_str: str) -> datetime.datetime:
+    """
+    Parse datetime string in STRICT mode - raises exception on failure.
+    
+    Difference from from_iso_format:
+        - from_datetime_str_strict: Strict mode, raises ValueError on failure (for data import)
+        - from_iso_format: Lenient mode, returns current time on failure (for runtime conversion)
+    
+    Supported formats (local time strings without timezone):
+        - "2025-01-07 09:15:33" (space-separated, common in database exports)
+        - "2025-01-07T09:15:33" (ISO T-separated)
+        - "2025-01-07 09:15:33.123456" (with microseconds)
+        - "2025-01-07T09:15:33.123456" (ISO with microseconds)
+    
+    Note: Does NOT support timezone suffixes (e.g., "Z" or "+08:00"). 
+          Use from_iso_format for those formats.
+    
+    Args:
+        time_str: Datetime string to parse
+    
+    Returns:
+        Timezone-aware datetime object (using system TZ environment variable)
+    
+    Raises:
+        ValueError: If time string format is invalid or cannot be parsed
+    
+    Example:
+        >>> from_datetime_str_strict("2025-01-07 09:15:33")
+        datetime.datetime(2025, 1, 7, 9, 15, 33, tzinfo=ZoneInfo('Asia/Shanghai'))
+    """
+    if not time_str or not isinstance(time_str, str):
+        raise ValueError(f"Invalid time string: {time_str}")
+    
+    time_str = time_str.strip()
+    
+    # 尝试常见格式（按使用频率排序）
+    formats = [
+        "%Y-%m-%d %H:%M:%S",         # "2025-01-07 09:15:33"
+        "%Y-%m-%dT%H:%M:%S",         # "2025-01-07T09:15:33"
+        "%Y-%m-%d %H:%M:%S.%f",      # "2025-01-07 09:15:33.123456"
+        "%Y-%m-%dT%H:%M:%S.%f",      # "2025-01-07T09:15:33.123456"
+    ]
+    
+    for fmt in formats:
+        try:
+            dt = datetime.datetime.strptime(time_str, fmt)
+            # 添加时区信息
+            return dt.replace(tzinfo=timezone)
+        except ValueError:
+            continue
+    
+    # 所有格式都失败，抛出异常
+    raise ValueError(
+        f"Failed to parse datetime string '{time_str}'. "
+        f"Supported formats: 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DDTHH:MM:SS' (with optional microseconds)"
+    )
+
+
 def from_iso_format(create_time, target_timezone: ZoneInfo = None) -> datetime.datetime:
     """
     将时间转换为带时区信息的datetime对象

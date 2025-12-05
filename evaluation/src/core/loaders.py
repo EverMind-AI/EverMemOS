@@ -11,6 +11,7 @@ from typing import List, Optional
 
 from evaluation.src.core.data_models import Dataset, Conversation, Message, QAPair
 from evaluation.src.converters.registry import get_converter
+from common_utils.datetime_utils import from_datetime_str_strict
 
 
 def load_dataset(dataset_name: str, data_path: str, max_content_length: Optional[int] = None) -> Dataset:
@@ -209,13 +210,11 @@ def _convert_locomo_conversation(conversation_data: dict, conv_id: str, max_cont
             timestamp_source = None
             
             if 'time' in msg and msg['time']:
-                # Priority 1: Use message-level timestamp if available
-                msg_timestamp = _parse_message_timestamp(msg['time'])
-                if msg_timestamp:
-                    timestamp_source = "message_level"
-            
-            # Fallback to session-level timestamp calculation (priority 2)
-            if msg_timestamp is None:
+                # Priority 1: Use message-level timestamp (strict parsing, raises on error)
+                msg_timestamp = from_datetime_str_strict(msg['time'])
+                timestamp_source = "message_level"
+            else:
+                # Priority 2: Generate from session-level timestamp
                 msg_timestamp = current_session_time + timedelta(seconds=msg_idx * time_interval)
                 timestamp_source = "fake" if is_fake_timestamp else "session_level"
             
@@ -310,44 +309,4 @@ def _parse_locomo_timestamp(timestamp_str: str) -> Optional[datetime]:
         return None
 
 
-def _parse_message_timestamp(time_str: str) -> Optional[datetime]:
-    """
-    Parse message-level timestamp.
-    
-    This function supports datasets where each message has its own timestamp field.
-    
-    Input formats:
-        - "2025-01-07 09:15:33" (standard format)
-        - "2025-01-07T09:15:33" (ISO format)
-        - "2025-01-07 09:15:33.123456" (with microseconds)
-        - "2025-01-07T09:15:33.123456" (ISO with microseconds)
-    
-    Args:
-        time_str: Message timestamp string
-    
-    Returns:
-        datetime object or None if parsing fails
-    """
-    if not time_str or not isinstance(time_str, str):
-        return None
-    
-    time_str = time_str.strip()
-    
-    # Try common formats in order of likelihood
-    formats = [
-        "%Y-%m-%d %H:%M:%S",         # "2025-01-07 09:15:33"
-        "%Y-%m-%dT%H:%M:%S",         # "2025-01-07T09:15:33"
-        "%Y-%m-%d %H:%M:%S.%f",      # "2025-01-07 09:15:33.123456"
-        "%Y-%m-%dT%H:%M:%S.%f",      # "2025-01-07T09:15:33.123456"
-    ]
-    
-    for fmt in formats:
-        try:
-            return datetime.strptime(time_str, fmt)
-        except ValueError:
-            continue
-    
-    # If all formats fail, print warning and return None
-    print(f"⚠️  Warning: Failed to parse message timestamp '{time_str}'")
-    return None
 

@@ -23,6 +23,7 @@ from common_utils.datetime_utils import (
     from_iso_format,
     from_timestamp,
     get_now_with_timezone,
+    from_datetime_str_strict,
 )
 from memory_layer.llm.llm_provider import LLMProvider
 from memory_layer.memcell_extractor.base_memcell_extractor import RawData, MemCell
@@ -101,19 +102,9 @@ def raw_data_load(locomo_data_path: str) -> Dict[str, List[RawData]]:
                 for i, msg in enumerate(session_messages):
                     # Priority 1: Use message-level timestamp if available (e.g., evermembench)
                     if 'time' in msg and msg['time']:
-                        try:
-                            # Parse message-level timestamp
-                            # Support formats: "2025-01-07 09:15:33" or "2025-01-07T09:15:33"
-                            time_str = msg['time'].strip()
-                            if 'T' in time_str:
-                                msg_datetime = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
-                            else:
-                                msg_datetime = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
-                            iso_timestamp = to_iso_format(msg_datetime)
-                        except (ValueError, AttributeError):
-                            # Fallback to session-level calculation if parsing fails
-                            msg_timestamp = session_time + timedelta(seconds=i * 30)
-                            iso_timestamp = to_iso_format(msg_timestamp)
+                        # Parse message-level timestamp (strict parsing, raises on error)
+                        msg_datetime = from_datetime_str_strict(msg['time'])
+                        iso_timestamp = to_iso_format(msg_datetime)
                     else:
                         # Priority 2: Generate timestamp from session time (e.g., locomo)
                         msg_timestamp = session_time + timedelta(seconds=i * 30)
