@@ -131,7 +131,8 @@ def append_user_ids_to_names(content: Any, refer_list: Any) -> Any:
 
 
 def build_conversation_text(
-    memcell: MemCell, user_id_to_name: Dict[str, str]
+    memcell: MemCell,
+    user_id_to_name: Dict[str, str],
 ) -> Tuple[str, Optional[str]]:
     """Convert raw data from a memcell into formatted conversation text.
 
@@ -148,27 +149,29 @@ def build_conversation_text(
 
     lines: List[str] = []
     for data in data_list:
-        speaker_id = data.get("speaker_id", "")
-        speaker_name = data.get("speaker_name", "")
+        messages = data.get("messages")
+        for msg in messages:
+            speaker_id = msg.get("extend").get("speaker_id")
+            speaker_name = msg.get("extend").get("speaker_name")
+            # Use extracted mapping as fallback if speaker_name is missing
+            if not speaker_name and speaker_id:
+                speaker_name = user_id_to_name.get(str(speaker_id), "")
 
-        # Use extracted mapping as fallback if speaker_name is missing
-        if not speaker_name and speaker_id:
-            speaker_name = user_id_to_name.get(str(speaker_id), "")
-
-        speaker = (
-            f"{speaker_name}(user_id:{speaker_id})" if speaker_id else speaker_name
-        )
-        content = append_refer_user_ids(data.get("content"), data.get("referList"))
-        timestamp = data.get("timestamp")
-
-        if timestamp:
-            lines.append(
-                f"[{timestamp}][conversation_id:{conversation_id_str}] {speaker}: {content}"
+            speaker = f"{speaker_name}(user_id:{speaker_id})" if speaker_id else speaker_name
+            content = append_refer_user_ids(
+                msg.get("content"),
+                msg.get("referList"),
             )
-        else:
-            lines.append(
-                f"[conversation_id:{conversation_id_str}] {speaker}: {content}"
-            )
+            timestamp = msg.get("timestamp")
+
+            if timestamp:
+                lines.append(
+                    f"[{timestamp}][conversation_id:{conversation_id_str}] {speaker}说: {content}"
+                )
+            else:
+                lines.append(
+                    f"[conversation_id:{conversation_id_str}] {speaker}说: {content}"
+                )
 
     return "\n".join(lines), conversation_id_str or None
 

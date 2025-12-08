@@ -605,8 +605,12 @@ class ProfileMemoryExtractor(MemoryExtractor):
         default_date: Optional[str] = None
 
         for memcell in request.memcell_list:
-            # 🔧 直接使用 episode，因为 original_data 经常为空
-            episode_text, event_id = build_episode_text(memcell, user_id_to_name)
+            conversation_text, event_id = build_conversation_text(memcell, user_id_to_name)
+            if conversation_text:
+                episode_text = conversation_text
+            else:
+                # 🔧 直接使用 episode，因为 original_data 经常为空
+                episode_text, event_id = build_episode_text(memcell, user_id_to_name)
 
             if episode_text:
                 conversation_lines.append(episode_text)
