@@ -1,5 +1,26 @@
 repos:
 -   repo: https://github.com/psf/black
-    rev: 24.3.0  # Use the latest stable version
+    rev: 24.3.0  # Use latest stable version
     hooks:
     -   id: black
+
+# Local hooks for non-English character detection
+-   repo: local
+    hooks:
+    # Check for non-English (CJK) characters in staged files
+    -   id: check-i18n-files
+        name: Check Non-English Characters in Files
+        entry: env PYTHONPATH=src python -m devops_scripts.i18n.i18n_tool hook
+        language: system
+        pass_filenames: true
+        # Skip this hook by setting SKIP_I18N_CHECK=1
+
+    # Check for non-English (CJK) characters in commit message
+    -   id: check-i18n-commit-msg
+        name: Check Non-English Characters in Commit Message
+        entry: env PYTHONPATH=src python -m devops_scripts.i18n.i18n_tool hook --commit-msg
+        language: system
+        stages: [commit-msg]
+        pass_filenames: true
+        always_run: true
+        # Skip by adding [skip-i18n] or #skip-i18n-check in commit message

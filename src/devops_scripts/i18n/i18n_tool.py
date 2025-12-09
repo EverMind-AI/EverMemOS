@@ -5,6 +5,7 @@ This unified tool provides multiple functions for internationalization:
 1. translate: Translate Chinese comments/logs to English in Python files
 2. check: Check for remaining Chinese content in Python files
 3. review: Review git commits to verify translation changes
+4. hook: Pre-commit hook to check for Chinese characters in staged files/commit msg
 
 CRITICAL RULES FOR TRANSLATION:
     1. DO NOT modify any code logic - this is the most important rule
@@ -29,7 +30,13 @@ Usage:
     python -m devops_scripts.i18n.i18n_tool review --commit abc123
     python -m devops_scripts.i18n.i18n_tool review --commit HEAD~3..HEAD
     python -m devops_scripts.i18n.i18n_tool review --reset  # Clear progress and start fresh
+
+    # Hook commands (for pre-commit)
+    python -m devops_scripts.i18n.i18n_tool hook file1.py file2.py
+    python -m devops_scripts.i18n.i18n_tool hook --commit-msg .git/COMMIT_EDITMSG
 """
+
+from __future__ import annotations
 
 import os
 import sys
@@ -37,26 +44,26 @@ import re
 import asyncio
 import json
 import subprocess
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
 
-# Add src to path for imports
+# ==============================================================================
+# Path Configuration (no project dependencies needed)
+# ==============================================================================
+
+# Add src to path for imports (only when needed by other commands)
 SRC_DIR = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(SRC_DIR))
+PROJECT_DIR = SRC_DIR.parent
 
-# Load environment variables first
-from dotenv import load_dotenv
-from common_utils.project_path import PROJECT_DIR
 
-env_file_path = PROJECT_DIR / ".env"
-if env_file_path.exists():
-    load_dotenv(env_file_path)
-    print(f"Loaded environment from {env_file_path}")
-
-from memory_layer.llm import OpenAIProvider
+def _setup_project_imports():
+    """Setup project imports when needed (lazy loading)."""
+    if str(SRC_DIR) not in sys.path:
+        sys.path.insert(0, str(SRC_DIR))
 
 
 # ==============================================================================
@@ -74,14 +81,87 @@ SKIP_DIRECTORIES = ["memory_layer/prompts"]
 
 # Files to skip (relative to SRC_DIR)
 SKIP_FILES = [
-    "memory_layer/memory_extractor/profile_memory/conversation.py",
-    "common_utils/text_utils.py",
-    "core/oxm/es/analyzer.py",
-    "memory_layer/memory_extractor/profile_memory/types.py",
-    "memory_layer/memory_extractor/profile_memory/value_helpers.py",
+    # "memory_layer/memory_extractor/profile_memory/conversation.py",
+    # "common_utils/text_utils.py",
+    # "core/oxm/es/analyzer.py",
+    # "memory_layer/memory_extractor/profile_memory/types.py",
+    # "memory_layer/memory_extractor/profile_memory/value_helpers.py",
     # This tool itself contains Chinese examples in prompts, skip it
-    "devops_scripts/i18n/i18n_tool.py",
+    "devops_scripts/i18n/i18n_tool.py"
 ]
+
+# ==============================================================================
+# Hook Configuration (for pre-commit)
+# ==============================================================================
+
+# File patterns to skip in hook check (glob patterns, relative to project root)
+# All files are checked by default, add patterns here to skip
+HOOK_SKIP_PATTERNS = [
+    # i18n tool itself contains CJK examples in prompts
+    "src/devops_scripts/i18n/i18n_tool.py",
+    # Prompt files may contain CJK
+    "src/memory_layer/prompts/*",
+    # Test files that specifically test i18n handling
+    "**/test_*i18n*.py",
+    # Documentation files (may contain CJK for localization)
+    "*.md",
+    "*.rst",
+    # Lock files and generated files
+    "*.lock",
+    "package-lock.json",
+    "yarn.lock",
+    # Data files
+    "*.json",
+    "*.yaml",
+    "*.yml",
+    "*.toml",
+    "*.xml",
+    "*.csv",
+    # Binary and media files
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.gif",
+    "*.svg",
+    "*.ico",
+    "*.pdf",
+    "*.zip",
+    "*.tar",
+    "*.gz",
+    # Compiled files
+    "*.pyc",
+    "*.pyo",
+    "*.so",
+    "*.dll",
+    "*.exe",
+    # Git files
+    ".git/*",
+    ".gitignore",
+    ".gitattributes",
+]
+
+# Environment variable to skip hook checks
+HOOK_SKIP_ENV_VAR = "SKIP_I18N_CHECK"
+
+# Keywords in commit message to skip check
+HOOK_SKIP_COMMIT_MSG_KEYWORDS = [
+    "skip-i18n-check",
+    "#skip-i18n-check",
+    "[skip-i18n]",
+    "[no-i18n-check]",
+]
+
+# CJK Unicode ranges (Chinese, Japanese, Korean)
+CJK_PATTERN = re.compile(
+    r'['
+    r'\u4e00-\u9fff'  # CJK Unified Ideographs (Chinese)
+    r'\u3040-\u309f'  # Hiragana (Japanese)
+    r'\u30a0-\u30ff'  # Katakana (Japanese)
+    r'\uac00-\ud7af'  # Hangul Syllables (Korean)
+    r'\u3400-\u4dbf'  # CJK Unified Ideographs Extension A
+    r'\uf900-\ufaff'  # CJK Compatibility Ideographs
+    r']'
+)
 
 
 # ==============================================================================
@@ -196,8 +276,18 @@ def contains_chinese(text: str) -> bool:
     return bool(chinese_pattern.search(text))
 
 
-def create_llm_provider() -> OpenAIProvider:
-    """Create and return an LLM provider instance."""
+def _load_env_and_get_llm_provider():
+    """Load environment and create LLM provider (lazy loading)."""
+    _setup_project_imports()
+
+    from dotenv import load_dotenv
+    from memory_layer.llm import OpenAIProvider
+
+    env_file_path = PROJECT_DIR / ".env"
+    if env_file_path.exists():
+        load_dotenv(env_file_path)
+        print(f"Loaded environment from {env_file_path}")
+
     return OpenAIProvider(
         model=os.getenv("LLM_MODEL", "gpt-4.1-mini"),
         api_key=os.getenv("LLM_API_KEY"),
@@ -756,7 +846,7 @@ async def cmd_translate(
             f"Resuming from previous run: {len(progress['processed'])} files already processed"
         )
 
-    provider = create_llm_provider()
+    provider = _load_env_and_get_llm_provider()
 
     if specific_files:
         python_files = [Path(f) for f in specific_files]
@@ -1013,7 +1103,7 @@ async def cmd_review(
     if not files_to_process:
         print("All files already processed!")
     else:
-        provider = create_llm_provider()
+        provider = _load_env_and_get_llm_provider()
 
         print("Analyzing changes with LLM...")
         print()
@@ -1143,6 +1233,247 @@ async def cmd_review(
 
 
 # ==============================================================================
+# Command: hook (pre-commit hook)
+# ==============================================================================
+
+
+def _hook_should_skip_file(file_path: str) -> bool:
+    """Check if a file should be skipped based on HOOK_SKIP_PATTERNS.
+
+    Only applies skip patterns to files within the project directory.
+    """
+    # Try to get relative path from project root
+    try:
+        abs_path = Path(file_path).resolve()
+        rel_path = str(abs_path.relative_to(PROJECT_DIR)).replace("\\", "/")
+    except ValueError:
+        # File is outside project directory, don't skip
+        return False
+
+    file_name = Path(file_path).name
+
+    for pattern in HOOK_SKIP_PATTERNS:
+        pattern = pattern.replace("\\", "/")
+
+        # Pattern like "*.md" - match by extension
+        if pattern.startswith("*."):
+            if fnmatch(file_name, pattern):
+                return True
+            continue
+
+        # Pattern like "**/*.py" or "**/test_*.py" - recursive glob
+        if pattern.startswith("**/"):
+            if fnmatch(rel_path, pattern) or fnmatch(file_name, pattern[3:]):
+                return True
+            continue
+
+        # Pattern like "dir/*" or "dir/**" - directory prefix
+        if pattern.endswith("/*") or pattern.endswith("/**"):
+            dir_prefix = pattern.rstrip("/*")
+            if rel_path.startswith(dir_prefix + "/"):
+                return True
+            continue
+
+        # Exact file/path match
+        if fnmatch(rel_path, pattern):
+            return True
+
+    return False
+
+
+def _hook_contains_cjk(text: str) -> bool:
+    """Check if text contains CJK (Chinese/Japanese/Korean) characters."""
+    return bool(CJK_PATTERN.search(text))
+
+
+def _hook_find_cjk_lines(content: str) -> list[tuple[int, str]]:
+    """Find all lines containing CJK characters.
+
+    Returns:
+        List of tuples: (line_number, line_content)
+    """
+    cjk_lines = []
+    for line_num, line in enumerate(content.split("\n"), 1):
+        if _hook_contains_cjk(line):
+            display_line = line.strip()[:100]
+            if len(line.strip()) > 100:
+                display_line += "..."
+            cjk_lines.append((line_num, display_line))
+    return cjk_lines
+
+
+def _hook_get_relative_path(file_path: str) -> str:
+    """Get the relative path from project root."""
+    try:
+        abs_path = Path(file_path).resolve()
+        return str(abs_path.relative_to(PROJECT_DIR))
+    except ValueError:
+        return file_path
+
+
+def _hook_format_translation_command(files: list[str]) -> str:
+    """Format the i18n_tool.py translation command for the given files."""
+    rel_files = [_hook_get_relative_path(f) for f in files]
+
+    if len(rel_files) == 1:
+        return (
+            f"python -m devops_scripts.i18n.i18n_tool translate --files {rel_files[0]}"
+        )
+    else:
+        files_str = " ".join(rel_files)
+        return f"python -m devops_scripts.i18n.i18n_tool translate --files {files_str}"
+
+
+def _hook_check_files(
+    files: list[str],
+) -> tuple[bool, dict[str, list[tuple[int, str]]]]:
+    """Check files for CJK characters.
+
+    Returns:
+        Tuple of (has_errors, files_with_cjk)
+        files_with_cjk is a dict: {file_path: [(line_num, content), ...]}
+    """
+    files_with_cjk = {}
+
+    for file_path in files:
+        # Check if file should be skipped
+        if _hook_should_skip_file(file_path):
+            continue
+
+        # Check if file exists
+        if not Path(file_path).exists():
+            continue
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            cjk_lines = _hook_find_cjk_lines(content)
+            if cjk_lines:
+                files_with_cjk[file_path] = cjk_lines
+
+        except Exception as e:
+            print(f"Warning: Could not read {file_path}: {e}", file=sys.stderr)
+
+    return bool(files_with_cjk), files_with_cjk
+
+
+def _hook_check_commit_message(msg_file: str) -> tuple[bool, list[tuple[int, str]]]:
+    """Check commit message for CJK characters.
+
+    Returns:
+        Tuple of (has_cjk, cjk_lines)
+    """
+    try:
+        with open(msg_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Check for skip keywords
+        content_lower = content.lower()
+        for keyword in HOOK_SKIP_COMMIT_MSG_KEYWORDS:
+            if keyword.lower() in content_lower:
+                return False, []
+
+        cjk_lines = _hook_find_cjk_lines(content)
+        return bool(cjk_lines), cjk_lines
+
+    except Exception as e:
+        print(f"Warning: Could not read commit message file: {e}", file=sys.stderr)
+        return False, []
+
+
+def _hook_print_error_report(
+    files_with_cjk: dict[str, list[tuple[int, str]]],
+    commit_msg_cjk: list[tuple[int, str]] | None = None,
+):
+    """Print a detailed error report."""
+    print("\n" + "=" * 70, file=sys.stderr)
+    print("❌ NON-ENGLISH CHARACTERS DETECTED (CJK)", file=sys.stderr)
+    print("=" * 70, file=sys.stderr)
+
+    if files_with_cjk:
+        print("\n📄 Files containing non-English characters:", file=sys.stderr)
+        print("-" * 70, file=sys.stderr)
+
+        for file_path, cjk_lines in files_with_cjk.items():
+            rel_path = _hook_get_relative_path(file_path)
+            print(f"\n  {rel_path} ({len(cjk_lines)} lines)", file=sys.stderr)
+            for line_num, content in cjk_lines[:5]:
+                print(f"    Line {line_num}: {content}", file=sys.stderr)
+            if len(cjk_lines) > 5:
+                print(f"    ... and {len(cjk_lines) - 5} more lines", file=sys.stderr)
+
+    if commit_msg_cjk:
+        print("\n💬 Commit message contains non-English characters:", file=sys.stderr)
+        print("-" * 70, file=sys.stderr)
+        for line_num, content in commit_msg_cjk:
+            print(f"    Line {line_num}: {content}", file=sys.stderr)
+
+    print("\n" + "=" * 70, file=sys.stderr)
+    print("HOW TO FIX", file=sys.stderr)
+    print("=" * 70, file=sys.stderr)
+
+    if files_with_cjk:
+        files_list = list(files_with_cjk.keys())
+        cmd = _hook_format_translation_command(files_list)
+        print(f"\n1. Translate the files using:", file=sys.stderr)
+        print(f"   {cmd}", file=sys.stderr)
+        print("\n   Or for dry-run first:", file=sys.stderr)
+        print(f"   {cmd} --dry-run", file=sys.stderr)
+
+    if commit_msg_cjk:
+        print("\n2. Rewrite your commit message in English", file=sys.stderr)
+
+    print("\n" + "-" * 70, file=sys.stderr)
+    print("TO SKIP THIS CHECK (use sparingly):", file=sys.stderr)
+    print("-" * 70, file=sys.stderr)
+    print(f"  • Set environment variable: {HOOK_SKIP_ENV_VAR}=1", file=sys.stderr)
+    print("  • Add to commit message: [skip-i18n] or #skip-i18n-check", file=sys.stderr)
+    print(
+        "  • Add file patterns to HOOK_SKIP_PATTERNS in i18n_tool.py", file=sys.stderr
+    )
+    print("\n" + "=" * 70 + "\n", file=sys.stderr)
+
+
+def cmd_hook(files: list[str], commit_msg: bool = False) -> int:
+    """Execute the hook command for pre-commit.
+
+    Args:
+        files: List of files to check, or commit message file if commit_msg=True
+        commit_msg: If True, check commit message instead of files
+
+    Returns:
+        0 if no CJK found, 1 if CJK found
+    """
+    # Check for skip environment variable
+    if os.environ.get(HOOK_SKIP_ENV_VAR, "").lower() in ("1", "true", "yes"):
+        print(f"Skipping i18n check ({HOOK_SKIP_ENV_VAR} is set)")
+        return 0
+
+    has_error = False
+    files_with_cjk = {}
+    commit_msg_cjk = None
+
+    if commit_msg:
+        # Check commit message
+        if files:
+            msg_file = files[0]
+            has_cjk, commit_msg_cjk = _hook_check_commit_message(msg_file)
+            if has_cjk:
+                has_error = True
+    else:
+        # Check staged files
+        if files:
+            has_error, files_with_cjk = _hook_check_files(files)
+
+    if has_error:
+        _hook_print_error_report(files_with_cjk, commit_msg_cjk)
+        return 1
+
+    return 0
+
+
+# ==============================================================================
 # Main Entry Point
 # ==============================================================================
 
@@ -1229,11 +1560,31 @@ def main():
         "--reset", action="store_true", help="Clear previous progress and start fresh"
     )
 
+    # Hook command (for pre-commit)
+    hook_parser = subparsers.add_parser(
+        "hook", help="Pre-commit hook to check for non-English (CJK) characters"
+    )
+    hook_parser.add_argument(
+        "--commit-msg",
+        action="store_true",
+        help="Check commit message instead of files",
+    )
+    hook_parser.add_argument(
+        "files",
+        nargs="*",
+        help="Files to check (for pre-commit) or commit message file (for commit-msg)",
+    )
+
     args = parser.parse_args()
 
     if not args.command:
         parser.print_help()
         sys.exit(1)
+
+    if args.command == "hook":
+        # Hook command doesn't need project dependencies
+        exit_code = cmd_hook(files=args.files, commit_msg=args.commit_msg)
+        sys.exit(exit_code)
 
     if args.command == "translate":
         directories = resolve_directories(args.directory)
