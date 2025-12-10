@@ -258,25 +258,39 @@ class BaseRepository(ABC, Generic[T]):
 
     # ==================== Counting Methods ====================
 
-    async def count_all(self) -> int:
+    async def count_all(self, filter_query: Optional[dict] = None) -> int:
         """
-        Count total number of documents
+        Count documents with optimized strategy
+
+        When no filter is provided, uses estimated_document_count() which is
+        extremely fast (milliseconds) as it reads from collection metadata.
+        When a filter is provided, uses count_documents() for accurate results.
+
+        Args:
+            filter_query: Optional filter conditions. If None, uses fast estimation.
 
         Returns:
-            Total number of documents
+            Total number of documents (estimated if no filter, exact if with filter)
         """
         try:
-            count = await self.model.count()
-            logger.info(
-                "✅ Successfully counted total documents [%s]: %d records",
-                self.model_name,
-                count,
-            )
+            if filter_query is None or filter_query == {}:
+                # No filter: use estimated_document_count() for speed (metadata-based)
+                collection = self.model.get_pymongo_collection()
+                count = await collection.estimated_document_count()
+                logger.info(
+                    "✅ Fast estimated count [%s]: %d records", self.model_name, count
+                )
+            else:
+                # With filter: use count_documents() for accuracy
+                count = await self.model.find(filter_query).count()
+                logger.info(
+                    "✅ Exact count with filter [%s]: %d records",
+                    self.model_name,
+                    count,
+                )
             return count
         except Exception as e:
-            logger.error(
-                "❌ Failed to count total documents [%s]: %s", self.model_name, e
-            )
+            logger.error("❌ Failed to count documents [%s]: %s", self.model_name, e)
             return 0
 
     async def exists_by_id(self, object_id: Union[str, PydanticObjectId]) -> bool:
