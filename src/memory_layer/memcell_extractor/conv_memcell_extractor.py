@@ -76,6 +76,7 @@ class ConvMemCellExtractor(MemCellExtractor):
     DEFAULT_HARD_TOKEN_LIMIT = 8192
     DEFAULT_HARD_MESSAGE_LIMIT = 50
 
+    # TODO: @Hui to optimize tiktoken cache
     @classmethod
     def _get_tokenizer(cls) -> tiktoken.Encoding:
         """Get or create the shared tokenizer (lazy loading, only once)."""
