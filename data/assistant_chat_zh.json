@@ -3,13 +3,15 @@
   "conversation_meta": {
     "scene": "company",
     "scene_desc": {
-      "bot_ids": ["robot_001"]
+      "bot_ids": [
+        "robot_001"
+      ]
     },
     "name": "用户健康咨询对话",
     "description": "用户与AI助手关于北京旅游、健康管理、运动康复等主题的对话记录",
     "group_id": "chat_user_001_assistant",
-    "created_at": "2025-08-26T08:00:00+08:00",
-    "default_timezone": "Asia/Shanghai",
+    "created_at": "2025-08-26T00:00:00Z",
+    "default_timezone": "UTC",
     "user_details": {
       "user_001": {
         "full_name": "用户",
@@ -44,7 +46,7 @@
   "conversation_list": [
     {
       "message_id": "msg_001",
-      "create_time": "2025-08-26T08:00:00+08:00",
+      "create_time": "2025-08-26T00:00:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -53,7 +55,7 @@
     },
     {
       "message_id": "msg_002",
-      "create_time": "2025-08-26T08:00:30+08:00",
+      "create_time": "2025-08-26T00:00:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -62,7 +64,7 @@
     },
     {
       "message_id": "msg_003",
-      "create_time": "2025-08-26T08:03:00+08:00",
+      "create_time": "2025-08-26T00:03:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -71,7 +73,7 @@
     },
     {
       "message_id": "msg_004",
-      "create_time": "2025-08-26T08:03:30+08:00",
+      "create_time": "2025-08-26T00:03:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -80,7 +82,7 @@
     },
     {
       "message_id": "msg_005",
-      "create_time": "2025-08-26T08:04:00+08:00",
+      "create_time": "2025-08-26T00:04:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -89,7 +91,7 @@
     },
     {
       "message_id": "msg_006",
-      "create_time": "2025-08-26T08:04:30+08:00",
+      "create_time": "2025-08-26T00:04:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -98,7 +100,7 @@
     },
     {
       "message_id": "msg_007",
-      "create_time": "2025-08-26T08:16:00+08:00",
+      "create_time": "2025-08-26T00:16:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -107,7 +109,7 @@
     },
     {
       "message_id": "msg_008",
-      "create_time": "2025-08-26T08:16:30+08:00",
+      "create_time": "2025-08-26T00:16:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -116,7 +118,7 @@
     },
     {
       "message_id": "msg_009",
-      "create_time": "2025-08-26T08:17:00+08:00",
+      "create_time": "2025-08-26T00:17:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -125,7 +127,7 @@
     },
     {
       "message_id": "msg_010",
-      "create_time": "2025-08-26T08:17:30+08:00",
+      "create_time": "2025-08-26T00:17:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -134,7 +136,7 @@
     },
     {
       "message_id": "msg_011",
-      "create_time": "2025-09-05T15:00:00+08:00",
+      "create_time": "2025-09-05T07:00:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -143,7 +145,7 @@
     },
     {
       "message_id": "msg_012",
-      "create_time": "2025-09-05T15:00:30+08:00",
+      "create_time": "2025-09-05T07:00:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -152,7 +154,7 @@
     },
     {
       "message_id": "msg_013",
-      "create_time": "2025-09-05T15:04:00+08:00",
+      "create_time": "2025-09-05T07:04:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -161,7 +163,7 @@
     },
     {
       "message_id": "msg_014",
-      "create_time": "2025-09-05T15:04:30+08:00",
+      "create_time": "2025-09-05T07:04:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -170,7 +172,7 @@
     },
     {
       "message_id": "msg_015",
-      "create_time": "2025-09-07T14:00:00+08:00",
+      "create_time": "2025-09-07T06:00:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -179,7 +181,7 @@
     },
     {
       "message_id": "msg_016",
-      "create_time": "2025-09-07T14:00:30+08:00",
+      "create_time": "2025-09-07T06:00:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -188,7 +190,7 @@
     },
     {
       "message_id": "msg_017",
-      "create_time": "2025-09-07T14:03:00+08:00",
+      "create_time": "2025-09-07T06:03:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -197,7 +199,7 @@
     },
     {
       "message_id": "msg_018",
-      "create_time": "2025-09-07T14:03:30+08:00",
+      "create_time": "2025-09-07T06:03:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -206,7 +208,7 @@
     },
     {
       "message_id": "msg_019",
-      "create_time": "2025-09-13T16:00:00+08:00",
+      "create_time": "2025-09-13T08:00:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -215,7 +217,7 @@
     },
     {
       "message_id": "msg_020",
-      "create_time": "2025-09-13T16:00:30+08:00",
+      "create_time": "2025-09-13T08:00:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -224,7 +226,7 @@
     },
     {
       "message_id": "msg_021",
-      "create_time": "2025-09-13T16:02:00+08:00",
+      "create_time": "2025-09-13T08:02:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -233,7 +235,7 @@
     },
     {
       "message_id": "msg_022",
-      "create_time": "2025-09-13T16:02:30+08:00",
+      "create_time": "2025-09-13T08:02:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -242,7 +244,7 @@
     },
     {
       "message_id": "msg_023",
-      "create_time": "2025-09-14T12:00:00+08:00",
+      "create_time": "2025-09-14T04:00:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -251,7 +253,7 @@
     },
     {
       "message_id": "msg_024",
-      "create_time": "2025-09-14T12:00:30+08:00",
+      "create_time": "2025-09-14T04:00:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -260,7 +262,7 @@
     },
     {
       "message_id": "msg_025",
-      "create_time": "2025-09-14T12:02:00+08:00",
+      "create_time": "2025-09-14T04:02:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -269,7 +271,7 @@
     },
     {
       "message_id": "msg_026",
-      "create_time": "2025-09-14T12:02:30+08:00",
+      "create_time": "2025-09-14T04:02:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -278,7 +280,7 @@
     },
     {
       "message_id": "msg_027",
-      "create_time": "2025-09-14T12:04:00+08:00",
+      "create_time": "2025-09-14T04:04:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -287,7 +289,7 @@
     },
     {
       "message_id": "msg_028",
-      "create_time": "2025-09-14T12:04:30+08:00",
+      "create_time": "2025-09-14T04:04:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -296,7 +298,7 @@
     },
     {
       "message_id": "msg_029",
-      "create_time": "2025-09-14T12:10:00+08:00",
+      "create_time": "2025-09-14T04:10:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -305,7 +307,7 @@
     },
     {
       "message_id": "msg_030",
-      "create_time": "2025-09-14T12:10:30+08:00",
+      "create_time": "2025-09-14T04:10:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -314,7 +316,7 @@
     },
     {
       "message_id": "msg_031",
-      "create_time": "2025-09-14T12:12:00+08:00",
+      "create_time": "2025-09-14T04:12:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -323,7 +325,7 @@
     },
     {
       "message_id": "msg_032",
-      "create_time": "2025-09-14T12:12:30+08:00",
+      "create_time": "2025-09-14T04:12:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -332,7 +334,7 @@
     },
     {
       "message_id": "msg_033",
-      "create_time": "2025-10-08T09:30:00+08:00",
+      "create_time": "2025-10-08T01:30:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -341,7 +343,7 @@
     },
     {
       "message_id": "msg_034",
-      "create_time": "2025-10-08T09:30:30+08:00",
+      "create_time": "2025-10-08T01:30:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -350,7 +352,7 @@
     },
     {
       "message_id": "msg_035",
-      "create_time": "2025-10-08T09:31:00+08:00",
+      "create_time": "2025-10-08T01:31:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -359,7 +361,7 @@
     },
     {
       "message_id": "msg_036",
-      "create_time": "2025-10-08T09:31:30+08:00",
+      "create_time": "2025-10-08T01:31:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -368,7 +370,7 @@
     },
     {
       "message_id": "msg_037",
-      "create_time": "2025-10-12T09:17:00+08:00",
+      "create_time": "2025-10-12T01:17:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -377,7 +379,7 @@
     },
     {
       "message_id": "msg_038",
-      "create_time": "2025-10-12T09:17:30+08:00",
+      "create_time": "2025-10-12T01:17:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -386,7 +388,7 @@
     },
     {
       "message_id": "msg_039",
-      "create_time": "2025-10-12T09:20:00+08:00",
+      "create_time": "2025-10-12T01:20:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -395,7 +397,7 @@
     },
     {
       "message_id": "msg_040",
-      "create_time": "2025-10-12T09:20:30+08:00",
+      "create_time": "2025-10-12T01:20:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -404,7 +406,7 @@
     },
     {
       "message_id": "msg_041",
-      "create_time": "2025-10-12T09:22:00+08:00",
+      "create_time": "2025-10-12T01:22:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -413,7 +415,7 @@
     },
     {
       "message_id": "msg_042",
-      "create_time": "2025-10-12T09:22:30+08:00",
+      "create_time": "2025-10-12T01:22:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -422,7 +424,7 @@
     },
     {
       "message_id": "msg_043",
-      "create_time": "2025-10-12T09:23:00+08:00",
+      "create_time": "2025-10-12T01:23:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -431,7 +433,7 @@
     },
     {
       "message_id": "msg_044",
-      "create_time": "2025-10-12T09:23:30+08:00",
+      "create_time": "2025-10-12T01:23:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -440,7 +442,7 @@
     },
     {
       "message_id": "msg_045",
-      "create_time": "2025-10-12T09:24:00+08:00",
+      "create_time": "2025-10-12T01:24:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -449,7 +451,7 @@
     },
     {
       "message_id": "msg_046",
-      "create_time": "2025-10-12T09:24:30+08:00",
+      "create_time": "2025-10-12T01:24:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -458,7 +460,7 @@
     },
     {
       "message_id": "msg_047",
-      "create_time": "2025-10-12T09:25:00+08:00",
+      "create_time": "2025-10-12T01:25:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -467,7 +469,7 @@
     },
     {
       "message_id": "msg_048",
-      "create_time": "2025-10-12T09:25:30+08:00",
+      "create_time": "2025-10-12T01:25:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -476,7 +478,7 @@
     },
     {
       "message_id": "msg_049",
-      "create_time": "2025-10-12T09:26:00+08:00",
+      "create_time": "2025-10-12T01:26:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -485,7 +487,7 @@
     },
     {
       "message_id": "msg_050",
-      "create_time": "2025-10-12T09:26:30+08:00",
+      "create_time": "2025-10-12T01:26:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -494,7 +496,7 @@
     },
     {
       "message_id": "msg_051",
-      "create_time": "2025-10-20T20:03:00+08:00",
+      "create_time": "2025-10-20T12:03:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -503,7 +505,7 @@
     },
     {
       "message_id": "msg_052",
-      "create_time": "2025-10-20T20:03:30+08:00",
+      "create_time": "2025-10-20T12:03:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -512,7 +514,7 @@
     },
     {
       "message_id": "msg_053",
-      "create_time": "2025-10-20T20:04:00+08:00",
+      "create_time": "2025-10-20T12:04:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -521,7 +523,7 @@
     },
     {
       "message_id": "msg_054",
-      "create_time": "2025-10-20T20:04:30+08:00",
+      "create_time": "2025-10-20T12:04:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",
@@ -530,7 +532,7 @@
     },
     {
       "message_id": "msg_055",
-      "create_time": "2025-10-20T20:06:00+08:00",
+      "create_time": "2025-10-20T12:06:00Z",
       "sender": "user_001",
       "sender_name": "user",
       "type": "text",
@@ -539,7 +541,7 @@
     },
     {
       "message_id": "msg_056",
-      "create_time": "2025-10-20T20:06:30+08:00",
+      "create_time": "2025-10-20T12:06:30Z",
       "sender": "robot_001",
       "sender_name": "assistant",
       "type": "text",

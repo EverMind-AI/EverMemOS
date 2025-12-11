@@ -57,7 +57,7 @@ Memory API 提供了专门用于处理群聊记忆的接口，采用简单直接
   "group_id": "group_123",
   "group_name": "项目讨论组",
   "message_id": "msg_001",
-  "create_time": "2025-01-15T10:00:00+08:00",
+  "create_time": "2025-01-15T02:00:00Z",
   "sender": "user_001",
   "sender_name": "张三",
   "content": "今天讨论下新功能的技术方案",
@@ -163,7 +163,7 @@ Memory API 提供了专门用于处理群聊记忆的接口，采用简单直接
   "group_id": "group_123",
   "group_name": "项目讨论组",
   "message_id": "msg_001",
-  "create_time": "2025-01-15T10:00:00+08:00",
+  "create_time": "2025-01-15T02:00:00Z",
   "sender": "user_001",
   "sender_name": "张三",
   "content": "今天讨论下新功能的技术方案",
@@ -181,7 +181,7 @@ Memory API 提供了专门用于处理群聊记忆的接口，采用简单直接
   "group_id": "bot_conversation_123",
   "group_name": "与AI助手的对话",
   "message_id": "bot_msg_001",
-  "create_time": "2025-01-15T10:05:00+08:00",
+  "create_time": "2025-01-15T02:05:00Z",
   "sender": "user_456",
   "sender_name": "李四",
   "content": "帮我总结下今天的会议内容",
@@ -235,7 +235,7 @@ curl -X POST http://localhost:1995/api/v1/memories \
     "group_id": "group_123",
     "group_name": "项目讨论组",
     "message_id": "msg_001",
-    "create_time": "2025-01-15T10:00:00+08:00",
+    "create_time": "2025-01-15T02:00:00Z",
     "sender": "user_001",
     "sender_name": "张三",
     "content": "今天讨论下新功能的技术方案",
@@ -255,7 +255,7 @@ async def call_memory_api():
         "group_id": "group_123",
         "group_name": "项目讨论组",
         "message_id": "msg_001",
-        "create_time": "2025-01-15T10:00:00+08:00",
+        "create_time": "2025-01-15T02:00:00Z",
         "sender": "user_001",
         "sender_name": "张三",
         "content": "今天讨论下新功能的技术方案",
@@ -320,7 +320,7 @@ python src/bootstrap.py src/run_memorize.py \
   "group_id": "private_user001_user002",
   "group_name": "与张三的私聊",
   "message_id": "private_msg_001",
-  "create_time": "2025-01-15T10:00:00+08:00",
+  "create_time": "2025-01-15T02:00:00Z",
   "sender": "user_001",
   "sender_name": "张三",
   "content": "你好，最近怎么样？",
@@ -334,7 +334,7 @@ python src/bootstrap.py src/run_memorize.py \
 
 ```json
 {
-  "create_time": "2025-01-15T10:00:00+08:00"  // 带时区
+  "create_time": "2025-01-15T02:00:00Z"  // 带时区
 }
 ```
 
@@ -688,8 +688,8 @@ asyncio.run(search_memories())
   "name": "项目讨论组",
   "description": "新功能开发的技术讨论",
   "group_id": "group_123",
-  "created_at": "2025-01-15T10:00:00+08:00",
-  "default_timezone": "Asia/Shanghai",
+  "created_at": "2025-01-15T02:00:00Z",
+  "default_timezone": "UTC",
   "user_details": {
     "user_001": {
       "full_name": "张三",
@@ -735,8 +735,8 @@ asyncio.run(search_memories())
     "scene": "group_chat",
     "name": "项目讨论组",
     "version": "1.0",
-    "created_at": "2025-01-15T10:00:00+08:00",
-    "updated_at": "2025-01-15T10:00:00+08:00"
+    "created_at": "2025-01-15T02:00:00Z",
+    "updated_at": "2025-01-15T02:00:00Z"
   }
 }
 ```
@@ -803,7 +803,7 @@ asyncio.run(search_memories())
     "scene": "group_chat",
     "name": "新的对话名称",
     "updated_fields": ["name", "tags"],
-    "updated_at": "2025-01-15T10:30:00+08:00"
+    "updated_at": "2025-01-15T02:30:00Z"
   }
 }
 ```

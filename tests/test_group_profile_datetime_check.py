@@ -18,7 +18,7 @@ import asyncio
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any
 from bson import ObjectId
-import pytz
+from zoneinfo import ZoneInfo
 
 from core.di import get_bean_by_type
 from infra_layer.adapters.out.persistence.repository.group_profile_raw_repository import (
@@ -29,7 +29,7 @@ from infra_layer.adapters.out.persistence.document.memory.group_profile import (
     TopicInfo,
     RoleAssignment,
 )
-from common_utils.datetime_utils import get_now_with_timezone, to_timezone, get_timezone
+from common_utils.datetime_utils import get_timezone
 from core.observation.logger import get_logger
 
 logger = get_logger(__name__)
@@ -48,7 +48,7 @@ def create_aware_datetime_utc() -> datetime:
 
 def create_aware_datetime_shanghai() -> datetime:
     """Create a datetime object in Shanghai timezone"""
-    shanghai_tz = get_timezone()
+    shanghai_tz = ZoneInfo("Asia/Shanghai")
     return datetime(2025, 1, 1, 12, 0, 0, tzinfo=shanghai_tz)
 
 
@@ -91,9 +91,13 @@ async def test_single_datetime_field_conversion():
         # Verify: _recursive_datetime_check should be automatically executed in model_validator
         # Check if datetime in extend has been converted
         result_dt = group_profile.extend["test_datetime"]
-        logger.info("   Converted datetime: %s (tzinfo=%s)", result_dt, result_dt.tzinfo)
+        logger.info(
+            "   Converted datetime: %s (tzinfo=%s)", result_dt, result_dt.tzinfo
+        )
 
-        assert is_aware_datetime(result_dt), "datetime should contain timezone information"
+        assert is_aware_datetime(
+            result_dt
+        ), "datetime should contain timezone information"
         logger.info("✅ Single datetime field conversion succeeded")
 
         # Save to database and verify
@@ -169,7 +173,9 @@ async def test_nested_basemodel_datetime_conversion():
         assert (
             topic.last_active_at.tzinfo is None
         ), "TopicInfo's datetime after instantiation should still be naive"
-        logger.info("✅ TopicInfo's datetime remains naive after instantiation (as expected)")
+        logger.info(
+            "✅ TopicInfo's datetime remains naive after instantiation (as expected)"
+        )
 
         # Create GroupProfile - _recursive_datetime_check will be triggered here
         group_profile = GroupProfile(
@@ -183,8 +189,12 @@ async def test_nested_basemodel_datetime_conversion():
             result_dt,
             result_dt.tzinfo,
         )
-        assert is_aware_datetime(result_dt), "Nested datetime should contain timezone information"
-        logger.info("✅ Datetime conversion succeeded for TopicInfo nested in GroupProfile")
+        assert is_aware_datetime(
+            result_dt
+        ), "Nested datetime should contain timezone information"
+        logger.info(
+            "✅ Datetime conversion succeeded for TopicInfo nested in GroupProfile"
+        )
 
         # Save to database and verify
         await repo.upsert_by_group_id(
@@ -232,7 +242,9 @@ async def test_list_datetime_conversion():
     Fix solution: In BaseModel cases, need to mark whether the object has been modified, rather than relying on whether the object reference has changed.
     """
     logger.info("Starting test for datetime object conversion in lists...")
-    logger.warning("⚠️ This test will demonstrate the list sampling optimization bug in _recursive_datetime_check")
+    logger.warning(
+        "⚠️ This test will demonstrate the list sampling optimization bug in _recursive_datetime_check"
+    )
 
     repo = get_bean_by_type(GroupProfileRawRepository)
     group_id = "test_group_datetime_003"
@@ -284,9 +296,13 @@ async def test_list_datetime_conversion():
 
         # 🐛 BUG Verification: Only the first element is converted, subsequent elements are not
         if converted_count == 1 and not_converted_indices == [1, 2]:
-            logger.warning("⚠️ Confirmed BUG: List sampling optimization causes only the first element to be converted")
+            logger.warning(
+                "⚠️ Confirmed BUG: List sampling optimization causes only the first element to be converted"
+            )
             logger.warning("   First element (topics[0]): Converted ✅")
-            logger.warning("   Subsequent elements (topics[1], topics[2]): Not converted ❌")
+            logger.warning(
+                "   Subsequent elements (topics[1], topics[2]): Not converted ❌"
+            )
             logger.info("✅ List sampling optimization BUG has been confirmed by test")
         else:
             # If the bug is fixed, all elements should be converted
@@ -378,11 +394,15 @@ async def test_dict_datetime_conversion():
         )
 
         if not is_nested_aware:
-            logger.warning("⚠️ Confirmed: Datetime in second-level nested dictionary was not converted (recursive depth limit)")
+            logger.warning(
+                "⚠️ Confirmed: Datetime in second-level nested dictionary was not converted (recursive depth limit)"
+            )
             logger.warning(
                 "   Depth calculation: DocumentBase (0) -> extend field (0) -> extend dictionary (2) -> nested dictionary (4)"
             )
-            logger.warning("   _recursive_datetime_check stops recursion when depth >= 4")
+            logger.warning(
+                "   _recursive_datetime_check stops recursion when depth >= 4"
+            )
             logger.info("✅ Recursive depth limit has been confirmed by test")
         else:
             logger.info(
@@ -481,8 +501,12 @@ async def test_mixed_scenario():
         # Verify 2: Datetime list in extend dictionary
         for i, dt in enumerate(group_profile.extend["timestamps"]):
             logger.info("   extend['timestamps'][%d]: %s (tzinfo=%s)", i, dt, dt.tzinfo)
-            assert is_aware_datetime(dt), f"extend['timestamps'][{i}] should contain timezone information"
-        logger.info("✅ All datetime conversions in extend['timestamps'] list succeeded")
+            assert is_aware_datetime(
+                dt
+            ), f"extend['timestamps'][{i}] should contain timezone information"
+        logger.info(
+            "✅ All datetime conversions in extend['timestamps'] list succeeded"
+        )
 
         # Verify 3: Datetime in nested dictionary within extend dictionary
         assert is_aware_datetime(
@@ -564,7 +588,9 @@ async def test_edge_cases():
             version="v2",
             extend={},  # Empty dictionary
         )
-        assert group_profile_empty_dict.extend == {}, "Empty dictionary should remain empty"
+        assert (
+            group_profile_empty_dict.extend == {}
+        ), "Empty dictionary should remain empty"
         logger.info("✅ Empty dictionary test passed")
 
         # Test 3: None value
@@ -599,7 +625,9 @@ async def test_edge_cases():
         )
         result_dt = group_profile_aware.extend["aware_datetime"]
         # Verify timezone hasn't changed (still original timezone)
-        assert is_aware_datetime(result_dt), "aware datetime should maintain timezone information"
+        assert is_aware_datetime(
+            result_dt
+        ), "aware datetime should maintain timezone information"
         logger.info("✅ aware datetime test passed")
 
         logger.info("✅ All edge case tests passed")
@@ -644,7 +672,9 @@ async def test_list_sampling_optimization():
         # Verify: All elements should be converted
         for i, dt in enumerate(group_profile_all_naive.extend["datetime_list"]):
             logger.info("   datetime_list[%d]: %s (tzinfo=%s)", i, dt, dt.tzinfo)
-            assert is_aware_datetime(dt), f"datetime_list[{i}] should contain timezone information"
+            assert is_aware_datetime(
+                dt
+            ), f"datetime_list[{i}] should contain timezone information"
 
         logger.info("✅ All naive datetime list conversion succeeded")
 
@@ -660,7 +690,9 @@ async def test_list_sampling_optimization():
 
         # Verify: All elements should remain aware
         for i, dt in enumerate(group_profile_all_aware.extend["datetime_list"]):
-            assert is_aware_datetime(dt), f"datetime_list[{i}] should contain timezone information"
+            assert is_aware_datetime(
+                dt
+            ), f"datetime_list[{i}] should contain timezone information"
 
         logger.info("✅ All aware datetime list remains unchanged")
 
@@ -765,7 +797,9 @@ async def test_timezone_consistency():
         logger.info(
             "   Converted naive: %s (tzinfo=%s)", result_naive, result_naive.tzinfo
         )
-        assert is_aware_datetime(result_naive), "naive datetime should be converted to aware"
+        assert is_aware_datetime(
+            result_naive
+        ), "naive datetime should be converted to aware"
 
         # Verify: UTC and Shanghai datetimes should maintain original timezone
         result_utc = group_profile.extend["utc"]
@@ -778,7 +812,9 @@ async def test_timezone_consistency():
         )
 
         assert is_aware_datetime(result_utc), "utc datetime should remain aware"
-        assert is_aware_datetime(result_shanghai), "shanghai datetime should remain aware"
+        assert is_aware_datetime(
+            result_shanghai
+        ), "shanghai datetime should remain aware"
 
         logger.info("✅ Timezone consistency test passed")
 
@@ -830,10 +866,14 @@ async def test_tuple_datetime_conversion():
             for i in range(3):  # Check first 3 elements (all datetime)
                 dt = result_tuple[i]
                 logger.info("   tuple[%d]: %s (tzinfo=%s)", i, dt, dt.tzinfo)
-                assert is_aware_datetime(dt), f"tuple[{i}] should contain timezone information"
+                assert is_aware_datetime(
+                    dt
+                ), f"tuple[{i}] should contain timezone information"
             logger.info("✅ Datetime conversion succeeded in tuple")
         else:
-            logger.warning("   Tuple was converted to other type: %s", type(result_tuple))
+            logger.warning(
+                "   Tuple was converted to other type: %s", type(result_tuple)
+            )
 
         logger.info("✅ Tuple datetime conversion test passed")
 
@@ -849,7 +889,9 @@ async def test_tuple_datetime_conversion():
 
 async def run_all_tests():
     """Run all tests"""
-    logger.info("🚀 Starting to run all tests for GroupProfile _recursive_datetime_check...")
+    logger.info(
+        "🚀 Starting to run all tests for GroupProfile _recursive_datetime_check..."
+    )
     logger.info("=" * 80)
     logger.info("Test notes:")
     logger.info("- Test 1-2: Basic functionality tests (expected to pass)")
@@ -877,8 +919,12 @@ async def run_all_tests():
         logger.info(
             "✅ Passed tests: single datetime, nested BaseModel, edge cases, timezone consistency"
         )
-        logger.info("⚠️  Discovered BUG: list sampling optimization (only first element converted)")
-        logger.info("⚠️  Discovered limitation: recursive depth limit (MAX_RECURSION_DEPTH = 4)")
+        logger.info(
+            "⚠️  Discovered BUG: list sampling optimization (only first element converted)"
+        )
+        logger.info(
+            "⚠️  Discovered limitation: recursive depth limit (MAX_RECURSION_DEPTH = 4)"
+        )
         logger.info("=" * 80)
     except Exception as e:
         logger.error("❌ Error occurred during testing: %s", e)

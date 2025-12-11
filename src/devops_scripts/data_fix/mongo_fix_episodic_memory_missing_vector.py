@@ -240,14 +240,14 @@ def _parse_args() -> argparse.Namespace:
         dest="start_created_at",
         type=str,
         default=None,
-        help="Only process documents with created_at greater than or equal to this time (ISO format, e.g., 2025-09-16T20:20:06+08:00)",
+        help="Only process documents with created_at greater than or equal to this time (ISO format, e.g., 2025-09-16T20:20:06+00:00)",
     )
     parser.add_argument(
         "--end-created-at",
         dest="end_created_at",
         type=str,
         default=None,
-        help="Only process documents with created_at less than or equal to this time (ISO format, e.g., 2025-09-30T23:59:59+08:00)",
+        help="Only process documents with created_at less than or equal to this time (ISO format, e.g., 2025-09-30T23:59:59+00:00)",
     )
     return parser.parse_args()
 

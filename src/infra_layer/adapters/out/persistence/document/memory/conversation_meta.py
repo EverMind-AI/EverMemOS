@@ -11,6 +11,7 @@ from core.oxm.mongo.document_base import DocumentBase
 from pydantic import Field, ConfigDict, BaseModel
 from pymongo import IndexModel, ASCENDING, DESCENDING, TEXT
 from core.oxm.mongo.audit_base import AuditBase
+from common_utils.datetime_utils import get_timezone
 
 
 class UserDetailModel(BaseModel):
@@ -63,7 +64,8 @@ class ConversationMeta(DocumentBase, AuditBase):
         ..., description="Conversation creation time, ISO format string"
     )
     default_timezone: Optional[str] = Field(
-        default="Asia/Shanghai", description="Default timezone, e.g.: Asia/Shanghai"
+        default_factory=lambda: get_timezone().key,
+        description="Default timezone, e.g.: UTC",
     )
 
     # Participant information
@@ -94,8 +96,8 @@ class ConversationMeta(DocumentBase, AuditBase):
                 "name": "User health consultation conversation",
                 "description": "Conversation records between user and AI assistant regarding Beijing travel, health management, sports rehabilitation, etc.",
                 "group_id": "chat_user_001_assistant",
-                "conversation_created_at": "2025-08-26T08:00:00+08:00",
-                "default_timezone": "Asia/Shanghai",
+                "conversation_created_at": "2025-08-26T00:00:00Z",
+                "default_timezone": "UTC",
                 "user_details": {
                     "user_001": {
                         "full_name": "User",

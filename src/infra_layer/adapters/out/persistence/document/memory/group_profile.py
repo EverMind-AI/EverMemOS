@@ -130,7 +130,7 @@ class GroupProfile(DocumentBase, AuditBase):
                         "name": "Python Best Practices",
                         "summary": "Discuss best practices for Python programming",
                         "status": "exploring",
-                        "last_active_at": "2025-09-22T10:00:00+08:00",
+                        "last_active_at": "2025-09-22T10:00:00+00:00",
                         "id": "topic_001",
                         "update_type": "new",
                         "old_topic_id": None,

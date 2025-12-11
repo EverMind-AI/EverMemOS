@@ -12,6 +12,7 @@ from psycopg.rows import dict_row
 
 from core.di.decorators import component
 from core.observation.logger import get_logger
+from common_utils.datetime_utils import get_timezone
 
 logger = get_logger(__name__)
 
@@ -28,8 +29,8 @@ class DatabaseConnectionProvider:
                 "Database connection string DATABASE_URL is not configured"
             )
 
-        # Read timezone configuration from environment variables, default to Shanghai timezone
-        self.timezone = os.getenv("TZ", "Asia/Shanghai")
+        # Read timezone configuration from environment variables
+        self.timezone = get_timezone()
 
         # Connection pool configuration
         self.max_size = int(os.getenv("CHECKPOINTER_DB_POOL_SIZE", "20"))

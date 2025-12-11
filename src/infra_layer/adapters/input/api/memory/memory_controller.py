@@ -81,7 +81,7 @@ class MemoryController(BaseController):
           "group_id": "group_123",
           "group_name": "Project Discussion Group",
           "message_id": "msg_001",
-          "create_time": "2025-01-15T10:00:00+08:00",
+          "create_time": "2025-01-15T10:00:00+00:00",
           "sender": "user_001",
           "sender_name": "Zhang San",
           "content": "Today let's discuss the technical solution for the new feature",
@@ -225,7 +225,8 @@ class MemoryController(BaseController):
 
             # 5. Return unified response format
             logger.info(
-                "Memory request processing completed, extracted %s memories", memory_count
+                "Memory request processing completed, extracted %s memories",
+                memory_count,
             )
 
             # Optimize return message to help users understand runtime status
@@ -523,22 +524,28 @@ class MemoryController(BaseController):
         try:
             # Get params from query params first
             query_params = dict(fastapi_request.query_params)
-            
+
             # Also try to get params from body (for GET + body requests like Elasticsearch)
             if body := await fastapi_request.body():
                 with suppress(json.JSONDecodeError, TypeError):
                     if isinstance(body_data := json.loads(body), dict):
                         query_params.update(body_data)
-            
+
             query = query_params.get("query")
             logger.info(
-                "Received search request: user_id=%s, query=%s, retrieve_method=%s", 
-                query_params.get("user_id"), query, query_params.get("retrieve_method")
+                "Received search request: user_id=%s, query=%s, retrieve_method=%s",
+                query_params.get("user_id"),
+                query,
+                query_params.get("retrieve_method"),
             )
 
             # Directly use converter to transform
-            retrieve_request = convert_dict_to_retrieve_mem_request(query_params, query=query)
-            logger.info(f"After conversion: retrieve_method={retrieve_request.retrieve_method}")
+            retrieve_request = convert_dict_to_retrieve_mem_request(
+                query_params, query=query
+            )
+            logger.info(
+                f"After conversion: retrieve_method={retrieve_request.retrieve_method}"
+            )
 
             # Use retrieve_mem method (supports keyword, vector, hybrid)
             response = await self.memory_manager.retrieve_mem(retrieve_request)

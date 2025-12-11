@@ -26,7 +26,7 @@ Single Event Loop, use `async/await` for I/O operations, discuss with developmen
 Prohibit database access and API calls in for loops, use batch operations instead
 
 **🕐 Timezone Awareness**  
-All time fields must carry timezone information. Input without timezone is treated as Shanghai timezone (Asia/Shanghai, UTC+8). Do not use `datetime.datetime.now()`, must use utility functions from `common_utils/datetime_utils.py`
+All time fields must carry timezone information. Input without timezone is treated as the timezone configured by environment variable `TZ` (default UTC). Do not use `datetime.datetime.now()`, must use utility functions from `common_utils/datetime_utils.py`
 
 **📥 Import Standards**  
 - PYTHONPATH management: Project module import starting paths (src/tests/demo etc.) need unified management, communicate with development lead before changes
@@ -870,7 +870,7 @@ Must use project-provided utility functions:
 All time fields entering the system must meet:
 
 - **Must carry timezone info**: All datetime type fields must be timezone-aware
-- **Default timezone**: If input data doesn't have timezone info, treat it as **Asia/Shanghai (Shanghai timezone, UTC+8)**
+- **Default timezone**: If input data doesn't have timezone info, treat it as the timezone configured by environment variable `TZ` (**default UTC**)
 - **Storage format**: When storing in database, recommend converting to UTC timezone uniformly, but must preserve timezone info
 
 #### 2. Python Implementation Standards
@@ -887,21 +887,21 @@ from common_utils.datetime_utils import (
     to_timezone
 )
 
-# Method 1: Get current time (automatically with Shanghai timezone)
+# Method 1: Get current time (automatically with timezone, configured by TZ env var, default UTC)
 now = get_now_with_timezone()
-# Returns: datetime.datetime(2025, 9, 16, 20, 17, 41, tzinfo=zoneinfo.ZoneInfo(key='Asia/Shanghai'))
+# Returns: datetime.datetime(2025, 9, 16, 12, 17, 41, tzinfo=zoneinfo.ZoneInfo(key='UTC'))
 
 # Method 2: Convert from timestamp (auto-detect seconds/milliseconds, auto-add timezone)
 dt = from_timestamp(1758025061)
 dt_ms = from_timestamp(1758025061000)
 
 # Method 3: Convert from ISO string (auto-handle timezone)
-dt = from_iso_format("2025-09-15T13:11:15.588000")  # No timezone, auto-add Shanghai timezone
-dt_with_tz = from_iso_format("2025-09-15T13:11:15+08:00")  # Has timezone, preserve original then convert
+dt = from_iso_format("2025-09-15T13:11:15.588000")  # No timezone, auto-add default timezone
+dt_with_tz = from_iso_format("2025-09-15T13:11:15Z")  # Has timezone, preserve original then convert
 
 # Method 4: Format to ISO string (auto-include timezone)
 iso_str = to_iso_format(now)
-# Returns: "2025-09-16T20:20:06.517301+08:00"
+# Returns: "2025-09-16T12:20:06.517301Z"
 
 # Method 5: Convert to timestamp
 ts = to_timestamp_ms(now)
@@ -945,7 +945,7 @@ dt = datetime(2025, 1, 1, 12, 0, 0)
 
 # New code (correct)
 from common_utils.datetime_utils import from_iso_format
-dt = from_iso_format("2025-01-01T12:00:00")  # Auto-add Shanghai timezone
+dt = from_iso_format("2025-01-01T12:00:00")  # Auto-add default timezone
 
 # ----------------
 

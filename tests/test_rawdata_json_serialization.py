@@ -105,7 +105,9 @@ class TestRawDataJsonSerialization:
         restored_data = RawData.from_json_str(json_str)
 
         # Verify nested structure
-        assert restored_data.content["replyInfo"]["originalMessage"] == "Original message"
+        assert (
+            restored_data.content["replyInfo"]["originalMessage"] == "Original message"
+        )
         assert isinstance(restored_data.content["replyInfo"]["timestamp"], datetime)
         assert restored_data.content["replyInfo"]["author"]["id"] == "user_001"
         assert (
@@ -422,7 +424,7 @@ class TestRawDataJsonSerialization:
                 "message_content": iso_time_str,  # Content is time format but field name is not a time field, should not be converted
                 "description": f"Event occurred at {iso_time_str}",  # Description containing time format, should not be converted
                 "user_id": "2024-01-01T10:00:00Z",  # Looks like time but not a time field, should not be converted
-                "version": "2024-01-01T10:00:00.123456+08:00",  # Version number happens to be in time format, should not be converted
+                "version": "2024-01-01T10:00:00.123456+00:00",  # Version number happens to be in time format, should not be converted
             },
             data_id="field_test",
             data_type="Test",
@@ -444,9 +446,11 @@ class TestRawDataJsonSerialization:
 
         # Verify string content remains unchanged
         assert restored_data.content["message_content"] == iso_time_str
-        assert restored_data.content["description"] == f"Event occurred at {iso_time_str}"
+        assert (
+            restored_data.content["description"] == f"Event occurred at {iso_time_str}"
+        )
         assert restored_data.content["user_id"] == "2024-01-01T10:00:00Z"
-        assert restored_data.content["version"] == "2024-01-01T10:00:00.123456+08:00"
+        assert restored_data.content["version"] == "2024-01-01T10:00:00.123456+00:00"
 
     def test_real_world_conversation_data_improved(self):
         """Test real-world conversation data scenario (improved version)"""
@@ -512,7 +516,7 @@ class TestRawDataJsonSerialization:
                 'id': 'email_123',
                 'source': 'gmail',
                 'subject': 'Meeting schedule: starting at 2024-01-01T14:00:00Z',  # Subject contains time format
-                'body_content': 'The meeting will start at 2024-01-01T14:00:00+08:00, please attend on time',  # Body contains time format
+                'body_content': 'The meeting will start at 2024-01-01T14:00:00+00:00, please attend on time',  # Body contains time format
                 'sent_timestamp': test_time,  # Actual time field
                 'received_timestamp': test_time,  # Actual time field
                 'create_timestamp': test_time,  # Actual time field
@@ -538,7 +542,7 @@ class TestRawDataJsonSerialization:
         assert isinstance(restored_data.content['subject'], str)
         assert isinstance(restored_data.content['body_content'], str)
         assert '2024-01-01T14:00:00Z' in restored_data.content['subject']
-        assert '2024-01-01T14:00:00+08:00' in restored_data.content['body_content']
+        assert '2024-01-01T14:00:00+00:00' in restored_data.content['body_content']
 
     def test_real_world_document_data_improved(self):
         """Test real-world document data scenario (improved version)"""
@@ -549,7 +553,7 @@ class TestRawDataJsonSerialization:
             content={
                 'user_id_list': ["user_001"],
                 'title': 'Project Plan - Deadline 2024-12-31T23:59:59Z',  # Title contains time format
-                'content': '# Project Plan\n\nStart time: 2024-01-01T09:00:00+08:00\nEnd time: 2024-12-31T18:00:00+08:00',  # Content contains time format
+                'content': '# Project Plan\n\nStart time: 2024-01-01T09:00:00+00:00\nEnd time: 2024-12-31T18:00:00+00:00',  # Content contains time format
                 'modify_timestamp': test_time,  # Actual time field
                 'last_update_timestamp': test_time,  # Actual time field
                 'source_type': 'notion',
@@ -571,8 +575,8 @@ class TestRawDataJsonSerialization:
         assert isinstance(restored_data.content['title'], str)
         assert isinstance(restored_data.content['content'], str)
         assert '2024-12-31T23:59:59Z' in restored_data.content['title']
-        assert '2024-01-01T09:00:00+08:00' in restored_data.content['content']
-        assert '2024-12-31T18:00:00+08:00' in restored_data.content['content']
+        assert '2024-01-01T09:00:00+00:00' in restored_data.content['content']
+        assert '2024-12-31T18:00:00+00:00' in restored_data.content['content']
 
     def test_nested_structure_with_mixed_content(self):
         """Test nested structures with mixed content"""
@@ -587,7 +591,7 @@ class TestRawDataJsonSerialization:
                     "author": {
                         "name": "Zhang San",
                         "last_login_time": test_time,  # Time field
-                        "profile_description": "User registration time: 2024-01-01T08:00:00+08:00",  # Non-time field but contains time format
+                        "profile_description": "User registration time: 2024-01-01T08:00:00+00:00",  # Non-time field but contains time format
                     },
                 },
                 "system_info": {
@@ -639,7 +643,7 @@ class TestRawDataJsonSerialization:
             "2024-01-01T10:00:00Z" in restored_data.content["message_info"]["content"]
         )
         assert (
-            "2024-01-01T08:00:00+08:00"
+            "2024-01-01T08:00:00+00:00"
             in restored_data.content["message_info"]["author"]["profile_description"]
         )
         assert restored_data.content["system_info"]["version"] == "2024.01.01T10.00.00"
@@ -678,7 +682,7 @@ class TestRawDataJsonSerialization:
                     {
                         "name": "Event 2",
                         "event_time": test_time,  # Should be converted
-                        "note": "Scheduled to execute at 2024-01-02T14:00:00+08:00",  # Should not be converted
+                        "note": "Scheduled to execute at 2024-01-02T14:00:00+00:00",  # Should not be converted
                     },
                 ],
             },
@@ -713,7 +717,7 @@ class TestRawDataJsonSerialization:
         assert (
             "2024-01-01T10:00:00Z" in restored_data.content["events"][0]["description"]
         )
-        assert "2024-01-02T14:00:00+08:00" in restored_data.content["events"][1]["note"]
+        assert "2024-01-02T14:00:00+00:00" in restored_data.content["events"][1]["note"]
 
 
 if __name__ == "__main__":
@@ -775,11 +779,17 @@ if __name__ == "__main__":
         test_instance.test_edge_cases_improved()
         print("✅ Edge case test (improved version) passed")
 
-        print("\n🎉 All tests passed! RawData JSON serialization functionality is working correctly.")
+        print(
+            "\n🎉 All tests passed! RawData JSON serialization functionality is working correctly."
+        )
         print("\nMain features and improvements:")
         print("- ✅ Complete JSON serialization and deserialization support")
-        print("- ✅ Intelligent time field recognition based on field names rather than content")
-        print("- ✅ Avoids mistakenly converting time format strings in message content to datetime")
+        print(
+            "- ✅ Intelligent time field recognition based on field names rather than content"
+        )
+        print(
+            "- ✅ Avoids mistakenly converting time format strings in message content to datetime"
+        )
         print("- ✅ Supports all common time field naming patterns in the project")
         print("- ✅ Correctly handles mixed content types in nested structures")
         print("- ✅ Comprehensive error handling and edge case handling")

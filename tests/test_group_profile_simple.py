@@ -168,7 +168,7 @@ def test_timezone_handling():
     # Create times in different timezones
     utc_time = get_now_with_timezone(ZoneInfo("UTC"))
     tokyo_time = get_now_with_timezone(ZoneInfo("Asia/Tokyo"))
-    shanghai_time = get_now_with_timezone()
+    shanghai_time = get_now_with_timezone(ZoneInfo("Asia/Shanghai"))
 
     print(f"UTC time: {to_iso_format(utc_time)}")
     print(f"Tokyo time: {to_iso_format(tokyo_time)}")

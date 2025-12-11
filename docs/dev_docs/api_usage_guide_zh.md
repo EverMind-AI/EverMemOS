@@ -106,7 +106,7 @@ POST /api/v1/memories
 ```json
 {
   "message_id": "msg_001",
-  "create_time": "2025-02-01T10:00:00+08:00",
+  "create_time": "2025-02-01T10:00:00+00:00",
   "sender": "user_103",
   "sender_name": "Chen",
   "content": "消息内容",
@@ -161,7 +161,7 @@ curl -X POST http://localhost:1995/api/v3/agentic/memorize \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
-    "create_time": "2025-02-01T10:00:00+08:00",
+    "create_time": "2025-02-01T10:00:00+00:00",
     "sender": "user_103",
     "sender_name": "Chen",
     "content": "我们需要在本周完成产品设计",
@@ -177,7 +177,7 @@ curl -X POST http://localhost:1995/api/v1/memories \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
-    "create_time": "2025-02-01T10:00:00+08:00",
+    "create_time": "2025-02-01T10:00:00+00:00",
     "sender": "user_103",
     "sender_name": "Chen",
     "content": "我们需要在本周完成产品设计",
@@ -200,7 +200,7 @@ async def store_memory_v3():
             "http://localhost:1995/api/v3/agentic/memorize",
             json={
                 "message_id": "msg_001",
-                "create_time": "2025-02-01T10:00:00+08:00",
+                "create_time": "2025-02-01T10:00:00+00:00",
                 "sender": "user_103",
                 "sender_name": "Chen",
                 "content": "我们需要在本周完成产品设计",
@@ -225,7 +225,7 @@ async def store_memory_v1():
             "http://localhost:1995/api/v1/memories",
             json={
                 "message_id": "msg_001",
-                "create_time": "2025-02-01T10:00:00+08:00",
+                "create_time": "2025-02-01T10:00:00+00:00",
                 "sender": "user_103",
                 "sender_name": "Chen",
                 "content": "我们需要在本周完成产品设计",
@@ -250,7 +250,7 @@ fetch('http://localhost:1995/api/v3/agentic/memorize', {
   },
   body: JSON.stringify({
     message_id: 'msg_001',
-    create_time: '2025-02-01T10:00:00+08:00',
+    create_time: '2025-02-01T10:00:00+00:00',
     sender: 'user_103',
     sender_name: 'Chen',
     content: '我们需要在本周完成产品设计',
@@ -272,7 +272,7 @@ fetch('http://localhost:1995/api/v1/memories', {
   },
   body: JSON.stringify({
     message_id: 'msg_001',
-    create_time: '2025-02-01T10:00:00+08:00',
+    create_time: '2025-02-01T10:00:00+00:00',
     sender: 'user_103',
     sender_name: 'Chen',
     content: '我们需要在本周完成产品设计',
@@ -296,7 +296,7 @@ MemSys 定义了标准化的群聊数据格式 `GroupChatFormat`，用于存储�
   "conversation_meta": {
     "group_id": "group_001",
     "name": "项目讨论组",
-    "default_timezone": "+08:00",
+    "default_timezone": "+00:00",
     "user_details": {
       "user_101": {
         "full_name": "Alex",
@@ -308,7 +308,7 @@ MemSys 定义了标准化的群聊数据格式 `GroupChatFormat`，用于存储�
   "conversation_list": [
     {
       "message_id": "msg_001",
-      "create_time": "2025-02-01T10:00:00+08:00",
+      "create_time": "2025-02-01T10:00:00+00:00",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -466,7 +466,7 @@ uv run python src/bootstrap.py src/run_memorize.py \
 群聊ID: group_001
 用户数量: 5
 消息数量: 20
-时间范围: 2025-02-01T10:00:00+08:00 ~ 2025-02-01T18:30:00+08:00
+时间范围: 2025-02-01T10:00:00+00:00 ~ 2025-02-01T18:30:00+00:00
 
 ======================================================================
 开始逐条调用 memorize API
@@ -505,7 +505,7 @@ API地址: http://localhost:1995/api/v3/agentic/memorize
   "conversation_meta": {
     "group_id": "project_team_001",
     "name": "产品开发团队",
-    "default_timezone": "+08:00",
+    "default_timezone": "+00:00",
     "user_details": {
       "alice": {
         "full_name": "Alice Wang",
@@ -522,7 +522,7 @@ API地址: http://localhost:1995/api/v3/agentic/memorize
   "conversation_list": [
     {
       "message_id": "msg_20250201_001",
-      "create_time": "2025-02-01T09:00:00+08:00",
+      "create_time": "2025-02-01T09:00:00+00:00",
       "sender": "alice",
       "sender_name": "Alice Wang",
       "type": "text",
@@ -531,7 +531,7 @@ API地址: http://localhost:1995/api/v3/agentic/memorize
     },
     {
       "message_id": "msg_20250201_002",
-      "create_time": "2025-02-01T09:02:00+08:00",
+      "create_time": "2025-02-01T09:02:00+00:00",
       "sender": "bob",
       "sender_name": "Bob Chen",
       "type": "text",

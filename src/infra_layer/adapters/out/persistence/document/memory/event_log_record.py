@@ -65,7 +65,7 @@ class EventLogRecord(DocumentBase, AuditBase):
                 "user_name": "Alice",
                 "atomic_fact": "The user went to Chengdu on January 1, 2024, and enjoyed the local Sichuan cuisine.",
                 "parent_episode_id": "episode_001",
-                "timestamp": "2024-01-01T10:00:00+08:00",
+                "timestamp": "2024-01-01T10:00:00+00:00",
                 "group_id": "group_travel",
                 "group_name": "Travel Group",
                 "participants": ["Zhang San", "Li Si"],

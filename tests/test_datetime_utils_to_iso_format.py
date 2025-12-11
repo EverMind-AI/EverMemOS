@@ -74,14 +74,14 @@ class TestToIsoFormatNormalCases:
 
     def test_string_input_passthrough(self):
         """测试字符串输入直接返回"""
-        iso_str = "2025-12-05T10:30:00+08:00"
+        iso_str = "2025-12-05T10:30:00+00:00"
         result = to_iso_format(iso_str)
 
         assert result == iso_str
 
     def test_string_input_with_allow_none_false(self):
         """测试字符串输入且 allow_none=False"""
-        iso_str = "2025-12-05T10:30:00+08:00"
+        iso_str = "2025-12-05T10:30:00+00:00"
         result = to_iso_format(iso_str, allow_none=False)
 
         assert result == iso_str
@@ -127,4 +127,3 @@ class TestToIsoFormatEdgeCases:
         """测试不支持的类型返回 None"""
         result = to_iso_format([1, 2, 3])  # type: ignore
         assert result is None
-

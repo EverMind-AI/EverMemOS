@@ -461,7 +461,7 @@ curl -X POST http://localhost:8001/api/v1/memories \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
-    "create_time": "2025-02-01T10:00:00+08:00",
+    "create_time": "2025-02-01T10:00:00+00:00",
     "sender": "user_103",
     "sender_name": "Chen",
     "content": "我们需要在本周完成产品设计",
@@ -590,7 +590,7 @@ uv run python src/bootstrap.py src/run_memorize.py \
   "conversation_list": [
     {
       "message_id": "msg_001",
-      "create_time": "2025-02-01T10:00:00+08:00",
+      "create_time": "2025-02-01T10:00:00+00:00",
       "sender": "user_101",
       "content": "大家早上好"
     }

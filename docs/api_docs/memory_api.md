@@ -57,7 +57,7 @@ Store a single group chat message memory
   "group_id": "group_123",
   "group_name": "Project Discussion Group",
   "message_id": "msg_001",
-  "create_time": "2025-01-15T10:00:00+08:00",
+  "create_time": "2025-01-15T02:00:00Z",
   "sender": "user_001",
   "sender_name": "Zhang San",
   "content": "Let's discuss the technical approach for the new feature today",
@@ -163,7 +163,7 @@ Suitable for processing real-time message streams from chat applications, storin
   "group_id": "group_123",
   "group_name": "Project Discussion Group",
   "message_id": "msg_001",
-  "create_time": "2025-01-15T10:00:00+08:00",
+  "create_time": "2025-01-15T02:00:00Z",
   "sender": "user_001",
   "sender_name": "Zhang San",
   "content": "Let's discuss the technical approach for the new feature today",
@@ -181,7 +181,7 @@ After a chatbot receives a user message, it can directly call the Memory API to 
   "group_id": "bot_conversation_123",
   "group_name": "Conversation with AI Assistant",
   "message_id": "bot_msg_001",
-  "create_time": "2025-01-15T10:05:00+08:00",
+  "create_time": "2025-01-15T02:05:00Z",
   "sender": "user_456",
   "sender_name": "Li Si",
   "content": "Help me summarize today's meeting content",
@@ -235,7 +235,7 @@ curl -X POST http://localhost:1995/api/v1/memories \
     "group_id": "group_123",
     "group_name": "Project Discussion Group",
     "message_id": "msg_001",
-    "create_time": "2025-01-15T10:00:00+08:00",
+    "create_time": "2025-01-15T02:00:00Z",
     "sender": "user_001",
     "sender_name": "Zhang San",
     "content": "Let'\''s discuss the technical approach for the new feature today",
@@ -255,7 +255,7 @@ async def call_memory_api():
         "group_id": "group_123",
         "group_name": "Project Discussion Group",
         "message_id": "msg_001",
-        "create_time": "2025-01-15T10:00:00+08:00",
+        "create_time": "2025-01-15T02:00:00Z",
         "sender": "user_001",
         "sender_name": "Zhang San",
         "content": "Let's discuss the technical approach for the new feature today",
@@ -320,7 +320,7 @@ Private chat messages can omit `group_id`, or use a special private chat ID:
   "group_id": "private_user001_user002",
   "group_name": "Private chat with Zhang San",
   "message_id": "private_msg_001",
-  "create_time": "2025-01-15T10:00:00+08:00",
+  "create_time": "2025-01-15T02:00:00Z",
   "sender": "user_001",
   "sender_name": "Zhang San",
   "content": "Hi, how are you doing?",
@@ -334,7 +334,7 @@ Private chat messages can omit `group_id`, or use a special private chat ID:
 
 ```json
 {
-  "create_time": "2025-01-15T10:00:00+08:00"  // with timezone
+  "create_time": "2025-01-15T02:00:00Z"  // with timezone
 }
 ```
 
@@ -688,8 +688,8 @@ Save conversation metadata, including scene, participants, tags, etc.
   "name": "Project Discussion Group",
   "description": "Technical discussion for new feature development",
   "group_id": "group_123",
-  "created_at": "2025-01-15T10:00:00+08:00",
-  "default_timezone": "Asia/Shanghai",
+  "created_at": "2025-01-15T02:00:00Z",
+  "default_timezone": "UTC",
   "user_details": {
     "user_001": {
       "full_name": "Zhang San",
@@ -735,8 +735,8 @@ Save conversation metadata, including scene, participants, tags, etc.
     "scene": "group_chat",
     "name": "Project Discussion Group",
     "version": "1.0",
-    "created_at": "2025-01-15T10:00:00+08:00",
-    "updated_at": "2025-01-15T10:00:00+08:00"
+    "created_at": "2025-01-15T02:00:00Z",
+    "updated_at": "2025-01-15T02:00:00Z"
   }
 }
 ```
@@ -803,7 +803,7 @@ Partially update conversation metadata, only updating the provided fields.
     "scene": "group_chat",
     "name": "New Conversation Name",
     "updated_fields": ["name", "tags"],
-    "updated_at": "2025-01-15T10:30:00+08:00"
+    "updated_at": "2025-01-15T02:30:00Z"
   }
 }
 ```

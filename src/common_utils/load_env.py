@@ -14,6 +14,7 @@ import time
 
 from common_utils.app_meta import set_service_name
 from common_utils.project_path import PROJECT_DIR
+from common_utils.datetime_utils import get_timezone
 
 # Environment variables are not loaded yet, so get_logger cannot be used here
 logger = logging.getLogger(__name__)
@@ -74,8 +75,8 @@ def reset_timezone():
     """
     Reset timezone
     """
-    timezone = os.environ.get("TZ") or "Asia/Shanghai"
-    os.environ["TZ"] = timezone
+    timezone = get_timezone()
+    os.environ["TZ"] = timezone.key
     # tzset() is not available on Windows, only call it if available
     if hasattr(time, 'tzset'):
         time.tzset()

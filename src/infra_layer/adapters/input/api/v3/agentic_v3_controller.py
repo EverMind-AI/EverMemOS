@@ -75,7 +75,7 @@ class AgenticV3Controller(BaseController):
           "group_id": "group_123",
           "group_name": "Project Discussion Group",
           "message_id": "msg_001",
-          "create_time": "2025-01-15T10:00:00+08:00",
+          "create_time": "2025-01-15T10:00:00+00:00",
           "sender": "user_001",
           "sender_name": "Zhang San",
           "content": "Discuss the technical solution for the new feature today",

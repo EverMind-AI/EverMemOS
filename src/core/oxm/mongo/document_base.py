@@ -44,7 +44,7 @@ class DocumentBase(Document):
 
     def _recursive_datetime_check(self, obj, path: str = "", depth: int = 0):
         """
-        Recursively check and convert all datetime objects to Shanghai timezone
+        Recursively check and convert all datetime objects to default timezone
 
         Args:
             obj: Object to check
@@ -64,7 +64,7 @@ class DocumentBase(Document):
                 # No timezone info, convert to default timezone; usually created within the process and passed as parameter
                 return to_timezone(obj)
             else:
-                # Return if read with timezone and it's the default timezone (Shanghai)
+                # Return if read with timezone and it's the default timezone
                 return obj
 
         # Case 2: Object is BaseModel

@@ -3,6 +3,7 @@ from typing import AsyncGenerator
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from core.di.decorators import component
+from common_utils.datetime_utils import get_timezone
 
 
 @component(name="database_session_provider", primary=True)
@@ -13,8 +14,7 @@ class DatabaseSessionProvider:
         """Initialize the database session provider"""
         self.database_url = os.getenv("DATABASE_URL", "")
 
-        # Read timezone configuration from environment variables, default to Asia/Shanghai
-        timezone = os.getenv("TZ", "Asia/Shanghai")
+        timezone = get_timezone()
 
         # Replace postgresql:// with postgresql+asyncpg:// to support async
         if self.database_url.startswith("postgresql://"):

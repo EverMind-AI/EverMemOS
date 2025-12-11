@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
-from datetime import datetime
 from api_specs.memory_types import BaseMemory
 from api_specs.memory_models import MemoryType, Metadata, MemoryModel, RetrieveMethod
+from common_utils.datetime_utils import get_timezone
 
 
 @dataclass
@@ -107,7 +107,7 @@ class ConversationMetaRequest:
     group_id: str  # Group ID
     created_at: str  # Creation time, ISO format string
     description: Optional[str] = None  # Conversation description
-    default_timezone: Optional[str] = "Asia/Shanghai"  # Default timezone
+    default_timezone: Optional[str] = get_timezone().key  # Default timezone
     user_details: Dict[str, UserDetail] = field(
         default_factory=dict
     )  # User details, key is dynamic (e.g., user_001, robot_001), value structure is fixed

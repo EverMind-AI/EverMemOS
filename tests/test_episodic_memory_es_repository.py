@@ -446,7 +446,7 @@ async def test_timezone_handling():
         # Create times in different timezones
         utc_time = get_now_with_timezone(ZoneInfo("UTC"))
         tokyo_time = get_now_with_timezone(ZoneInfo("Asia/Tokyo"))
-        shanghai_time = get_now_with_timezone()  # Default Shanghai timezone
+        shanghai_time = get_now_with_timezone(ZoneInfo("Asia/Shanghai"))
 
         logger.info("Original UTC time: %s", to_iso_format(utc_time))
         logger.info("Original Tokyo time: %s", to_iso_format(tokyo_time))
@@ -498,7 +498,9 @@ async def test_timezone_handling():
         logger.info("✅ Timezone validation succeeded")
 
         # Test time range query - use wider time range and Shanghai timezone
-        shanghai_time = get_now_with_timezone()  # Current Shanghai time
+        shanghai_time = get_now_with_timezone(
+            ZoneInfo("Asia/Shanghai")
+        )  # Current Shanghai time
         date_range = {
             "gte": (shanghai_time - timedelta(hours=2)).isoformat(),
             "lte": (shanghai_time + timedelta(hours=2)).isoformat(),

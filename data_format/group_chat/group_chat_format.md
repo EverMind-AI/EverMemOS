@@ -78,7 +78,7 @@ Each message uses user ID as `sender`, with an optional `sender_name` for readab
 ```json
 {
   "message_id": "msg_001",
-  "create_time": "2025-02-01T10:00:00+08:00",
+  "create_time": "2025-02-01T10:00:00+00:00",
   "sender": "user_103",
   "sender_name": "Chen",
   "type": "text",
@@ -90,7 +90,7 @@ Each message uses user ID as `sender`, with an optional `sender_name` for readab
 ### 5. Timezone-Aware Timestamps
 
 - Uses ISO 8601 format
-- Recommended to include timezone information (e.g., `+08:00`)
+- Recommended to include timezone information (e.g., `+00:00`)
 - If a message doesn't have timezone information, it can be obtained from `conversation_meta.default_timezone`
 
 ### 6. Message Types
@@ -140,7 +140,7 @@ Including complete information:
 "refer_list": [
   {
     "message_id": "msg_002",
-    "create_time": "2025-02-01T10:01:00+08:00",
+    "create_time": "2025-02-01T10:01:00+00:00",
     "sender": "user_102",
     "sender_name": "Betty",
     "type": "text",

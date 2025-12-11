@@ -27,6 +27,7 @@ from infra_layer.adapters.input.api.mapper.group_chat_converter import (
     validate_group_chat_format_input,
 )
 from core.observation.logger import get_logger
+from common_utils.datetime_utils import get_timezone
 
 logger = get_logger(__name__)
 
@@ -149,7 +150,9 @@ class GroupChatMemorizer:
                     "description": meta.get("description", ""),
                     "group_id": group_id,
                     "created_at": meta.get("created_at", ""),
-                    "default_timezone": meta.get("default_timezone", "Asia/Shanghai"),
+                    "default_timezone": meta.get(
+                        "default_timezone", get_timezone().key
+                    ),
                     "user_details": meta.get("user_details", {}),
                     "tags": meta.get("tags", []),
                 }

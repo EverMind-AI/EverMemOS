@@ -70,8 +70,8 @@ The input file must conform to the `GroupChatFormat` specification, see `data_fo
     "name": "Smart Sales Assistant Project Team",
     "description": "Development discussion group for Smart Sales Assistant project",
     "group_id": "group_sales_ai_2025",
-    "created_at": "2025-02-01T09:00:00+08:00",
-    "default_timezone": "Asia/Shanghai",
+    "created_at": "2025-02-01T01:00:00Z",
+    "default_timezone": "UTC",
     "user_details": {
       "user_101": {
         "full_name": "Alex",
@@ -87,7 +87,7 @@ The input file must conform to the `GroupChatFormat` specification, see `data_fo
   "conversation_list": [
     {
       "message_id": "msg_001",
-      "create_time": "2025-02-01T10:00:00+08:00",
+      "create_time": "2025-02-01T02:00:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -146,7 +146,7 @@ Group Chat Name: Smart Sales Assistant Project Team
 Group Chat ID: group_sales_ai_2025
 Number of Users: 5
 Number of Messages: 8
-Time Range: 2025-02-01T10:00:00+08:00 ~ 2025-02-01T10:05:00+08:00
+Time Range: 2025-02-01T02:00:00Z ~ 2025-02-01T02:05:00Z
 
 ======================================================================
 Reading Group Chat Data

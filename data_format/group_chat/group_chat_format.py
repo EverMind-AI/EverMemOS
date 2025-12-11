@@ -209,8 +209,8 @@ def create_example_group_chat() -> GroupChatFormat:
             "name": "Smart Sales Assistant Project Group",
             "description": "Smart Sales Assistant Project Development Discussion Group",
             "group_id": "group_sales_ai_2025",
-            "created_at": "2025-02-01T09:00:00+08:00",
-            "default_timezone": "Asia/Shanghai",
+            "created_at": "2025-02-01T01:00:00Z",
+            "default_timezone": "UTC",
             "user_details": {
                 "user_101": {
                     "full_name": "Alex",
@@ -243,7 +243,7 @@ def create_example_group_chat() -> GroupChatFormat:
         "conversation_list": [
             {
                 "message_id": "msg_001",
-                "create_time": "2025-02-01T10:00:00+08:00",
+                "create_time": "2025-02-01T02:00:00Z",
                 "sender": "user_103",
                 "sender_name": "Chen",
                 "type": "text",
@@ -252,7 +252,7 @@ def create_example_group_chat() -> GroupChatFormat:
             },
             {
                 "message_id": "msg_002",
-                "create_time": "2025-02-01T10:01:00+08:00",
+                "create_time": "2025-02-01T02:01:00Z",
                 "sender": "user_102",
                 "sender_name": "Betty",
                 "type": "text",
@@ -261,7 +261,7 @@ def create_example_group_chat() -> GroupChatFormat:
             },
             {
                 "message_id": "msg_003",
-                "create_time": "2025-02-01T10:01:30+08:00",
+                "create_time": "2025-02-01T02:01:30Z",
                 "sender": "user_103",
                 "sender_name": "Chen",
                 "type": "text",
@@ -271,7 +271,7 @@ def create_example_group_chat() -> GroupChatFormat:
             },
             {
                 "message_id": "msg_004",
-                "create_time": "2025-02-01T10:02:00+08:00",
+                "create_time": "2025-02-01T02:02:00Z",
                 "sender": "user_101",
                 "sender_name": "Alex",
                 "type": "text",
@@ -280,7 +280,7 @@ def create_example_group_chat() -> GroupChatFormat:
             },
             {
                 "message_id": "msg_005",
-                "create_time": "2025-02-01T10:02:30+08:00",
+                "create_time": "2025-02-01T02:02:30Z",
                 "sender": "user_101",
                 "sender_name": "Alex",
                 "type": "text",
@@ -289,7 +289,7 @@ def create_example_group_chat() -> GroupChatFormat:
             },
             {
                 "message_id": "msg_006",
-                "create_time": "2025-02-01T10:03:30+08:00",
+                "create_time": "2025-02-01T02:03:30Z",
                 "sender": "user_102",
                 "sender_name": "Betty",
                 "type": "text",
@@ -299,7 +299,7 @@ def create_example_group_chat() -> GroupChatFormat:
             },
             {
                 "message_id": "msg_007",
-                "create_time": "2025-02-01T10:04:00+08:00",
+                "create_time": "2025-02-01T02:04:00Z",
                 "sender": "user_101",
                 "sender_name": "Alex",
                 "type": "text",
@@ -314,7 +314,7 @@ def create_example_group_chat() -> GroupChatFormat:
             },
             {
                 "message_id": "msg_008",
-                "create_time": "2025-02-01T10:05:00+08:00",
+                "create_time": "2025-02-01T02:05:00Z",
                 "sender": "user_101",
                 "sender_name": "Alex",
                 "type": "text",

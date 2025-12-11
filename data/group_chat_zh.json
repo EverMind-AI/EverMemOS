@@ -5,7 +5,7 @@
     "scene_desc": {},
     "name": "智能销售助手项目组",
     "description": "智能销售助手项目的开发讨论群",
-    "default_timezone": "Asia/Shanghai",
+    "default_timezone": "UTC",
     "user_details": {
       "user_103": {
         "full_name": "Chen",
@@ -83,12 +83,12 @@
     },
     "tags": [],
     "group_id": "group_sales_ai_2025",
-    "created_at": "2025-02-01T10:00:00+08:00"
+    "created_at": "2025-02-01T02:00:00Z"
   },
   "conversation_list": [
     {
       "message_id": "msg_0001",
-      "create_time": "2025-02-01T10:00:00+08:00",
+      "create_time": "2025-02-01T02:00:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -97,7 +97,7 @@
     },
     {
       "message_id": "msg_0002",
-      "create_time": "2025-02-01T10:01:00+08:00",
+      "create_time": "2025-02-01T02:01:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -106,7 +106,7 @@
     },
     {
       "message_id": "msg_0003",
-      "create_time": "2025-02-01T10:01:30+08:00",
+      "create_time": "2025-02-01T02:01:30Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -115,7 +115,7 @@
     },
     {
       "message_id": "msg_0004",
-      "create_time": "2025-02-01T10:02:00+08:00",
+      "create_time": "2025-02-01T02:02:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -124,7 +124,7 @@
     },
     {
       "message_id": "msg_0005",
-      "create_time": "2025-02-01T10:02:30+08:00",
+      "create_time": "2025-02-01T02:02:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -133,7 +133,7 @@
     },
     {
       "message_id": "msg_0006",
-      "create_time": "2025-02-01T10:03:00+08:00",
+      "create_time": "2025-02-01T02:03:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -142,7 +142,7 @@
     },
     {
       "message_id": "msg_0007",
-      "create_time": "2025-02-01T10:03:30+08:00",
+      "create_time": "2025-02-01T02:03:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -151,7 +151,7 @@
     },
     {
       "message_id": "msg_0008",
-      "create_time": "2025-02-01T10:04:00+08:00",
+      "create_time": "2025-02-01T02:04:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -160,7 +160,7 @@
     },
     {
       "message_id": "msg_0009",
-      "create_time": "2025-02-01T10:05:00+08:00",
+      "create_time": "2025-02-01T02:05:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -169,7 +169,7 @@
     },
     {
       "message_id": "msg_0010",
-      "create_time": "2025-02-01T10:05:30+08:00",
+      "create_time": "2025-02-01T02:05:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -178,7 +178,7 @@
     },
     {
       "message_id": "msg_0011",
-      "create_time": "2025-02-01T10:06:00+08:00",
+      "create_time": "2025-02-01T02:06:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -187,7 +187,7 @@
     },
     {
       "message_id": "msg_0012",
-      "create_time": "2025-02-02T18:20:00+08:00",
+      "create_time": "2025-02-02T10:20:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -196,7 +196,7 @@
     },
     {
       "message_id": "msg_0013",
-      "create_time": "2025-02-02T18:21:00+08:00",
+      "create_time": "2025-02-02T10:21:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -205,7 +205,7 @@
     },
     {
       "message_id": "msg_0014",
-      "create_time": "2025-02-02T18:21:30+08:00",
+      "create_time": "2025-02-02T10:21:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -214,7 +214,7 @@
     },
     {
       "message_id": "msg_0015",
-      "create_time": "2025-02-03T09:30:00+08:00",
+      "create_time": "2025-02-03T01:30:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -223,7 +223,7 @@
     },
     {
       "message_id": "msg_0016",
-      "create_time": "2025-02-03T09:31:00+08:00",
+      "create_time": "2025-02-03T01:31:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -232,7 +232,7 @@
     },
     {
       "message_id": "msg_0017",
-      "create_time": "2025-02-03T09:31:30+08:00",
+      "create_time": "2025-02-03T01:31:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -241,7 +241,7 @@
     },
     {
       "message_id": "msg_0018",
-      "create_time": "2025-02-03T09:32:00+08:00",
+      "create_time": "2025-02-03T01:32:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -250,7 +250,7 @@
     },
     {
       "message_id": "msg_0019",
-      "create_time": "2025-02-03T09:32:30+08:00",
+      "create_time": "2025-02-03T01:32:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -259,7 +259,7 @@
     },
     {
       "message_id": "msg_0020",
-      "create_time": "2025-02-03T09:33:00+08:00",
+      "create_time": "2025-02-03T01:33:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -268,7 +268,7 @@
     },
     {
       "message_id": "msg_0021",
-      "create_time": "2025-02-04T12:05:00+08:00",
+      "create_time": "2025-02-04T04:05:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -277,7 +277,7 @@
     },
     {
       "message_id": "msg_0022",
-      "create_time": "2025-02-04T12:06:00+08:00",
+      "create_time": "2025-02-04T04:06:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -286,7 +286,7 @@
     },
     {
       "message_id": "msg_0023",
-      "create_time": "2025-02-04T12:06:20+08:00",
+      "create_time": "2025-02-04T04:06:20Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -295,7 +295,7 @@
     },
     {
       "message_id": "msg_0024",
-      "create_time": "2025-02-04T12:06:40+08:00",
+      "create_time": "2025-02-04T04:06:40Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -304,7 +304,7 @@
     },
     {
       "message_id": "msg_0025",
-      "create_time": "2025-02-05T11:00:00+08:00",
+      "create_time": "2025-02-05T03:00:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -313,7 +313,7 @@
     },
     {
       "message_id": "msg_0026",
-      "create_time": "2025-02-05T11:01:00+08:00",
+      "create_time": "2025-02-05T03:01:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -322,7 +322,7 @@
     },
     {
       "message_id": "msg_0027",
-      "create_time": "2025-02-05T11:01:30+08:00",
+      "create_time": "2025-02-05T03:01:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -331,7 +331,7 @@
     },
     {
       "message_id": "msg_0028",
-      "create_time": "2025-02-05T11:02:00+08:00",
+      "create_time": "2025-02-05T03:02:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -340,7 +340,7 @@
     },
     {
       "message_id": "msg_0029",
-      "create_time": "2025-02-05T11:03:00+08:00",
+      "create_time": "2025-02-05T03:03:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -349,7 +349,7 @@
     },
     {
       "message_id": "msg_0030",
-      "create_time": "2025-02-06T17:50:00+08:00",
+      "create_time": "2025-02-06T09:50:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -358,7 +358,7 @@
     },
     {
       "message_id": "msg_0031",
-      "create_time": "2025-02-06T17:51:00+08:00",
+      "create_time": "2025-02-06T09:51:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -367,7 +367,7 @@
     },
     {
       "message_id": "msg_0032",
-      "create_time": "2025-02-06T17:51:30+08:00",
+      "create_time": "2025-02-06T09:51:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -376,7 +376,7 @@
     },
     {
       "message_id": "msg_0033",
-      "create_time": "2025-02-09T18:00:00+08:00",
+      "create_time": "2025-02-09T10:00:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -385,7 +385,7 @@
     },
     {
       "message_id": "msg_0034",
-      "create_time": "2025-02-09T18:01:00+08:00",
+      "create_time": "2025-02-09T10:01:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -394,7 +394,7 @@
     },
     {
       "message_id": "msg_0035",
-      "create_time": "2025-02-09T18:01:30+08:00",
+      "create_time": "2025-02-09T10:01:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -403,7 +403,7 @@
     },
     {
       "message_id": "msg_0036",
-      "create_time": "2025-02-10T10:40:00+08:00",
+      "create_time": "2025-02-10T02:40:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -412,7 +412,7 @@
     },
     {
       "message_id": "msg_0037",
-      "create_time": "2025-02-10T10:41:00+08:00",
+      "create_time": "2025-02-10T02:41:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -421,7 +421,7 @@
     },
     {
       "message_id": "msg_0038",
-      "create_time": "2025-02-12T10:09:00+08:00",
+      "create_time": "2025-02-12T02:09:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -430,7 +430,7 @@
     },
     {
       "message_id": "msg_0039",
-      "create_time": "2025-02-12T10:10:00+08:00",
+      "create_time": "2025-02-12T02:10:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -439,7 +439,7 @@
     },
     {
       "message_id": "msg_0040",
-      "create_time": "2025-02-12T10:10:30+08:00",
+      "create_time": "2025-02-12T02:10:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -448,7 +448,7 @@
     },
     {
       "message_id": "msg_0041",
-      "create_time": "2025-02-12T10:11:00+08:00",
+      "create_time": "2025-02-12T02:11:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -457,7 +457,7 @@
     },
     {
       "message_id": "msg_0042",
-      "create_time": "2025-02-12T10:12:00+08:00",
+      "create_time": "2025-02-12T02:12:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -466,7 +466,7 @@
     },
     {
       "message_id": "msg_0043",
-      "create_time": "2025-02-13T16:18:00+08:00",
+      "create_time": "2025-02-13T08:18:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -475,7 +475,7 @@
     },
     {
       "message_id": "msg_0044",
-      "create_time": "2025-02-13T16:19:00+08:00",
+      "create_time": "2025-02-13T08:19:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -484,7 +484,7 @@
     },
     {
       "message_id": "msg_0045",
-      "create_time": "2025-02-14T09:55:00+08:00",
+      "create_time": "2025-02-14T01:55:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -493,7 +493,7 @@
     },
     {
       "message_id": "msg_0046",
-      "create_time": "2025-02-14T09:56:00+08:00",
+      "create_time": "2025-02-14T01:56:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -502,7 +502,7 @@
     },
     {
       "message_id": "msg_0047",
-      "create_time": "2025-02-14T09:56:30+08:00",
+      "create_time": "2025-02-14T01:56:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -511,7 +511,7 @@
     },
     {
       "message_id": "msg_0048",
-      "create_time": "2025-02-15T16:40:00+08:00",
+      "create_time": "2025-02-15T08:40:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -520,7 +520,7 @@
     },
     {
       "message_id": "msg_0049",
-      "create_time": "2025-02-15T16:41:00+08:00",
+      "create_time": "2025-02-15T08:41:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -529,7 +529,7 @@
     },
     {
       "message_id": "msg_0050",
-      "create_time": "2025-02-15T16:41:30+08:00",
+      "create_time": "2025-02-15T08:41:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -538,7 +538,7 @@
     },
     {
       "message_id": "msg_0051",
-      "create_time": "2025-02-15T16:42:00+08:00",
+      "create_time": "2025-02-15T08:42:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -547,7 +547,7 @@
     },
     {
       "message_id": "msg_0052",
-      "create_time": "2025-02-16T20:22:00+08:00",
+      "create_time": "2025-02-16T12:22:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -556,7 +556,7 @@
     },
     {
       "message_id": "msg_0053",
-      "create_time": "2025-02-18T10:10:00+08:00",
+      "create_time": "2025-02-18T02:10:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -565,7 +565,7 @@
     },
     {
       "message_id": "msg_0054",
-      "create_time": "2025-02-18T10:11:00+08:00",
+      "create_time": "2025-02-18T02:11:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -574,7 +574,7 @@
     },
     {
       "message_id": "msg_0055",
-      "create_time": "2025-02-20T09:00:00+08:00",
+      "create_time": "2025-02-20T01:00:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -583,7 +583,7 @@
     },
     {
       "message_id": "msg_0056",
-      "create_time": "2025-02-20T09:01:00+08:00",
+      "create_time": "2025-02-20T01:01:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -592,7 +592,7 @@
     },
     {
       "message_id": "msg_0057",
-      "create_time": "2025-02-20T09:02:00+08:00",
+      "create_time": "2025-02-20T01:02:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -601,7 +601,7 @@
     },
     {
       "message_id": "msg_0058",
-      "create_time": "2025-02-20T09:02:30+08:00",
+      "create_time": "2025-02-20T01:02:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -610,7 +610,7 @@
     },
     {
       "message_id": "msg_0059",
-      "create_time": "2025-02-20T09:03:00+08:00",
+      "create_time": "2025-02-20T01:03:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -619,7 +619,7 @@
     },
     {
       "message_id": "msg_0060",
-      "create_time": "2025-02-23T14:27:00+08:00",
+      "create_time": "2025-02-23T06:27:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -628,7 +628,7 @@
     },
     {
       "message_id": "msg_0061",
-      "create_time": "2025-02-23T14:28:00+08:00",
+      "create_time": "2025-02-23T06:28:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -637,7 +637,7 @@
     },
     {
       "message_id": "msg_0062",
-      "create_time": "2025-02-24T19:12:00+08:00",
+      "create_time": "2025-02-24T11:12:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -646,7 +646,7 @@
     },
     {
       "message_id": "msg_0063",
-      "create_time": "2025-02-24T19:12:30+08:00",
+      "create_time": "2025-02-24T11:12:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -655,7 +655,7 @@
     },
     {
       "message_id": "msg_0064",
-      "create_time": "2025-02-24T19:13:00+08:00",
+      "create_time": "2025-02-24T11:13:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -664,7 +664,7 @@
     },
     {
       "message_id": "msg_0065",
-      "create_time": "2025-02-26T09:03:00+08:00",
+      "create_time": "2025-02-26T01:03:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -673,7 +673,7 @@
     },
     {
       "message_id": "msg_0066",
-      "create_time": "2025-02-26T09:04:00+08:00",
+      "create_time": "2025-02-26T01:04:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -682,7 +682,7 @@
     },
     {
       "message_id": "msg_0067",
-      "create_time": "2025-02-27T17:25:00+08:00",
+      "create_time": "2025-02-27T09:25:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -691,7 +691,7 @@
     },
     {
       "message_id": "msg_0068",
-      "create_time": "2025-02-27T17:26:00+08:00",
+      "create_time": "2025-02-27T09:26:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -700,7 +700,7 @@
     },
     {
       "message_id": "msg_0069",
-      "create_time": "2025-02-27T18:00:00+08:00",
+      "create_time": "2025-02-27T10:00:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -709,7 +709,7 @@
     },
     {
       "message_id": "msg_0070",
-      "create_time": "2025-02-28T18:05:00+08:00",
+      "create_time": "2025-02-28T10:05:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -718,7 +718,7 @@
     },
     {
       "message_id": "msg_0071",
-      "create_time": "2025-02-28T18:06:00+08:00",
+      "create_time": "2025-02-28T10:06:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -727,7 +727,7 @@
     },
     {
       "message_id": "msg_0072",
-      "create_time": "2025-02-28T18:06:30+08:00",
+      "create_time": "2025-02-28T10:06:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -736,7 +736,7 @@
     },
     {
       "message_id": "msg_0073",
-      "create_time": "2025-02-28T18:07:00+08:00",
+      "create_time": "2025-02-28T10:07:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -745,7 +745,7 @@
     },
     {
       "message_id": "msg_0074",
-      "create_time": "2025-02-28T18:07:30+08:00",
+      "create_time": "2025-02-28T10:07:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -754,7 +754,7 @@
     },
     {
       "message_id": "msg_0075",
-      "create_time": "2025-03-01T09:15:00+08:00",
+      "create_time": "2025-03-01T01:15:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -763,7 +763,7 @@
     },
     {
       "message_id": "msg_0076",
-      "create_time": "2025-03-01T09:16:00+08:00",
+      "create_time": "2025-03-01T01:16:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -772,7 +772,7 @@
     },
     {
       "message_id": "msg_0077",
-      "create_time": "2025-03-01T09:16:30+08:00",
+      "create_time": "2025-03-01T01:16:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -781,7 +781,7 @@
     },
     {
       "message_id": "msg_0078",
-      "create_time": "2025-03-01T09:17:00+08:00",
+      "create_time": "2025-03-01T01:17:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -790,7 +790,7 @@
     },
     {
       "message_id": "msg_0079",
-      "create_time": "2025-03-01T09:17:30+08:00",
+      "create_time": "2025-03-01T01:17:30Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -799,7 +799,7 @@
     },
     {
       "message_id": "msg_0080",
-      "create_time": "2025-03-02T20:30:00+08:00",
+      "create_time": "2025-03-02T12:30:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -808,7 +808,7 @@
     },
     {
       "message_id": "msg_0081",
-      "create_time": "2025-03-02T20:30:30+08:00",
+      "create_time": "2025-03-02T12:30:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -817,7 +817,7 @@
     },
     {
       "message_id": "msg_0082",
-      "create_time": "2025-03-02T20:31:00+08:00",
+      "create_time": "2025-03-02T12:31:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -826,7 +826,7 @@
     },
     {
       "message_id": "msg_0083",
-      "create_time": "2025-03-03T10:12:00+08:00",
+      "create_time": "2025-03-03T02:12:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -835,7 +835,7 @@
     },
     {
       "message_id": "msg_0084",
-      "create_time": "2025-03-03T10:13:00+08:00",
+      "create_time": "2025-03-03T02:13:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -844,7 +844,7 @@
     },
     {
       "message_id": "msg_0085",
-      "create_time": "2025-03-03T10:14:00+08:00",
+      "create_time": "2025-03-03T02:14:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -853,7 +853,7 @@
     },
     {
       "message_id": "msg_0086",
-      "create_time": "2025-03-04T08:55:00+08:00",
+      "create_time": "2025-03-04T00:55:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -862,7 +862,7 @@
     },
     {
       "message_id": "msg_0087",
-      "create_time": "2025-03-04T08:56:00+08:00",
+      "create_time": "2025-03-04T00:56:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -871,7 +871,7 @@
     },
     {
       "message_id": "msg_0088",
-      "create_time": "2025-03-04T08:56:30+08:00",
+      "create_time": "2025-03-04T00:56:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -880,7 +880,7 @@
     },
     {
       "message_id": "msg_0089",
-      "create_time": "2025-03-05T10:22:00+08:00",
+      "create_time": "2025-03-05T02:22:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -889,7 +889,7 @@
     },
     {
       "message_id": "msg_0090",
-      "create_time": "2025-03-05T10:23:00+08:00",
+      "create_time": "2025-03-05T02:23:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -898,7 +898,7 @@
     },
     {
       "message_id": "msg_0091",
-      "create_time": "2025-03-05T10:24:00+08:00",
+      "create_time": "2025-03-05T02:24:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -907,7 +907,7 @@
     },
     {
       "message_id": "msg_0092",
-      "create_time": "2025-03-06T16:02:00+08:00",
+      "create_time": "2025-03-06T08:02:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -916,7 +916,7 @@
     },
     {
       "message_id": "msg_0093",
-      "create_time": "2025-03-06T16:03:00+08:00",
+      "create_time": "2025-03-06T08:03:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -925,7 +925,7 @@
     },
     {
       "message_id": "msg_0094",
-      "create_time": "2025-03-06T16:03:30+08:00",
+      "create_time": "2025-03-06T08:03:30Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -934,7 +934,7 @@
     },
     {
       "message_id": "msg_0095",
-      "create_time": "2025-03-08T21:02:00+08:00",
+      "create_time": "2025-03-08T13:02:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -943,7 +943,7 @@
     },
     {
       "message_id": "msg_0096",
-      "create_time": "2025-03-08T21:03:00+08:00",
+      "create_time": "2025-03-08T13:03:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -952,7 +952,7 @@
     },
     {
       "message_id": "msg_0097",
-      "create_time": "2025-03-08T21:04:00+08:00",
+      "create_time": "2025-03-08T13:04:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -961,7 +961,7 @@
     },
     {
       "message_id": "msg_0098",
-      "create_time": "2025-03-08T21:04:30+08:00",
+      "create_time": "2025-03-08T13:04:30Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -970,7 +970,7 @@
     },
     {
       "message_id": "msg_0099",
-      "create_time": "2025-03-09T10:20:00+08:00",
+      "create_time": "2025-03-09T02:20:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -979,7 +979,7 @@
     },
     {
       "message_id": "msg_0100",
-      "create_time": "2025-03-09T10:21:00+08:00",
+      "create_time": "2025-03-09T02:21:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -988,7 +988,7 @@
     },
     {
       "message_id": "msg_0101",
-      "create_time": "2025-03-09T10:22:00+08:00",
+      "create_time": "2025-03-09T02:22:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -997,7 +997,7 @@
     },
     {
       "message_id": "msg_0102",
-      "create_time": "2025-03-09T10:22:30+08:00",
+      "create_time": "2025-03-09T02:22:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1006,7 +1006,7 @@
     },
     {
       "message_id": "msg_0103",
-      "create_time": "2025-03-09T10:23:00+08:00",
+      "create_time": "2025-03-09T02:23:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1015,7 +1015,7 @@
     },
     {
       "message_id": "msg_0104",
-      "create_time": "2025-03-09T10:24:00+08:00",
+      "create_time": "2025-03-09T02:24:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1024,7 +1024,7 @@
     },
     {
       "message_id": "msg_0105",
-      "create_time": "2025-03-09T10:24:30+08:00",
+      "create_time": "2025-03-09T02:24:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -1033,7 +1033,7 @@
     },
     {
       "message_id": "msg_0106",
-      "create_time": "2025-03-09T10:25:00+08:00",
+      "create_time": "2025-03-09T02:25:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1042,7 +1042,7 @@
     },
     {
       "message_id": "msg_0107",
-      "create_time": "2025-03-10T11:40:00+08:00",
+      "create_time": "2025-03-10T03:40:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1051,7 +1051,7 @@
     },
     {
       "message_id": "msg_0108",
-      "create_time": "2025-03-10T11:41:00+08:00",
+      "create_time": "2025-03-10T03:41:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -1060,7 +1060,7 @@
     },
     {
       "message_id": "msg_0109",
-      "create_time": "2025-03-10T11:41:30+08:00",
+      "create_time": "2025-03-10T03:41:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1069,7 +1069,7 @@
     },
     {
       "message_id": "msg_0110",
-      "create_time": "2025-03-10T15:12:00+08:00",
+      "create_time": "2025-03-10T07:12:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1078,7 +1078,7 @@
     },
     {
       "message_id": "msg_0111",
-      "create_time": "2025-03-11T09:18:00+08:00",
+      "create_time": "2025-03-11T01:18:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1087,7 +1087,7 @@
     },
     {
       "message_id": "msg_0112",
-      "create_time": "2025-03-11T09:19:00+08:00",
+      "create_time": "2025-03-11T01:19:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1096,7 +1096,7 @@
     },
     {
       "message_id": "msg_0113",
-      "create_time": "2025-03-11T09:20:00+08:00",
+      "create_time": "2025-03-11T01:20:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1105,7 +1105,7 @@
     },
     {
       "message_id": "msg_0114",
-      "create_time": "2025-03-11T09:20:30+08:00",
+      "create_time": "2025-03-11T01:20:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1114,7 +1114,7 @@
     },
     {
       "message_id": "msg_0115",
-      "create_time": "2025-03-11T18:30:00+08:00",
+      "create_time": "2025-03-11T10:30:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1123,7 +1123,7 @@
     },
     {
       "message_id": "msg_0116",
-      "create_time": "2025-03-12T11:30:00+08:00",
+      "create_time": "2025-03-12T03:30:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -1132,7 +1132,7 @@
     },
     {
       "message_id": "msg_0117",
-      "create_time": "2025-03-12T11:31:00+08:00",
+      "create_time": "2025-03-12T03:31:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1141,7 +1141,7 @@
     },
     {
       "message_id": "msg_0118",
-      "create_time": "2025-03-12T11:31:30+08:00",
+      "create_time": "2025-03-12T03:31:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1150,7 +1150,7 @@
     },
     {
       "message_id": "msg_0119",
-      "create_time": "2025-03-12T11:32:00+08:00",
+      "create_time": "2025-03-12T03:32:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -1159,7 +1159,7 @@
     },
     {
       "message_id": "msg_0120",
-      "create_time": "2025-03-12T11:33:00+08:00",
+      "create_time": "2025-03-12T03:33:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1168,7 +1168,7 @@
     },
     {
       "message_id": "msg_0121",
-      "create_time": "2025-03-13T17:48:00+08:00",
+      "create_time": "2025-03-13T09:48:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1177,7 +1177,7 @@
     },
     {
       "message_id": "msg_0122",
-      "create_time": "2025-03-13T17:49:00+08:00",
+      "create_time": "2025-03-13T09:49:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1186,7 +1186,7 @@
     },
     {
       "message_id": "msg_0123",
-      "create_time": "2025-03-15T10:00:00+08:00",
+      "create_time": "2025-03-15T02:00:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1195,7 +1195,7 @@
     },
     {
       "message_id": "msg_0124",
-      "create_time": "2025-03-15T10:01:00+08:00",
+      "create_time": "2025-03-15T02:01:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1204,7 +1204,7 @@
     },
     {
       "message_id": "msg_0125",
-      "create_time": "2025-03-15T10:02:00+08:00",
+      "create_time": "2025-03-15T02:02:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1213,7 +1213,7 @@
     },
     {
       "message_id": "msg_0126",
-      "create_time": "2025-03-15T10:04:00+08:00",
+      "create_time": "2025-03-15T02:04:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1222,7 +1222,7 @@
     },
     {
       "message_id": "msg_0127",
-      "create_time": "2025-03-15T10:05:00+08:00",
+      "create_time": "2025-03-15T02:05:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -1231,7 +1231,7 @@
     },
     {
       "message_id": "msg_0128",
-      "create_time": "2025-03-15T10:06:00+08:00",
+      "create_time": "2025-03-15T02:06:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1240,7 +1240,7 @@
     },
     {
       "message_id": "msg_0129",
-      "create_time": "2025-03-16T12:20:00+08:00",
+      "create_time": "2025-03-16T04:20:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1249,7 +1249,7 @@
     },
     {
       "message_id": "msg_0130",
-      "create_time": "2025-03-16T12:21:00+08:00",
+      "create_time": "2025-03-16T04:21:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1258,7 +1258,7 @@
     },
     {
       "message_id": "msg_0131",
-      "create_time": "2025-03-16T12:22:00+08:00",
+      "create_time": "2025-03-16T04:22:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1267,7 +1267,7 @@
     },
     {
       "message_id": "msg_0132",
-      "create_time": "2025-03-17T10:12:00+08:00",
+      "create_time": "2025-03-17T02:12:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1276,7 +1276,7 @@
     },
     {
       "message_id": "msg_0133",
-      "create_time": "2025-03-17T10:13:00+08:00",
+      "create_time": "2025-03-17T02:13:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1285,7 +1285,7 @@
     },
     {
       "message_id": "msg_0134",
-      "create_time": "2025-03-17T10:14:00+08:00",
+      "create_time": "2025-03-17T02:14:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1294,7 +1294,7 @@
     },
     {
       "message_id": "msg_0135",
-      "create_time": "2025-03-17T10:15:00+08:00",
+      "create_time": "2025-03-17T02:15:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1303,7 +1303,7 @@
     },
     {
       "message_id": "msg_0136",
-      "create_time": "2025-03-17T10:16:00+08:00",
+      "create_time": "2025-03-17T02:16:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -1312,7 +1312,7 @@
     },
     {
       "message_id": "msg_0137",
-      "create_time": "2025-03-18T09:40:00+08:00",
+      "create_time": "2025-03-18T01:40:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1321,7 +1321,7 @@
     },
     {
       "message_id": "msg_0138",
-      "create_time": "2025-03-18T09:41:00+08:00",
+      "create_time": "2025-03-18T01:41:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1330,7 +1330,7 @@
     },
     {
       "message_id": "msg_0139",
-      "create_time": "2025-03-18T09:42:00+08:00",
+      "create_time": "2025-03-18T01:42:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1339,7 +1339,7 @@
     },
     {
       "message_id": "msg_0140",
-      "create_time": "2025-03-19T14:05:00+08:00",
+      "create_time": "2025-03-19T06:05:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1348,7 +1348,7 @@
     },
     {
       "message_id": "msg_0141",
-      "create_time": "2025-03-19T14:06:00+08:00",
+      "create_time": "2025-03-19T06:06:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1357,7 +1357,7 @@
     },
     {
       "message_id": "msg_0142",
-      "create_time": "2025-03-19T14:06:30+08:00",
+      "create_time": "2025-03-19T06:06:30Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1366,7 +1366,7 @@
     },
     {
       "message_id": "msg_0143",
-      "create_time": "2025-03-19T14:07:00+08:00",
+      "create_time": "2025-03-19T06:07:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -1375,7 +1375,7 @@
     },
     {
       "message_id": "msg_0144",
-      "create_time": "2025-03-19T14:08:00+08:00",
+      "create_time": "2025-03-19T06:08:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1384,7 +1384,7 @@
     },
     {
       "message_id": "msg_0145",
-      "create_time": "2025-03-20T13:20:00+08:00",
+      "create_time": "2025-03-20T05:20:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -1393,7 +1393,7 @@
     },
     {
       "message_id": "msg_0146",
-      "create_time": "2025-03-20T13:21:00+08:00",
+      "create_time": "2025-03-20T05:21:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1402,7 +1402,7 @@
     },
     {
       "message_id": "msg_0147",
-      "create_time": "2025-03-20T13:21:30+08:00",
+      "create_time": "2025-03-20T05:21:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1411,7 +1411,7 @@
     },
     {
       "message_id": "msg_0148",
-      "create_time": "2025-03-20T13:22:00+08:00",
+      "create_time": "2025-03-20T05:22:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1420,7 +1420,7 @@
     },
     {
       "message_id": "msg_0149",
-      "create_time": "2025-03-21T11:30:00+08:00",
+      "create_time": "2025-03-21T03:30:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1429,7 +1429,7 @@
     },
     {
       "message_id": "msg_0150",
-      "create_time": "2025-03-21T11:31:00+08:00",
+      "create_time": "2025-03-21T03:31:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1438,7 +1438,7 @@
     },
     {
       "message_id": "msg_0151",
-      "create_time": "2025-03-21T11:32:00+08:00",
+      "create_time": "2025-03-21T03:32:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1447,7 +1447,7 @@
     },
     {
       "message_id": "msg_0152",
-      "create_time": "2025-03-22T17:55:00+08:00",
+      "create_time": "2025-03-22T09:55:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1456,7 +1456,7 @@
     },
     {
       "message_id": "msg_0153",
-      "create_time": "2025-03-22T17:55:30+08:00",
+      "create_time": "2025-03-22T09:55:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1465,7 +1465,7 @@
     },
     {
       "message_id": "msg_0154",
-      "create_time": "2025-03-22T17:56:00+08:00",
+      "create_time": "2025-03-22T09:56:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1474,7 +1474,7 @@
     },
     {
       "message_id": "msg_0155",
-      "create_time": "2025-03-22T17:56:30+08:00",
+      "create_time": "2025-03-22T09:56:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -1483,7 +1483,7 @@
     },
     {
       "message_id": "msg_0156",
-      "create_time": "2025-03-24T09:02:00+08:00",
+      "create_time": "2025-03-24T01:02:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -1492,7 +1492,7 @@
     },
     {
       "message_id": "msg_0157",
-      "create_time": "2025-03-24T09:03:00+08:00",
+      "create_time": "2025-03-24T01:03:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1501,7 +1501,7 @@
     },
     {
       "message_id": "msg_0158",
-      "create_time": "2025-03-24T09:03:30+08:00",
+      "create_time": "2025-03-24T01:03:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1510,7 +1510,7 @@
     },
     {
       "message_id": "msg_0159",
-      "create_time": "2025-03-25T09:10:00+08:00",
+      "create_time": "2025-03-25T01:10:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1519,7 +1519,7 @@
     },
     {
       "message_id": "msg_0160",
-      "create_time": "2025-03-25T09:11:00+08:00",
+      "create_time": "2025-03-25T01:11:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1528,7 +1528,7 @@
     },
     {
       "message_id": "msg_0161",
-      "create_time": "2025-03-25T09:12:00+08:00",
+      "create_time": "2025-03-25T01:12:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -1537,7 +1537,7 @@
     },
     {
       "message_id": "msg_0162",
-      "create_time": "2025-03-25T09:12:30+08:00",
+      "create_time": "2025-03-25T01:12:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1546,7 +1546,7 @@
     },
     {
       "message_id": "msg_0163",
-      "create_time": "2025-03-26T16:40:00+08:00",
+      "create_time": "2025-03-26T08:40:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1555,7 +1555,7 @@
     },
     {
       "message_id": "msg_0164",
-      "create_time": "2025-03-26T16:41:00+08:00",
+      "create_time": "2025-03-26T08:41:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1564,7 +1564,7 @@
     },
     {
       "message_id": "msg_0165",
-      "create_time": "2025-03-26T16:42:00+08:00",
+      "create_time": "2025-03-26T08:42:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1573,7 +1573,7 @@
     },
     {
       "message_id": "msg_0166",
-      "create_time": "2025-03-26T16:42:30+08:00",
+      "create_time": "2025-03-26T08:42:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1582,7 +1582,7 @@
     },
     {
       "message_id": "msg_0167",
-      "create_time": "2025-03-27T11:05:00+08:00",
+      "create_time": "2025-03-27T03:05:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1591,7 +1591,7 @@
     },
     {
       "message_id": "msg_0168",
-      "create_time": "2025-03-27T11:06:00+08:00",
+      "create_time": "2025-03-27T03:06:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1600,7 +1600,7 @@
     },
     {
       "message_id": "msg_0169",
-      "create_time": "2025-03-27T11:06:30+08:00",
+      "create_time": "2025-03-27T03:06:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1609,7 +1609,7 @@
     },
     {
       "message_id": "msg_0170",
-      "create_time": "2025-03-28T16:33:00+08:00",
+      "create_time": "2025-03-28T08:33:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -1618,7 +1618,7 @@
     },
     {
       "message_id": "msg_0171",
-      "create_time": "2025-03-28T16:34:00+08:00",
+      "create_time": "2025-03-28T08:34:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1627,7 +1627,7 @@
     },
     {
       "message_id": "msg_0172",
-      "create_time": "2025-03-28T16:34:30+08:00",
+      "create_time": "2025-03-28T08:34:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1636,7 +1636,7 @@
     },
     {
       "message_id": "msg_0173",
-      "create_time": "2025-03-28T16:35:00+08:00",
+      "create_time": "2025-03-28T08:35:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1645,7 +1645,7 @@
     },
     {
       "message_id": "msg_0174",
-      "create_time": "2025-03-28T16:36:00+08:00",
+      "create_time": "2025-03-28T08:36:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1654,7 +1654,7 @@
     },
     {
       "message_id": "msg_0175",
-      "create_time": "2025-03-29T20:12:00+08:00",
+      "create_time": "2025-03-29T12:12:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -1663,7 +1663,7 @@
     },
     {
       "message_id": "msg_0176",
-      "create_time": "2025-03-29T20:12:30+08:00",
+      "create_time": "2025-03-29T12:12:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1672,7 +1672,7 @@
     },
     {
       "message_id": "msg_0177",
-      "create_time": "2025-03-29T20:13:00+08:00",
+      "create_time": "2025-03-29T12:13:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1681,7 +1681,7 @@
     },
     {
       "message_id": "msg_0178",
-      "create_time": "2025-03-30T10:22:00+08:00",
+      "create_time": "2025-03-30T02:22:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1690,7 +1690,7 @@
     },
     {
       "message_id": "msg_0179",
-      "create_time": "2025-03-30T10:23:00+08:00",
+      "create_time": "2025-03-30T02:23:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1699,7 +1699,7 @@
     },
     {
       "message_id": "msg_0180",
-      "create_time": "2025-03-30T10:24:00+08:00",
+      "create_time": "2025-03-30T02:24:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1708,7 +1708,7 @@
     },
     {
       "message_id": "msg_0181",
-      "create_time": "2025-03-30T10:25:00+08:00",
+      "create_time": "2025-03-30T02:25:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1717,7 +1717,7 @@
     },
     {
       "message_id": "msg_0182",
-      "create_time": "2025-03-30T11:50:00+08:00",
+      "create_time": "2025-03-30T03:50:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1726,7 +1726,7 @@
     },
     {
       "message_id": "msg_0183",
-      "create_time": "2025-03-30T11:51:00+08:00",
+      "create_time": "2025-03-30T03:51:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1735,7 +1735,7 @@
     },
     {
       "message_id": "msg_0184",
-      "create_time": "2025-04-01T10:00:00+08:00",
+      "create_time": "2025-04-01T02:00:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1744,7 +1744,7 @@
     },
     {
       "message_id": "msg_0185",
-      "create_time": "2025-04-01T10:01:00+08:00",
+      "create_time": "2025-04-01T02:01:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1753,7 +1753,7 @@
     },
     {
       "message_id": "msg_0186",
-      "create_time": "2025-04-01T10:01:30+08:00",
+      "create_time": "2025-04-01T02:01:30Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1762,7 +1762,7 @@
     },
     {
       "message_id": "msg_0187",
-      "create_time": "2025-04-01T10:02:00+08:00",
+      "create_time": "2025-04-01T02:02:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -1771,7 +1771,7 @@
     },
     {
       "message_id": "msg_0188",
-      "create_time": "2025-04-02T09:15:00+08:00",
+      "create_time": "2025-04-02T01:15:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -1780,7 +1780,7 @@
     },
     {
       "message_id": "msg_0189",
-      "create_time": "2025-04-02T09:16:00+08:00",
+      "create_time": "2025-04-02T01:16:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1789,7 +1789,7 @@
     },
     {
       "message_id": "msg_0190",
-      "create_time": "2025-04-02T09:16:30+08:00",
+      "create_time": "2025-04-02T01:16:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1798,7 +1798,7 @@
     },
     {
       "message_id": "msg_0191",
-      "create_time": "2025-04-03T14:26:00+08:00",
+      "create_time": "2025-04-03T06:26:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1807,7 +1807,7 @@
     },
     {
       "message_id": "msg_0192",
-      "create_time": "2025-04-03T14:27:00+08:00",
+      "create_time": "2025-04-03T06:27:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1816,7 +1816,7 @@
     },
     {
       "message_id": "msg_0193",
-      "create_time": "2025-04-03T14:27:30+08:00",
+      "create_time": "2025-04-03T06:27:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1825,7 +1825,7 @@
     },
     {
       "message_id": "msg_0194",
-      "create_time": "2025-04-04T11:05:00+08:00",
+      "create_time": "2025-04-04T03:05:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -1834,7 +1834,7 @@
     },
     {
       "message_id": "msg_0195",
-      "create_time": "2025-04-04T11:06:00+08:00",
+      "create_time": "2025-04-04T03:06:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1843,7 +1843,7 @@
     },
     {
       "message_id": "msg_0196",
-      "create_time": "2025-04-04T11:06:30+08:00",
+      "create_time": "2025-04-04T03:06:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1852,7 +1852,7 @@
     },
     {
       "message_id": "msg_0197",
-      "create_time": "2025-04-05T20:10:00+08:00",
+      "create_time": "2025-04-05T12:10:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1861,7 +1861,7 @@
     },
     {
       "message_id": "msg_0198",
-      "create_time": "2025-04-05T20:11:00+08:00",
+      "create_time": "2025-04-05T12:11:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1870,7 +1870,7 @@
     },
     {
       "message_id": "msg_0199",
-      "create_time": "2025-04-05T20:11:20+08:00",
+      "create_time": "2025-04-05T12:11:20Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1879,7 +1879,7 @@
     },
     {
       "message_id": "msg_0200",
-      "create_time": "2025-04-05T20:11:40+08:00",
+      "create_time": "2025-04-05T12:11:40Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -1888,7 +1888,7 @@
     },
     {
       "message_id": "msg_0201",
-      "create_time": "2025-04-06T10:12:00+08:00",
+      "create_time": "2025-04-06T02:12:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -1897,7 +1897,7 @@
     },
     {
       "message_id": "msg_0202",
-      "create_time": "2025-04-06T10:13:00+08:00",
+      "create_time": "2025-04-06T02:13:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1906,7 +1906,7 @@
     },
     {
       "message_id": "msg_0203",
-      "create_time": "2025-04-06T10:13:30+08:00",
+      "create_time": "2025-04-06T02:13:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1915,7 +1915,7 @@
     },
     {
       "message_id": "msg_0204",
-      "create_time": "2025-04-08T09:00:00+08:00",
+      "create_time": "2025-04-08T01:00:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -1924,7 +1924,7 @@
     },
     {
       "message_id": "msg_0205",
-      "create_time": "2025-04-08T09:01:00+08:00",
+      "create_time": "2025-04-08T01:01:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1933,7 +1933,7 @@
     },
     {
       "message_id": "msg_0206",
-      "create_time": "2025-04-08T09:02:00+08:00",
+      "create_time": "2025-04-08T01:02:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1942,7 +1942,7 @@
     },
     {
       "message_id": "msg_0207",
-      "create_time": "2025-04-08T09:02:30+08:00",
+      "create_time": "2025-04-08T01:02:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -1951,7 +1951,7 @@
     },
     {
       "message_id": "msg_0208",
-      "create_time": "2025-04-08T09:03:00+08:00",
+      "create_time": "2025-04-08T01:03:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -1960,7 +1960,7 @@
     },
     {
       "message_id": "msg_0209",
-      "create_time": "2025-04-09T17:20:00+08:00",
+      "create_time": "2025-04-09T09:20:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1969,7 +1969,7 @@
     },
     {
       "message_id": "msg_0210",
-      "create_time": "2025-04-09T17:21:00+08:00",
+      "create_time": "2025-04-09T09:21:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -1978,7 +1978,7 @@
     },
     {
       "message_id": "msg_0211",
-      "create_time": "2025-04-09T17:22:00+08:00",
+      "create_time": "2025-04-09T09:22:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1987,7 +1987,7 @@
     },
     {
       "message_id": "msg_0212",
-      "create_time": "2025-04-10T15:42:00+08:00",
+      "create_time": "2025-04-10T07:42:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -1996,7 +1996,7 @@
     },
     {
       "message_id": "msg_0213",
-      "create_time": "2025-04-10T15:43:00+08:00",
+      "create_time": "2025-04-10T07:43:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2005,7 +2005,7 @@
     },
     {
       "message_id": "msg_0214",
-      "create_time": "2025-04-10T15:44:00+08:00",
+      "create_time": "2025-04-10T07:44:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2014,7 +2014,7 @@
     },
     {
       "message_id": "msg_0215",
-      "create_time": "2025-04-11T09:50:00+08:00",
+      "create_time": "2025-04-11T01:50:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2023,7 +2023,7 @@
     },
     {
       "message_id": "msg_0216",
-      "create_time": "2025-04-11T09:51:00+08:00",
+      "create_time": "2025-04-11T01:51:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2032,7 +2032,7 @@
     },
     {
       "message_id": "msg_0217",
-      "create_time": "2025-04-11T09:51:30+08:00",
+      "create_time": "2025-04-11T01:51:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2041,7 +2041,7 @@
     },
     {
       "message_id": "msg_0218",
-      "create_time": "2025-04-12T18:20:00+08:00",
+      "create_time": "2025-04-12T10:20:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2050,7 +2050,7 @@
     },
     {
       "message_id": "msg_0219",
-      "create_time": "2025-04-12T18:21:00+08:00",
+      "create_time": "2025-04-12T10:21:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2059,7 +2059,7 @@
     },
     {
       "message_id": "msg_0220",
-      "create_time": "2025-04-12T18:21:30+08:00",
+      "create_time": "2025-04-12T10:21:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2068,7 +2068,7 @@
     },
     {
       "message_id": "msg_0221",
-      "create_time": "2025-04-12T18:22:00+08:00",
+      "create_time": "2025-04-12T10:22:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2077,7 +2077,7 @@
     },
     {
       "message_id": "msg_0222",
-      "create_time": "2025-04-13T14:10:00+08:00",
+      "create_time": "2025-04-13T06:10:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2086,7 +2086,7 @@
     },
     {
       "message_id": "msg_0223",
-      "create_time": "2025-04-13T14:11:00+08:00",
+      "create_time": "2025-04-13T06:11:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2095,7 +2095,7 @@
     },
     {
       "message_id": "msg_0224",
-      "create_time": "2025-04-13T14:11:30+08:00",
+      "create_time": "2025-04-13T06:11:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2104,7 +2104,7 @@
     },
     {
       "message_id": "msg_0225",
-      "create_time": "2025-04-14T19:05:00+08:00",
+      "create_time": "2025-04-14T11:05:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2113,7 +2113,7 @@
     },
     {
       "message_id": "msg_0226",
-      "create_time": "2025-04-14T19:06:00+08:00",
+      "create_time": "2025-04-14T11:06:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2122,7 +2122,7 @@
     },
     {
       "message_id": "msg_0227",
-      "create_time": "2025-04-14T19:06:30+08:00",
+      "create_time": "2025-04-14T11:06:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2131,7 +2131,7 @@
     },
     {
       "message_id": "msg_0228",
-      "create_time": "2025-04-15T09:30:00+08:00",
+      "create_time": "2025-04-15T01:30:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2140,7 +2140,7 @@
     },
     {
       "message_id": "msg_0229",
-      "create_time": "2025-04-15T09:31:00+08:00",
+      "create_time": "2025-04-15T01:31:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2149,7 +2149,7 @@
     },
     {
       "message_id": "msg_0230",
-      "create_time": "2025-04-15T09:31:30+08:00",
+      "create_time": "2025-04-15T01:31:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2158,7 +2158,7 @@
     },
     {
       "message_id": "msg_0231",
-      "create_time": "2025-04-15T09:32:00+08:00",
+      "create_time": "2025-04-15T01:32:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -2167,7 +2167,7 @@
     },
     {
       "message_id": "msg_0232",
-      "create_time": "2025-04-15T09:32:30+08:00",
+      "create_time": "2025-04-15T01:32:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2176,7 +2176,7 @@
     },
     {
       "message_id": "msg_0233",
-      "create_time": "2025-04-16T17:30:00+08:00",
+      "create_time": "2025-04-16T09:30:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2185,7 +2185,7 @@
     },
     {
       "message_id": "msg_0234",
-      "create_time": "2025-04-16T17:31:00+08:00",
+      "create_time": "2025-04-16T09:31:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2194,7 +2194,7 @@
     },
     {
       "message_id": "msg_0235",
-      "create_time": "2025-04-17T16:05:00+08:00",
+      "create_time": "2025-04-17T08:05:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2203,7 +2203,7 @@
     },
     {
       "message_id": "msg_0236",
-      "create_time": "2025-04-17T16:06:00+08:00",
+      "create_time": "2025-04-17T08:06:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2212,7 +2212,7 @@
     },
     {
       "message_id": "msg_0237",
-      "create_time": "2025-04-17T16:07:00+08:00",
+      "create_time": "2025-04-17T08:07:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2221,7 +2221,7 @@
     },
     {
       "message_id": "msg_0238",
-      "create_time": "2025-04-18T10:22:00+08:00",
+      "create_time": "2025-04-18T02:22:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2230,7 +2230,7 @@
     },
     {
       "message_id": "msg_0239",
-      "create_time": "2025-04-18T10:23:00+08:00",
+      "create_time": "2025-04-18T02:23:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2239,7 +2239,7 @@
     },
     {
       "message_id": "msg_0240",
-      "create_time": "2025-04-18T10:23:30+08:00",
+      "create_time": "2025-04-18T02:23:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2248,7 +2248,7 @@
     },
     {
       "message_id": "msg_0241",
-      "create_time": "2025-04-19T11:40:00+08:00",
+      "create_time": "2025-04-19T03:40:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2257,7 +2257,7 @@
     },
     {
       "message_id": "msg_0242",
-      "create_time": "2025-04-19T11:41:00+08:00",
+      "create_time": "2025-04-19T03:41:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2266,7 +2266,7 @@
     },
     {
       "message_id": "msg_0243",
-      "create_time": "2025-04-19T11:41:20+08:00",
+      "create_time": "2025-04-19T03:41:20Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -2275,7 +2275,7 @@
     },
     {
       "message_id": "msg_0244",
-      "create_time": "2025-04-19T11:41:40+08:00",
+      "create_time": "2025-04-19T03:41:40Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2284,7 +2284,7 @@
     },
     {
       "message_id": "msg_0245",
-      "create_time": "2025-04-20T09:12:00+08:00",
+      "create_time": "2025-04-20T01:12:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2293,7 +2293,7 @@
     },
     {
       "message_id": "msg_0246",
-      "create_time": "2025-04-20T09:13:00+08:00",
+      "create_time": "2025-04-20T01:13:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2302,7 +2302,7 @@
     },
     {
       "message_id": "msg_0247",
-      "create_time": "2025-04-20T09:13:30+08:00",
+      "create_time": "2025-04-20T01:13:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2311,7 +2311,7 @@
     },
     {
       "message_id": "msg_0248",
-      "create_time": "2025-04-21T10:50:00+08:00",
+      "create_time": "2025-04-21T02:50:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2320,7 +2320,7 @@
     },
     {
       "message_id": "msg_0249",
-      "create_time": "2025-04-21T10:51:00+08:00",
+      "create_time": "2025-04-21T02:51:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2329,7 +2329,7 @@
     },
     {
       "message_id": "msg_0250",
-      "create_time": "2025-04-21T10:51:30+08:00",
+      "create_time": "2025-04-21T02:51:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2338,7 +2338,7 @@
     },
     {
       "message_id": "msg_0251",
-      "create_time": "2025-04-21T10:52:00+08:00",
+      "create_time": "2025-04-21T02:52:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2347,7 +2347,7 @@
     },
     {
       "message_id": "msg_0252",
-      "create_time": "2025-04-22T09:01:00+08:00",
+      "create_time": "2025-04-22T01:01:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2356,7 +2356,7 @@
     },
     {
       "message_id": "msg_0253",
-      "create_time": "2025-04-22T09:02:00+08:00",
+      "create_time": "2025-04-22T01:02:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2365,7 +2365,7 @@
     },
     {
       "message_id": "msg_0254",
-      "create_time": "2025-04-22T09:02:30+08:00",
+      "create_time": "2025-04-22T01:02:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2374,7 +2374,7 @@
     },
     {
       "message_id": "msg_0255",
-      "create_time": "2025-04-23T13:15:00+08:00",
+      "create_time": "2025-04-23T05:15:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2383,7 +2383,7 @@
     },
     {
       "message_id": "msg_0256",
-      "create_time": "2025-04-23T13:16:00+08:00",
+      "create_time": "2025-04-23T05:16:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2392,7 +2392,7 @@
     },
     {
       "message_id": "msg_0257",
-      "create_time": "2025-04-23T13:16:30+08:00",
+      "create_time": "2025-04-23T05:16:30Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -2401,7 +2401,7 @@
     },
     {
       "message_id": "msg_0258",
-      "create_time": "2025-04-23T13:17:00+08:00",
+      "create_time": "2025-04-23T05:17:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2410,7 +2410,7 @@
     },
     {
       "message_id": "msg_0259",
-      "create_time": "2025-04-24T18:45:00+08:00",
+      "create_time": "2025-04-24T10:45:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2419,7 +2419,7 @@
     },
     {
       "message_id": "msg_0260",
-      "create_time": "2025-04-24T18:46:00+08:00",
+      "create_time": "2025-04-24T10:46:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2428,7 +2428,7 @@
     },
     {
       "message_id": "msg_0261",
-      "create_time": "2025-04-24T18:46:30+08:00",
+      "create_time": "2025-04-24T10:46:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2437,7 +2437,7 @@
     },
     {
       "message_id": "msg_0262",
-      "create_time": "2025-04-25T19:05:00+08:00",
+      "create_time": "2025-04-25T11:05:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2446,7 +2446,7 @@
     },
     {
       "message_id": "msg_0263",
-      "create_time": "2025-04-25T19:06:00+08:00",
+      "create_time": "2025-04-25T11:06:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2455,7 +2455,7 @@
     },
     {
       "message_id": "msg_0264",
-      "create_time": "2025-04-25T19:06:30+08:00",
+      "create_time": "2025-04-25T11:06:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2464,7 +2464,7 @@
     },
     {
       "message_id": "msg_0265",
-      "create_time": "2025-04-25T19:07:00+08:00",
+      "create_time": "2025-04-25T11:07:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -2473,7 +2473,7 @@
     },
     {
       "message_id": "msg_0266",
-      "create_time": "2025-04-25T19:07:30+08:00",
+      "create_time": "2025-04-25T11:07:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2482,7 +2482,7 @@
     },
     {
       "message_id": "msg_0267",
-      "create_time": "2025-04-26T11:10:00+08:00",
+      "create_time": "2025-04-26T03:10:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2491,7 +2491,7 @@
     },
     {
       "message_id": "msg_0268",
-      "create_time": "2025-04-26T11:10:30+08:00",
+      "create_time": "2025-04-26T03:10:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2500,7 +2500,7 @@
     },
     {
       "message_id": "msg_0269",
-      "create_time": "2025-04-26T11:11:00+08:00",
+      "create_time": "2025-04-26T03:11:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2509,7 +2509,7 @@
     },
     {
       "message_id": "msg_0270",
-      "create_time": "2025-04-27T09:25:00+08:00",
+      "create_time": "2025-04-27T01:25:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2518,7 +2518,7 @@
     },
     {
       "message_id": "msg_0271",
-      "create_time": "2025-04-27T09:26:00+08:00",
+      "create_time": "2025-04-27T01:26:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2527,7 +2527,7 @@
     },
     {
       "message_id": "msg_0272",
-      "create_time": "2025-04-27T09:26:30+08:00",
+      "create_time": "2025-04-27T01:26:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2536,7 +2536,7 @@
     },
     {
       "message_id": "msg_0273",
-      "create_time": "2025-04-27T09:27:00+08:00",
+      "create_time": "2025-04-27T01:27:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2545,7 +2545,7 @@
     },
     {
       "message_id": "msg_0274",
-      "create_time": "2025-04-28T15:50:00+08:00",
+      "create_time": "2025-04-28T07:50:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2554,7 +2554,7 @@
     },
     {
       "message_id": "msg_0275",
-      "create_time": "2025-04-28T15:51:00+08:00",
+      "create_time": "2025-04-28T07:51:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2563,7 +2563,7 @@
     },
     {
       "message_id": "msg_0276",
-      "create_time": "2025-04-28T15:52:00+08:00",
+      "create_time": "2025-04-28T07:52:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -2572,7 +2572,7 @@
     },
     {
       "message_id": "msg_0277",
-      "create_time": "2025-04-28T15:52:30+08:00",
+      "create_time": "2025-04-28T07:52:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2581,7 +2581,7 @@
     },
     {
       "message_id": "msg_0278",
-      "create_time": "2025-04-29T20:03:00+08:00",
+      "create_time": "2025-04-29T12:03:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2590,7 +2590,7 @@
     },
     {
       "message_id": "msg_0279",
-      "create_time": "2025-04-29T20:03:30+08:00",
+      "create_time": "2025-04-29T12:03:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2599,7 +2599,7 @@
     },
     {
       "message_id": "msg_0280",
-      "create_time": "2025-04-29T20:04:00+08:00",
+      "create_time": "2025-04-29T12:04:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -2608,7 +2608,7 @@
     },
     {
       "message_id": "msg_0281",
-      "create_time": "2025-04-29T20:04:30+08:00",
+      "create_time": "2025-04-29T12:04:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2617,7 +2617,7 @@
     },
     {
       "message_id": "msg_0282",
-      "create_time": "2025-04-30T10:00:00+08:00",
+      "create_time": "2025-04-30T02:00:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2626,7 +2626,7 @@
     },
     {
       "message_id": "msg_0283",
-      "create_time": "2025-04-30T10:01:00+08:00",
+      "create_time": "2025-04-30T02:01:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2635,7 +2635,7 @@
     },
     {
       "message_id": "msg_0284",
-      "create_time": "2025-04-30T10:01:30+08:00",
+      "create_time": "2025-04-30T02:01:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2644,7 +2644,7 @@
     },
     {
       "message_id": "msg_0285",
-      "create_time": "2025-04-30T10:02:00+08:00",
+      "create_time": "2025-04-30T02:02:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -2653,7 +2653,7 @@
     },
     {
       "message_id": "msg_0286",
-      "create_time": "2025-04-30T10:02:30+08:00",
+      "create_time": "2025-04-30T02:02:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2662,7 +2662,7 @@
     },
     {
       "message_id": "msg_0287",
-      "create_time": "2025-04-30T10:03:00+08:00",
+      "create_time": "2025-04-30T02:03:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2671,7 +2671,7 @@
     },
     {
       "message_id": "msg_0288",
-      "create_time": "2025-04-30T10:03:20+08:00",
+      "create_time": "2025-04-30T02:03:20Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2680,7 +2680,7 @@
     },
     {
       "message_id": "msg_0289",
-      "create_time": "2025-04-30T10:03:40+08:00",
+      "create_time": "2025-04-30T02:03:40Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2689,7 +2689,7 @@
     },
     {
       "message_id": "msg_0290",
-      "create_time": "2025-04-30T10:04:00+08:00",
+      "create_time": "2025-04-30T02:04:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2698,7 +2698,7 @@
     },
     {
       "message_id": "msg_0291",
-      "create_time": "2025-05-04T10:00:00+08:00",
+      "create_time": "2025-05-04T02:00:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2707,7 +2707,7 @@
     },
     {
       "message_id": "msg_0292",
-      "create_time": "2025-05-04T10:01:00+08:00",
+      "create_time": "2025-05-04T02:01:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2716,7 +2716,7 @@
     },
     {
       "message_id": "msg_0293",
-      "create_time": "2025-05-04T10:01:20+08:00",
+      "create_time": "2025-05-04T02:01:20Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2725,7 +2725,7 @@
     },
     {
       "message_id": "msg_0294",
-      "create_time": "2025-05-04T10:01:40+08:00",
+      "create_time": "2025-05-04T02:01:40Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2734,7 +2734,7 @@
     },
     {
       "message_id": "msg_0295",
-      "create_time": "2025-05-04T10:02:00+08:00",
+      "create_time": "2025-05-04T02:02:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2743,7 +2743,7 @@
     },
     {
       "message_id": "msg_0296",
-      "create_time": "2025-05-04T10:02:20+08:00",
+      "create_time": "2025-05-04T02:02:20Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2752,7 +2752,7 @@
     },
     {
       "message_id": "msg_0297",
-      "create_time": "2025-05-04T10:02:40+08:00",
+      "create_time": "2025-05-04T02:02:40Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2761,7 +2761,7 @@
     },
     {
       "message_id": "msg_0298",
-      "create_time": "2025-05-04T10:04:00+08:00",
+      "create_time": "2025-05-04T02:04:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2770,7 +2770,7 @@
     },
     {
       "message_id": "msg_0299",
-      "create_time": "2025-05-04T10:04:20+08:00",
+      "create_time": "2025-05-04T02:04:20Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2779,7 +2779,7 @@
     },
     {
       "message_id": "msg_0300",
-      "create_time": "2025-05-04T10:04:40+08:00",
+      "create_time": "2025-05-04T02:04:40Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -2788,7 +2788,7 @@
     },
     {
       "message_id": "msg_0301",
-      "create_time": "2025-05-04T10:05:00+08:00",
+      "create_time": "2025-05-04T02:05:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2797,7 +2797,7 @@
     },
     {
       "message_id": "msg_0302",
-      "create_time": "2025-05-04T10:05:30+08:00",
+      "create_time": "2025-05-04T02:05:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2806,7 +2806,7 @@
     },
     {
       "message_id": "msg_0303",
-      "create_time": "2025-05-04T10:06:00+08:00",
+      "create_time": "2025-05-04T02:06:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2815,7 +2815,7 @@
     },
     {
       "message_id": "msg_0304",
-      "create_time": "2025-05-04T10:07:00+08:00",
+      "create_time": "2025-05-04T02:07:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2824,7 +2824,7 @@
     },
     {
       "message_id": "msg_0305",
-      "create_time": "2025-05-04T10:10:00+08:00",
+      "create_time": "2025-05-04T02:10:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2833,7 +2833,7 @@
     },
     {
       "message_id": "msg_0306",
-      "create_time": "2025-05-04T10:12:00+08:00",
+      "create_time": "2025-05-04T02:12:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2842,7 +2842,7 @@
     },
     {
       "message_id": "msg_0307",
-      "create_time": "2025-05-04T10:12:20+08:00",
+      "create_time": "2025-05-04T02:12:20Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2851,7 +2851,7 @@
     },
     {
       "message_id": "msg_0308",
-      "create_time": "2025-05-04T10:12:40+08:00",
+      "create_time": "2025-05-04T02:12:40Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2860,7 +2860,7 @@
     },
     {
       "message_id": "msg_0309",
-      "create_time": "2025-05-04T10:13:00+08:00",
+      "create_time": "2025-05-04T02:13:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2869,7 +2869,7 @@
     },
     {
       "message_id": "msg_0310",
-      "create_time": "2025-05-04T10:15:00+08:00",
+      "create_time": "2025-05-04T02:15:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -2878,7 +2878,7 @@
     },
     {
       "message_id": "msg_0311",
-      "create_time": "2025-05-04T10:15:20+08:00",
+      "create_time": "2025-05-04T02:15:20Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2887,7 +2887,7 @@
     },
     {
       "message_id": "msg_0312",
-      "create_time": "2025-05-04T10:15:40+08:00",
+      "create_time": "2025-05-04T02:15:40Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -2896,7 +2896,7 @@
     },
     {
       "message_id": "msg_0313",
-      "create_time": "2025-05-05T15:10:00+08:00",
+      "create_time": "2025-05-05T07:10:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2905,7 +2905,7 @@
     },
     {
       "message_id": "msg_0314",
-      "create_time": "2025-05-05T15:10:20+08:00",
+      "create_time": "2025-05-05T07:10:20Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2914,7 +2914,7 @@
     },
     {
       "message_id": "msg_0315",
-      "create_time": "2025-05-05T15:10:40+08:00",
+      "create_time": "2025-05-05T07:10:40Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2923,7 +2923,7 @@
     },
     {
       "message_id": "msg_0316",
-      "create_time": "2025-05-05T15:12:00+08:00",
+      "create_time": "2025-05-05T07:12:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2932,7 +2932,7 @@
     },
     {
       "message_id": "msg_0317",
-      "create_time": "2025-05-05T15:12:30+08:00",
+      "create_time": "2025-05-05T07:12:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2941,7 +2941,7 @@
     },
     {
       "message_id": "msg_0318",
-      "create_time": "2025-05-07T14:06:00+08:00",
+      "create_time": "2025-05-07T06:06:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2950,7 +2950,7 @@
     },
     {
       "message_id": "msg_0319",
-      "create_time": "2025-05-07T14:06:20+08:00",
+      "create_time": "2025-05-07T06:06:20Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2959,7 +2959,7 @@
     },
     {
       "message_id": "msg_0320",
-      "create_time": "2025-05-07T14:06:40+08:00",
+      "create_time": "2025-05-07T06:06:40Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -2968,7 +2968,7 @@
     },
     {
       "message_id": "msg_0321",
-      "create_time": "2025-05-07T14:07:00+08:00",
+      "create_time": "2025-05-07T06:07:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -2977,7 +2977,7 @@
     },
     {
       "message_id": "msg_0322",
-      "create_time": "2025-05-07T14:07:30+08:00",
+      "create_time": "2025-05-07T06:07:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2986,7 +2986,7 @@
     },
     {
       "message_id": "msg_0323",
-      "create_time": "2025-05-07T14:08:00+08:00",
+      "create_time": "2025-05-07T06:08:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -2995,7 +2995,7 @@
     },
     {
       "message_id": "msg_0324",
-      "create_time": "2025-05-07T14:08:20+08:00",
+      "create_time": "2025-05-07T06:08:20Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3004,7 +3004,7 @@
     },
     {
       "message_id": "msg_0325",
-      "create_time": "2025-05-07T14:08:40+08:00",
+      "create_time": "2025-05-07T06:08:40Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3013,7 +3013,7 @@
     },
     {
       "message_id": "msg_0326",
-      "create_time": "2025-05-07T14:09:00+08:00",
+      "create_time": "2025-05-07T06:09:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3022,7 +3022,7 @@
     },
     {
       "message_id": "msg_0327",
-      "create_time": "2025-05-07T14:10:00+08:00",
+      "create_time": "2025-05-07T06:10:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3031,7 +3031,7 @@
     },
     {
       "message_id": "msg_0328",
-      "create_time": "2025-05-07T14:10:30+08:00",
+      "create_time": "2025-05-07T06:10:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3040,7 +3040,7 @@
     },
     {
       "message_id": "msg_0329",
-      "create_time": "2025-05-07T14:11:00+08:00",
+      "create_time": "2025-05-07T06:11:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3049,7 +3049,7 @@
     },
     {
       "message_id": "msg_0330",
-      "create_time": "2025-05-07T14:11:30+08:00",
+      "create_time": "2025-05-07T06:11:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3058,7 +3058,7 @@
     },
     {
       "message_id": "msg_0331",
-      "create_time": "2025-05-07T14:12:00+08:00",
+      "create_time": "2025-05-07T06:12:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3067,7 +3067,7 @@
     },
     {
       "message_id": "msg_0332",
-      "create_time": "2025-05-07T14:12:30+08:00",
+      "create_time": "2025-05-07T06:12:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3076,7 +3076,7 @@
     },
     {
       "message_id": "msg_0333",
-      "create_time": "2025-05-07T14:13:00+08:00",
+      "create_time": "2025-05-07T06:13:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3085,7 +3085,7 @@
     },
     {
       "message_id": "msg_0334",
-      "create_time": "2025-05-07T14:13:30+08:00",
+      "create_time": "2025-05-07T06:13:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3094,7 +3094,7 @@
     },
     {
       "message_id": "msg_0335",
-      "create_time": "2025-05-07T14:14:00+08:00",
+      "create_time": "2025-05-07T06:14:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3103,7 +3103,7 @@
     },
     {
       "message_id": "msg_0336",
-      "create_time": "2025-05-07T14:14:30+08:00",
+      "create_time": "2025-05-07T06:14:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3112,7 +3112,7 @@
     },
     {
       "message_id": "msg_0337",
-      "create_time": "2025-05-07T14:15:00+08:00",
+      "create_time": "2025-05-07T06:15:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3121,7 +3121,7 @@
     },
     {
       "message_id": "msg_0338",
-      "create_time": "2025-05-07T14:15:30+08:00",
+      "create_time": "2025-05-07T06:15:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3130,7 +3130,7 @@
     },
     {
       "message_id": "msg_0339",
-      "create_time": "2025-05-07T17:12:00+08:00",
+      "create_time": "2025-05-07T09:12:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3139,7 +3139,7 @@
     },
     {
       "message_id": "msg_0340",
-      "create_time": "2025-05-07T17:12:20+08:00",
+      "create_time": "2025-05-07T09:12:20Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3148,7 +3148,7 @@
     },
     {
       "message_id": "msg_0341",
-      "create_time": "2025-05-07T17:12:40+08:00",
+      "create_time": "2025-05-07T09:12:40Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3157,7 +3157,7 @@
     },
     {
       "message_id": "msg_0342",
-      "create_time": "2025-05-13T10:32:00+08:00",
+      "create_time": "2025-05-13T02:32:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3166,7 +3166,7 @@
     },
     {
       "message_id": "msg_0343",
-      "create_time": "2025-05-13T10:32:30+08:00",
+      "create_time": "2025-05-13T02:32:30Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3175,7 +3175,7 @@
     },
     {
       "message_id": "msg_0344",
-      "create_time": "2025-05-13T10:33:00+08:00",
+      "create_time": "2025-05-13T02:33:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3184,7 +3184,7 @@
     },
     {
       "message_id": "msg_0345",
-      "create_time": "2025-05-13T10:34:00+08:00",
+      "create_time": "2025-05-13T02:34:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3193,7 +3193,7 @@
     },
     {
       "message_id": "msg_0346",
-      "create_time": "2025-05-13T10:34:20+08:00",
+      "create_time": "2025-05-13T02:34:20Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3202,7 +3202,7 @@
     },
     {
       "message_id": "msg_0347",
-      "create_time": "2025-05-13T10:34:40+08:00",
+      "create_time": "2025-05-13T02:34:40Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3211,7 +3211,7 @@
     },
     {
       "message_id": "msg_0348",
-      "create_time": "2025-05-13T10:35:00+08:00",
+      "create_time": "2025-05-13T02:35:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3220,7 +3220,7 @@
     },
     {
       "message_id": "msg_0349",
-      "create_time": "2025-05-13T10:35:30+08:00",
+      "create_time": "2025-05-13T02:35:30Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3229,7 +3229,7 @@
     },
     {
       "message_id": "msg_0350",
-      "create_time": "2025-05-13T10:36:00+08:00",
+      "create_time": "2025-05-13T02:36:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3238,7 +3238,7 @@
     },
     {
       "message_id": "msg_0351",
-      "create_time": "2025-05-13T10:36:30+08:00",
+      "create_time": "2025-05-13T02:36:30Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3247,7 +3247,7 @@
     },
     {
       "message_id": "msg_0352",
-      "create_time": "2025-05-13T10:37:00+08:00",
+      "create_time": "2025-05-13T02:37:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3256,7 +3256,7 @@
     },
     {
       "message_id": "msg_0353",
-      "create_time": "2025-05-13T10:37:30+08:00",
+      "create_time": "2025-05-13T02:37:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3265,7 +3265,7 @@
     },
     {
       "message_id": "msg_0354",
-      "create_time": "2025-05-13T10:38:00+08:00",
+      "create_time": "2025-05-13T02:38:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3274,7 +3274,7 @@
     },
     {
       "message_id": "msg_0355",
-      "create_time": "2025-05-13T10:38:30+08:00",
+      "create_time": "2025-05-13T02:38:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3283,7 +3283,7 @@
     },
     {
       "message_id": "msg_0356",
-      "create_time": "2025-05-13T10:41:00+08:00",
+      "create_time": "2025-05-13T02:41:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3292,7 +3292,7 @@
     },
     {
       "message_id": "msg_0357",
-      "create_time": "2025-05-15T18:05:00+08:00",
+      "create_time": "2025-05-15T10:05:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3301,7 +3301,7 @@
     },
     {
       "message_id": "msg_0358",
-      "create_time": "2025-05-15T18:06:00+08:00",
+      "create_time": "2025-05-15T10:06:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3310,7 +3310,7 @@
     },
     {
       "message_id": "msg_0359",
-      "create_time": "2025-05-15T18:06:30+08:00",
+      "create_time": "2025-05-15T10:06:30Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3319,7 +3319,7 @@
     },
     {
       "message_id": "msg_0360",
-      "create_time": "2025-05-15T18:07:00+08:00",
+      "create_time": "2025-05-15T10:07:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3328,7 +3328,7 @@
     },
     {
       "message_id": "msg_0361",
-      "create_time": "2025-05-15T18:07:20+08:00",
+      "create_time": "2025-05-15T10:07:20Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3337,7 +3337,7 @@
     },
     {
       "message_id": "msg_0362",
-      "create_time": "2025-05-15T18:07:40+08:00",
+      "create_time": "2025-05-15T10:07:40Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3346,7 +3346,7 @@
     },
     {
       "message_id": "msg_0363",
-      "create_time": "2025-05-20T11:00:00+08:00",
+      "create_time": "2025-05-20T03:00:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3355,7 +3355,7 @@
     },
     {
       "message_id": "msg_0364",
-      "create_time": "2025-05-20T11:01:00+08:00",
+      "create_time": "2025-05-20T03:01:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3364,7 +3364,7 @@
     },
     {
       "message_id": "msg_0365",
-      "create_time": "2025-05-20T11:02:00+08:00",
+      "create_time": "2025-05-20T03:02:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3373,7 +3373,7 @@
     },
     {
       "message_id": "msg_0366",
-      "create_time": "2025-05-20T11:02:30+08:00",
+      "create_time": "2025-05-20T03:02:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3382,7 +3382,7 @@
     },
     {
       "message_id": "msg_0367",
-      "create_time": "2025-05-20T11:03:00+08:00",
+      "create_time": "2025-05-20T03:03:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3391,7 +3391,7 @@
     },
     {
       "message_id": "msg_0368",
-      "create_time": "2025-05-20T11:03:30+08:00",
+      "create_time": "2025-05-20T03:03:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3400,7 +3400,7 @@
     },
     {
       "message_id": "msg_0369",
-      "create_time": "2025-05-20T11:04:00+08:00",
+      "create_time": "2025-05-20T03:04:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3409,7 +3409,7 @@
     },
     {
       "message_id": "msg_0370",
-      "create_time": "2025-05-20T11:04:30+08:00",
+      "create_time": "2025-05-20T03:04:30Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3418,7 +3418,7 @@
     },
     {
       "message_id": "msg_0371",
-      "create_time": "2025-05-20T11:05:00+08:00",
+      "create_time": "2025-05-20T03:05:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3427,7 +3427,7 @@
     },
     {
       "message_id": "msg_0372",
-      "create_time": "2025-05-20T11:05:30+08:00",
+      "create_time": "2025-05-20T03:05:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3436,7 +3436,7 @@
     },
     {
       "message_id": "msg_0373",
-      "create_time": "2025-05-27T15:10:00+08:00",
+      "create_time": "2025-05-27T07:10:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3445,7 +3445,7 @@
     },
     {
       "message_id": "msg_0374",
-      "create_time": "2025-05-27T15:10:30+08:00",
+      "create_time": "2025-05-27T07:10:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3454,7 +3454,7 @@
     },
     {
       "message_id": "msg_0375",
-      "create_time": "2025-05-27T15:11:00+08:00",
+      "create_time": "2025-05-27T07:11:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3463,7 +3463,7 @@
     },
     {
       "message_id": "msg_0376",
-      "create_time": "2025-05-27T15:12:00+08:00",
+      "create_time": "2025-05-27T07:12:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3472,7 +3472,7 @@
     },
     {
       "message_id": "msg_0377",
-      "create_time": "2025-05-27T15:12:30+08:00",
+      "create_time": "2025-05-27T07:12:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3481,7 +3481,7 @@
     },
     {
       "message_id": "msg_0378",
-      "create_time": "2025-05-27T15:13:00+08:00",
+      "create_time": "2025-05-27T07:13:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3490,7 +3490,7 @@
     },
     {
       "message_id": "msg_0379",
-      "create_time": "2025-05-27T15:13:30+08:00",
+      "create_time": "2025-05-27T07:13:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3499,7 +3499,7 @@
     },
     {
       "message_id": "msg_0380",
-      "create_time": "2025-05-27T15:14:00+08:00",
+      "create_time": "2025-05-27T07:14:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3508,7 +3508,7 @@
     },
     {
       "message_id": "msg_0381",
-      "create_time": "2025-05-27T15:14:30+08:00",
+      "create_time": "2025-05-27T07:14:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3517,7 +3517,7 @@
     },
     {
       "message_id": "msg_0382",
-      "create_time": "2025-05-27T15:15:00+08:00",
+      "create_time": "2025-05-27T07:15:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3526,7 +3526,7 @@
     },
     {
       "message_id": "msg_0383",
-      "create_time": "2025-05-27T15:15:30+08:00",
+      "create_time": "2025-05-27T07:15:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3535,7 +3535,7 @@
     },
     {
       "message_id": "msg_0384",
-      "create_time": "2025-05-29T09:30:00+08:00",
+      "create_time": "2025-05-29T01:30:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3544,7 +3544,7 @@
     },
     {
       "message_id": "msg_0385",
-      "create_time": "2025-05-29T09:31:00+08:00",
+      "create_time": "2025-05-29T01:31:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3553,7 +3553,7 @@
     },
     {
       "message_id": "msg_0386",
-      "create_time": "2025-05-29T09:31:30+08:00",
+      "create_time": "2025-05-29T01:31:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3562,7 +3562,7 @@
     },
     {
       "message_id": "msg_0387",
-      "create_time": "2025-05-29T09:32:00+08:00",
+      "create_time": "2025-05-29T01:32:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3571,7 +3571,7 @@
     },
     {
       "message_id": "msg_0388",
-      "create_time": "2025-05-29T09:32:30+08:00",
+      "create_time": "2025-05-29T01:32:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3580,7 +3580,7 @@
     },
     {
       "message_id": "msg_0389",
-      "create_time": "2025-05-29T09:33:00+08:00",
+      "create_time": "2025-05-29T01:33:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3589,7 +3589,7 @@
     },
     {
       "message_id": "msg_0390",
-      "create_time": "2025-05-29T09:33:30+08:00",
+      "create_time": "2025-05-29T01:33:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3598,7 +3598,7 @@
     },
     {
       "message_id": "msg_0391",
-      "create_time": "2025-05-29T09:34:00+08:00",
+      "create_time": "2025-05-29T01:34:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3607,7 +3607,7 @@
     },
     {
       "message_id": "msg_0392",
-      "create_time": "2025-05-29T09:35:00+08:00",
+      "create_time": "2025-05-29T01:35:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3616,7 +3616,7 @@
     },
     {
       "message_id": "msg_0393",
-      "create_time": "2025-05-29T09:35:30+08:00",
+      "create_time": "2025-05-29T01:35:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3625,7 +3625,7 @@
     },
     {
       "message_id": "msg_0394",
-      "create_time": "2025-06-03T10:10:00+08:00",
+      "create_time": "2025-06-03T02:10:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3634,7 +3634,7 @@
     },
     {
       "message_id": "msg_0395",
-      "create_time": "2025-06-03T10:11:00+08:00",
+      "create_time": "2025-06-03T02:11:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3643,7 +3643,7 @@
     },
     {
       "message_id": "msg_0396",
-      "create_time": "2025-06-03T10:11:30+08:00",
+      "create_time": "2025-06-03T02:11:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3652,7 +3652,7 @@
     },
     {
       "message_id": "msg_0397",
-      "create_time": "2025-06-03T10:12:00+08:00",
+      "create_time": "2025-06-03T02:12:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3661,7 +3661,7 @@
     },
     {
       "message_id": "msg_0398",
-      "create_time": "2025-06-03T10:12:30+08:00",
+      "create_time": "2025-06-03T02:12:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3670,7 +3670,7 @@
     },
     {
       "message_id": "msg_0399",
-      "create_time": "2025-06-03T10:13:00+08:00",
+      "create_time": "2025-06-03T02:13:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3679,7 +3679,7 @@
     },
     {
       "message_id": "msg_0400",
-      "create_time": "2025-06-03T10:13:30+08:00",
+      "create_time": "2025-06-03T02:13:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3688,7 +3688,7 @@
     },
     {
       "message_id": "msg_0401",
-      "create_time": "2025-06-03T10:14:00+08:00",
+      "create_time": "2025-06-03T02:14:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3697,7 +3697,7 @@
     },
     {
       "message_id": "msg_0402",
-      "create_time": "2025-06-03T10:14:30+08:00",
+      "create_time": "2025-06-03T02:14:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3706,7 +3706,7 @@
     },
     {
       "message_id": "msg_0403",
-      "create_time": "2025-06-03T10:15:00+08:00",
+      "create_time": "2025-06-03T02:15:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3715,7 +3715,7 @@
     },
     {
       "message_id": "msg_0404",
-      "create_time": "2025-06-03T10:15:30+08:00",
+      "create_time": "2025-06-03T02:15:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3724,7 +3724,7 @@
     },
     {
       "message_id": "msg_0405",
-      "create_time": "2025-06-10T14:40:00+08:00",
+      "create_time": "2025-06-10T06:40:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3733,7 +3733,7 @@
     },
     {
       "message_id": "msg_0406",
-      "create_time": "2025-06-10T14:41:00+08:00",
+      "create_time": "2025-06-10T06:41:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3742,7 +3742,7 @@
     },
     {
       "message_id": "msg_0407",
-      "create_time": "2025-06-10T14:41:30+08:00",
+      "create_time": "2025-06-10T06:41:30Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3751,7 +3751,7 @@
     },
     {
       "message_id": "msg_0408",
-      "create_time": "2025-06-10T14:42:00+08:00",
+      "create_time": "2025-06-10T06:42:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3760,7 +3760,7 @@
     },
     {
       "message_id": "msg_0409",
-      "create_time": "2025-06-10T14:42:30+08:00",
+      "create_time": "2025-06-10T06:42:30Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3769,7 +3769,7 @@
     },
     {
       "message_id": "msg_0410",
-      "create_time": "2025-06-10T14:43:00+08:00",
+      "create_time": "2025-06-10T06:43:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3778,7 +3778,7 @@
     },
     {
       "message_id": "msg_0411",
-      "create_time": "2025-06-10T14:43:30+08:00",
+      "create_time": "2025-06-10T06:43:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3787,7 +3787,7 @@
     },
     {
       "message_id": "msg_0412",
-      "create_time": "2025-06-10T14:44:00+08:00",
+      "create_time": "2025-06-10T06:44:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3796,7 +3796,7 @@
     },
     {
       "message_id": "msg_0413",
-      "create_time": "2025-06-10T14:44:30+08:00",
+      "create_time": "2025-06-10T06:44:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3805,7 +3805,7 @@
     },
     {
       "message_id": "msg_0414",
-      "create_time": "2025-06-10T14:45:00+08:00",
+      "create_time": "2025-06-10T06:45:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3814,7 +3814,7 @@
     },
     {
       "message_id": "msg_0415",
-      "create_time": "2025-06-10T14:45:30+08:00",
+      "create_time": "2025-06-10T06:45:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3823,7 +3823,7 @@
     },
     {
       "message_id": "msg_0416",
-      "create_time": "2025-06-17T17:10:00+08:00",
+      "create_time": "2025-06-17T09:10:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3832,7 +3832,7 @@
     },
     {
       "message_id": "msg_0417",
-      "create_time": "2025-06-17T17:11:00+08:00",
+      "create_time": "2025-06-17T09:11:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3841,7 +3841,7 @@
     },
     {
       "message_id": "msg_0418",
-      "create_time": "2025-06-17T17:11:30+08:00",
+      "create_time": "2025-06-17T09:11:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3850,7 +3850,7 @@
     },
     {
       "message_id": "msg_0419",
-      "create_time": "2025-06-17T17:12:00+08:00",
+      "create_time": "2025-06-17T09:12:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3859,7 +3859,7 @@
     },
     {
       "message_id": "msg_0420",
-      "create_time": "2025-06-17T17:12:30+08:00",
+      "create_time": "2025-06-17T09:12:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3868,7 +3868,7 @@
     },
     {
       "message_id": "msg_0421",
-      "create_time": "2025-06-17T17:13:00+08:00",
+      "create_time": "2025-06-17T09:13:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3877,7 +3877,7 @@
     },
     {
       "message_id": "msg_0422",
-      "create_time": "2025-06-17T17:13:30+08:00",
+      "create_time": "2025-06-17T09:13:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3886,7 +3886,7 @@
     },
     {
       "message_id": "msg_0423",
-      "create_time": "2025-06-17T17:14:00+08:00",
+      "create_time": "2025-06-17T09:14:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3895,7 +3895,7 @@
     },
     {
       "message_id": "msg_0424",
-      "create_time": "2025-06-17T17:14:30+08:00",
+      "create_time": "2025-06-17T09:14:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3904,7 +3904,7 @@
     },
     {
       "message_id": "msg_0425",
-      "create_time": "2025-06-17T17:15:00+08:00",
+      "create_time": "2025-06-17T09:15:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3913,7 +3913,7 @@
     },
     {
       "message_id": "msg_0425",
-      "create_time": "2025-06-24T10:15:00+08:00",
+      "create_time": "2025-06-24T02:15:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3922,7 +3922,7 @@
     },
     {
       "message_id": "msg_0426",
-      "create_time": "2025-06-24T10:16:00+08:00",
+      "create_time": "2025-06-24T02:16:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3931,7 +3931,7 @@
     },
     {
       "message_id": "msg_0427",
-      "create_time": "2025-06-24T10:17:00+08:00",
+      "create_time": "2025-06-24T02:17:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -3940,7 +3940,7 @@
     },
     {
       "message_id": "msg_0428",
-      "create_time": "2025-06-24T10:17:30+08:00",
+      "create_time": "2025-06-24T02:17:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -3949,7 +3949,7 @@
     },
     {
       "message_id": "msg_0429",
-      "create_time": "2025-06-24T10:18:00+08:00",
+      "create_time": "2025-06-24T02:18:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3958,7 +3958,7 @@
     },
     {
       "message_id": "msg_0430",
-      "create_time": "2025-06-24T10:18:30+08:00",
+      "create_time": "2025-06-24T02:18:30Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -3967,7 +3967,7 @@
     },
     {
       "message_id": "msg_0431",
-      "create_time": "2025-06-24T10:19:00+08:00",
+      "create_time": "2025-06-24T02:19:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3976,7 +3976,7 @@
     },
     {
       "message_id": "msg_0432",
-      "create_time": "2025-06-24T10:19:30+08:00",
+      "create_time": "2025-06-24T02:19:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -3985,7 +3985,7 @@
     },
     {
       "message_id": "msg_0433",
-      "create_time": "2025-06-24T10:20:00+08:00",
+      "create_time": "2025-06-24T02:20:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -3994,7 +3994,7 @@
     },
     {
       "message_id": "msg_0434",
-      "create_time": "2025-07-01T11:40:00+08:00",
+      "create_time": "2025-07-01T03:40:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4003,7 +4003,7 @@
     },
     {
       "message_id": "msg_0435",
-      "create_time": "2025-07-01T11:40:20+08:00",
+      "create_time": "2025-07-01T03:40:20Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4012,7 +4012,7 @@
     },
     {
       "message_id": "msg_0436",
-      "create_time": "2025-07-01T11:40:40+08:00",
+      "create_time": "2025-07-01T03:40:40Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4021,7 +4021,7 @@
     },
     {
       "message_id": "msg_0437",
-      "create_time": "2025-07-01T11:41:00+08:00",
+      "create_time": "2025-07-01T03:41:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4030,7 +4030,7 @@
     },
     {
       "message_id": "msg_0438",
-      "create_time": "2025-07-01T11:42:00+08:00",
+      "create_time": "2025-07-01T03:42:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -4039,7 +4039,7 @@
     },
     {
       "message_id": "msg_0439",
-      "create_time": "2025-07-01T11:42:30+08:00",
+      "create_time": "2025-07-01T03:42:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -4048,7 +4048,7 @@
     },
     {
       "message_id": "msg_0440",
-      "create_time": "2025-07-01T11:41:00+08:00",
+      "create_time": "2025-07-01T03:41:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4057,7 +4057,7 @@
     },
     {
       "message_id": "msg_0441",
-      "create_time": "2025-07-01T11:41:30+08:00",
+      "create_time": "2025-07-01T03:41:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4066,7 +4066,7 @@
     },
     {
       "message_id": "msg_0442",
-      "create_time": "2025-07-01T11:43:40+08:00",
+      "create_time": "2025-07-01T03:43:40Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4075,7 +4075,7 @@
     },
     {
       "message_id": "msg_0443",
-      "create_time": "2025-07-01T12:41:00+08:00",
+      "create_time": "2025-07-01T04:41:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4084,7 +4084,7 @@
     },
     {
       "message_id": "msg_0444",
-      "create_time": "2025-07-01T12:41:30+08:00",
+      "create_time": "2025-07-01T04:41:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4093,7 +4093,7 @@
     },
     {
       "message_id": "msg_0445",
-      "create_time": "2025-07-01T12:41:40+08:00",
+      "create_time": "2025-07-01T04:41:40Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4102,7 +4102,7 @@
     },
     {
       "message_id": "msg_0446",
-      "create_time": "2025-07-01T12:42:15+08:00",
+      "create_time": "2025-07-01T04:42:15Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -4111,7 +4111,7 @@
     },
     {
       "message_id": "msg_0447",
-      "create_time": "2025-07-01T12:42:30+08:00",
+      "create_time": "2025-07-01T04:42:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -4120,7 +4120,7 @@
     },
     {
       "message_id": "msg_0448",
-      "create_time": "2025-07-01T12:43:00+08:00",
+      "create_time": "2025-07-01T04:43:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4129,7 +4129,7 @@
     },
     {
       "message_id": "msg_0449",
-      "create_time": "2025-07-01T12:43:30+08:00",
+      "create_time": "2025-07-01T04:43:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4138,7 +4138,7 @@
     },
     {
       "message_id": "msg_0450",
-      "create_time": "2025-07-01T12:44:00+08:00",
+      "create_time": "2025-07-01T04:44:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4147,7 +4147,7 @@
     },
     {
       "message_id": "msg_0451",
-      "create_time": "2025-07-01T12:44:30+08:00",
+      "create_time": "2025-07-01T04:44:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4156,7 +4156,7 @@
     },
     {
       "message_id": "msg_0452",
-      "create_time": "2025-07-01T12:45:00+08:00",
+      "create_time": "2025-07-01T04:45:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4165,7 +4165,7 @@
     },
     {
       "message_id": "msg_0453",
-      "create_time": "2025-07-01T12:45:30+08:00",
+      "create_time": "2025-07-01T04:45:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4174,7 +4174,7 @@
     },
     {
       "message_id": "msg_0454",
-      "create_time": "2025-07-03T12:10:00+08:00",
+      "create_time": "2025-07-03T04:10:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -4183,7 +4183,7 @@
     },
     {
       "message_id": "msg_0455",
-      "create_time": "2025-07-03T12:12:20+08:00",
+      "create_time": "2025-07-03T04:12:20Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4192,7 +4192,7 @@
     },
     {
       "message_id": "msg_0456",
-      "create_time": "2025-07-03T12:13:10+08:00",
+      "create_time": "2025-07-03T04:13:10Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4201,7 +4201,7 @@
     },
     {
       "message_id": "msg_0457",
-      "create_time": "2025-07-03T12:15:30+08:00",
+      "create_time": "2025-07-03T04:15:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -4210,7 +4210,7 @@
     },
     {
       "message_id": "msg_0458",
-      "create_time": "2025-07-03T12:53:00+08:00",
+      "create_time": "2025-07-03T04:53:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4219,7 +4219,7 @@
     },
     {
       "message_id": "msg_0459",
-      "create_time": "2025-07-08T12:17:00+08:00",
+      "create_time": "2025-07-08T04:17:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4228,7 +4228,7 @@
     },
     {
       "message_id": "msg_0460",
-      "create_time": "2025-07-08T12:17:30+08:00",
+      "create_time": "2025-07-08T04:17:30Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4237,7 +4237,7 @@
     },
     {
       "message_id": "msg_0461",
-      "create_time": "2025-07-08T12:18:10+08:00",
+      "create_time": "2025-07-08T04:18:10Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4246,7 +4246,7 @@
     },
     {
       "message_id": "msg_0462",
-      "create_time": "2025-07-08T12:18:00+08:00",
+      "create_time": "2025-07-08T04:18:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4255,7 +4255,7 @@
     },
     {
       "message_id": "msg_0463",
-      "create_time": "2025-07-08T12:18:00+08:00",
+      "create_time": "2025-07-08T04:18:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4264,7 +4264,7 @@
     },
     {
       "message_id": "msg_0464",
-      "create_time": "2025-07-08T12:18:30+08:00",
+      "create_time": "2025-07-08T04:18:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4273,7 +4273,7 @@
     },
     {
       "message_id": "msg_0465",
-      "create_time": "2025-07-08T12:20:00+08:00",
+      "create_time": "2025-07-08T04:20:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4282,7 +4282,7 @@
     },
     {
       "message_id": "msg_0466",
-      "create_time": "2025-07-08T14:03:00+08:00",
+      "create_time": "2025-07-08T06:03:00Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -4291,7 +4291,7 @@
     },
     {
       "message_id": "msg_0467",
-      "create_time": "2025-07-08T14:05:10+08:00",
+      "create_time": "2025-07-08T06:05:10Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -4300,7 +4300,7 @@
     },
     {
       "message_id": "msg_0468",
-      "create_time": "2025-07-08T14:22:00+08:00",
+      "create_time": "2025-07-08T06:22:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4309,7 +4309,7 @@
     },
     {
       "message_id": "msg_0469",
-      "create_time": "2025-07-08T14:23:10+08:00",
+      "create_time": "2025-07-08T06:23:10Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4318,7 +4318,7 @@
     },
     {
       "message_id": "msg_0470",
-      "create_time": "2025-07-08T14:24:30+08:00",
+      "create_time": "2025-07-08T06:24:30Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -4327,7 +4327,7 @@
     },
     {
       "message_id": "msg_0471",
-      "create_time": "2025-07-08T14:25:20+08:00",
+      "create_time": "2025-07-08T06:25:20Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -4336,7 +4336,7 @@
     },
     {
       "message_id": "msg_0472",
-      "create_time": "2025-07-08T14:26:00+08:00",
+      "create_time": "2025-07-08T06:26:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4345,7 +4345,7 @@
     },
     {
       "message_id": "msg_0473",
-      "create_time": "2025-07-09T09:11:00+08:00",
+      "create_time": "2025-07-09T01:11:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4354,7 +4354,7 @@
     },
     {
       "message_id": "msg_0474",
-      "create_time": "2025-07-09T09:12:50+08:00",
+      "create_time": "2025-07-09T01:12:50Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4363,7 +4363,7 @@
     },
     {
       "message_id": "msg_0475",
-      "create_time": "2025-07-09T09:13:30+08:00",
+      "create_time": "2025-07-09T01:13:30Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -4372,7 +4372,7 @@
     },
     {
       "message_id": "msg_0476",
-      "create_time": "2025-07-09T09:14:10+08:00",
+      "create_time": "2025-07-09T01:14:10Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4381,7 +4381,7 @@
     },
     {
       "message_id": "msg_0477",
-      "create_time": "2025-07-09T09:15:30+08:00",
+      "create_time": "2025-07-09T01:15:30Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -4390,7 +4390,7 @@
     },
     {
       "message_id": "msg_0478",
-      "create_time": "2025-07-09T09:16:40+08:00",
+      "create_time": "2025-07-09T01:16:40Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4399,7 +4399,7 @@
     },
     {
       "message_id": "msg_0479",
-      "create_time": "2025-07-09T09:17:10+08:00",
+      "create_time": "2025-07-09T01:17:10Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -4408,7 +4408,7 @@
     },
     {
       "message_id": "msg_0480",
-      "create_time": "2025-07-10T11:20:00+08:00",
+      "create_time": "2025-07-10T03:20:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4417,7 +4417,7 @@
     },
     {
       "message_id": "msg_0481",
-      "create_time": "2025-07-10T11:21:30+08:00",
+      "create_time": "2025-07-10T03:21:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4426,7 +4426,7 @@
     },
     {
       "message_id": "msg_0482",
-      "create_time": "2025-07-10T11:22:00+08:00",
+      "create_time": "2025-07-10T03:22:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4435,7 +4435,7 @@
     },
     {
       "message_id": "msg_0483",
-      "create_time": "2025-07-10T11:23:10+08:00",
+      "create_time": "2025-07-10T03:23:10Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -4444,7 +4444,7 @@
     },
     {
       "message_id": "msg_0484",
-      "create_time": "2025-07-10T11:24:00+08:00",
+      "create_time": "2025-07-10T03:24:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4453,7 +4453,7 @@
     },
     {
       "message_id": "msg_0485",
-      "create_time": "2025-07-11T16:45:00+08:00",
+      "create_time": "2025-07-11T08:45:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4462,7 +4462,7 @@
     },
     {
       "message_id": "msg_0486",
-      "create_time": "2025-07-11T16:46:10+08:00",
+      "create_time": "2025-07-11T08:46:10Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4471,7 +4471,7 @@
     },
     {
       "message_id": "msg_0487",
-      "create_time": "2025-07-11T16:47:00+08:00",
+      "create_time": "2025-07-11T08:47:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -4480,7 +4480,7 @@
     },
     {
       "message_id": "msg_0488",
-      "create_time": "2025-07-11T16:48:20+08:00",
+      "create_time": "2025-07-11T08:48:20Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4489,7 +4489,7 @@
     },
     {
       "message_id": "msg_0489",
-      "create_time": "2025-07-15T18:20:00+08:00",
+      "create_time": "2025-07-15T10:20:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4498,7 +4498,7 @@
     },
     {
       "message_id": "msg_0490",
-      "create_time": "2025-07-15T18:21:10+08:00",
+      "create_time": "2025-07-15T10:21:10Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4507,7 +4507,7 @@
     },
     {
       "message_id": "msg_0491",
-      "create_time": "2025-07-15T18:21:50+08:00",
+      "create_time": "2025-07-15T10:21:50Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4516,7 +4516,7 @@
     },
     {
       "message_id": "msg_0492",
-      "create_time": "2025-07-15T18:22:40+08:00",
+      "create_time": "2025-07-15T10:22:40Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -4525,7 +4525,7 @@
     },
     {
       "message_id": "msg_0493",
-      "create_time": "2025-07-15T18:23:20+08:00",
+      "create_time": "2025-07-15T10:23:20Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4534,7 +4534,7 @@
     },
     {
       "message_id": "msg_0494",
-      "create_time": "2025-07-15T18:24:10+08:00",
+      "create_time": "2025-07-15T10:24:10Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4543,7 +4543,7 @@
     },
     {
       "message_id": "msg_0495",
-      "create_time": "2025-07-15T18:25:00+08:00",
+      "create_time": "2025-07-15T10:25:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4552,7 +4552,7 @@
     },
     {
       "message_id": "msg_0496",
-      "create_time": "2025-07-15T18:25:40+08:00",
+      "create_time": "2025-07-15T10:25:40Z",
       "sender": "user_105",
       "sender_name": "Emily",
       "type": "text",
@@ -4561,7 +4561,7 @@
     },
     {
       "message_id": "msg_0497",
-      "create_time": "2025-07-15T18:26:00+08:00",
+      "create_time": "2025-07-15T10:26:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4570,7 +4570,7 @@
     },
     {
       "message_id": "msg_0498",
-      "create_time": "2025-07-15T18:26:30+08:00",
+      "create_time": "2025-07-15T10:26:30Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4579,7 +4579,7 @@
     },
     {
       "message_id": "msg_0499",
-      "create_time": "2025-07-16T09:02:00+08:00",
+      "create_time": "2025-07-16T01:02:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4588,7 +4588,7 @@
     },
     {
       "message_id": "msg_0500",
-      "create_time": "2025-07-16T09:03:00+08:00",
+      "create_time": "2025-07-16T01:03:00Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -4597,7 +4597,7 @@
     },
     {
       "message_id": "msg_0501",
-      "create_time": "2025-07-16T09:05:00+08:00",
+      "create_time": "2025-07-16T01:05:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4606,7 +4606,7 @@
     },
     {
       "message_id": "msg_0502",
-      "create_time": "2025-07-16T09:05:15+08:00",
+      "create_time": "2025-07-16T01:05:15Z",
       "sender": "user_104",
       "sender_name": "Dylan",
       "type": "text",
@@ -4615,7 +4615,7 @@
     },
     {
       "message_id": "msg_0503",
-      "create_time": "2025-07-16T09:05:30+08:00",
+      "create_time": "2025-07-16T01:05:30Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4624,7 +4624,7 @@
     },
     {
       "message_id": "msg_0504",
-      "create_time": "2025-07-16T09:06:00+08:00",
+      "create_time": "2025-07-16T01:06:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4633,7 +4633,7 @@
     },
     {
       "message_id": "msg_0505",
-      "create_time": "2025-07-16T09:25:00+08:00",
+      "create_time": "2025-07-16T01:25:00Z",
       "sender": "user_101",
       "sender_name": "Alex",
       "type": "text",
@@ -4642,7 +4642,7 @@
     },
     {
       "message_id": "msg_0506",
-      "create_time": "2025-07-16T09:34:00+08:00",
+      "create_time": "2025-07-16T01:34:00Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4651,7 +4651,7 @@
     },
     {
       "message_id": "msg_0507",
-      "create_time": "2025-07-16T09:34:30+08:00",
+      "create_time": "2025-07-16T01:34:30Z",
       "sender": "user_102",
       "sender_name": "Betty",
       "type": "text",
@@ -4660,7 +4660,7 @@
     },
     {
       "message_id": "msg_0508",
-      "create_time": "2025-07-16T09:35:20+08:00",
+      "create_time": "2025-07-16T01:35:20Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",
@@ -4669,7 +4669,7 @@
     },
     {
       "message_id": "msg_0509",
-      "create_time": "2025-07-20T10:00:00+08:00",
+      "create_time": "2025-07-20T02:00:00Z",
       "sender": "user_103",
       "sender_name": "Chen",
       "type": "text",

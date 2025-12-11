@@ -7,8 +7,8 @@ logger = get_logger(__name__)
 
 
 def get_timezone() -> ZoneInfo:
-    """Get timezone from TZ env var (default: Asia/Shanghai)."""
-    tz = os.getenv("TZ", "Asia/Shanghai")
+    """Get timezone from TZ env var (default: UTC)."""
+    tz = os.getenv("TZ", "UTC")
     return ZoneInfo(tz)
 
 
@@ -38,7 +38,7 @@ def to_iso_format(
         time_value: Time value to convert.
 
     Returns:
-        ISO format string (e.g. 2025-09-16T20:20:06+08:00), or None.
+        ISO format string (e.g. 2025-09-16T20:20:06Z), or None.
 
     Raises:
         TypeError: If time_value is not a supported type.
@@ -144,7 +144,7 @@ def _parse_datetime_core(
         - datetime object (passed through)
         - ISO format string: "2025-09-15T13:11:15.588000", "2025-09-15T13:11:15.588000Z"
         - Space-separated string: "2025-01-07 09:15:33" (Python 3.11+)
-        - With timezone offset: "2025-09-15T13:11:15+08:00"
+        - With timezone offset: "2025-09-15T13:11:15+00:00"
 
     Args:
         time_value: datetime object or time string
@@ -201,7 +201,7 @@ def from_iso_format(
         - "2025-01-07 09:15:33" (space-separated)
         - "2025-01-07T09:15:33" (ISO T-separated)
         - "2025-01-07 09:15:33.123456" (with microseconds)
-        - "2025-01-07T09:15:33+08:00" (with timezone)
+        - "2025-01-07T09:15:33+00:00" (with timezone)
         - "2025-01-07T09:15:33Z" (UTC)
 
     Returns:
@@ -212,7 +212,7 @@ def from_iso_format(
 
     Example:
         >>> from_iso_format("2025-01-07 09:15:33")
-        datetime.datetime(2025, 1, 7, 9, 15, 33, tzinfo=ZoneInfo('Asia/Shanghai'))
+        datetime.datetime(2025, 1, 7, 9, 15, 33, tzinfo=ZoneInfo('UTC'))
 
         >>> from_iso_format("invalid", strict=True)
         ValueError: ...

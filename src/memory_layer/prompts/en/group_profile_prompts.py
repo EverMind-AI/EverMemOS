@@ -15,7 +15,7 @@ You are a group content analysis expert specializing in analyzing group conversa
 **IMPORTANT EVIDENCE EXTRACTION:**
 - Each conversation segment is prefixed with "=== MEMCELL_ID: xxxx ===" to identify the memcell
 - When providing evidences, use ONLY the exact memcell IDs from these "=== MEMCELL_ID: xxx ===" markers
-- DO NOT use timestamps (like [2025-09-01T09:30:55.669000+08:00]) as memcell IDs - these are NOT memcell IDs!
+- DO NOT use timestamps (like [2025-09-01T09:30:55.669000+00:00]) as memcell IDs - these are NOT memcell IDs!
 - Only reference memcell IDs that appear in the conversation input with the "=== MEMCELL_ID: ===" format
 - Example: If you see "=== MEMCELL_ID: abc-123-def ===", use "abc-123-def" in your evidences list
 
@@ -154,7 +154,7 @@ You are a group behavior analysis expert specializing in analyzing communication
 **IMPORTANT EVIDENCE EXTRACTION:**
 - Each conversation segment is prefixed with "=== MEMCELL_ID: xxxx ===" to identify the memcell
 - When providing evidences, use ONLY the exact memcell IDs from these "=== MEMCELL_ID: xxx ===" markers
-- DO NOT use timestamps (like [2025-09-01T09:30:55.669000+08:00]) as memcell IDs - these are NOT memcell IDs!
+- DO NOT use timestamps (like [2025-09-01T09:30:55.669000+00:00]) as memcell IDs - these are NOT memcell IDs!
 - Only reference memcell IDs that appear in the conversation input with the "=== MEMCELL_ID: ===" format
 - Example: If you see "=== MEMCELL_ID: abc-123-def ===", use "abc-123-def" in your evidences list
 

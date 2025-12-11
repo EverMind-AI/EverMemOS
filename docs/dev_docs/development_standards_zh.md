@@ -26,7 +26,7 @@ make dev-setup              # 一键配置开发环境（同步依赖 + 安装 h
 禁止在 for 循环中进行数据库访问和 API 调用等 I/O 操作，使用批量操作替代
 
 **🕐 时区意识**  
-所有时间字段必须携带时区信息，不带时区的输入统一视为上海时区（Asia/Shanghai，UTC+8）。禁止使用 `datetime.datetime.now()`，必须使用 `common_utils/datetime_utils.py` 中的工具函数
+所有时间字段必须携带时区信息，不带时区的输入统一视为环境变量 `TZ` 配置的时区（默认 UTC）。禁止使用 `datetime.datetime.now()`，必须使用 `common_utils/datetime_utils.py` 中的工具函数
 
 **📥 导入规范**  
 - PYTHONPATH 管理：项目模块导入起始路径（src/tests/demo 等）需要统一管理，变更前请与开发负责人沟通  
@@ -888,7 +888,7 @@ async def fetch_with_rate_limit(urls: list[str]):
 所有进入系统的时间字段都必须满足以下要求：
 
 - **必须携带时区信息**：所有 datetime 类型的字段必须是 timezone-aware 的
-- **默认时区**：如果输入数据不带时区信息，统一将其视为 **Asia/Shanghai（上海时区，UTC+8）**
+- **默认时区**：如果输入数据不带时区信息，统一将其视为环境变量 `TZ` 配置的时区（**默认 UTC**）
 - **存储格式**：在数据库中存储时建议统一转换为 UTC 时区，但必须保留时区信息
 
 #### 2. Python 实现规范
@@ -905,21 +905,21 @@ from common_utils.datetime_utils import (
     to_timezone
 )
 
-# 方式1：获取当前时间（自动带上海时区）
+# 方式1：获取当前时间（自动带时区，由环境变量 TZ 配置，默认 UTC）
 now = get_now_with_timezone()
-# 返回: datetime.datetime(2025, 9, 16, 20, 17, 41, tzinfo=zoneinfo.ZoneInfo(key='Asia/Shanghai'))
+# 返回: datetime.datetime(2025, 9, 16, 12, 17, 41, tzinfo=zoneinfo.ZoneInfo(key='UTC'))
 
 # 方式2：从时间戳转换（自动识别秒级/毫秒级，自动添加时区）
 dt = from_timestamp(1758025061)
 dt_ms = from_timestamp(1758025061000)
 
 # 方式3：从 ISO 字符串转换（自动处理时区）
-dt = from_iso_format("2025-09-15T13:11:15.588000")  # 无时区，自动添加上海时区
-dt_with_tz = from_iso_format("2025-09-15T13:11:15+08:00")  # 有时区，保留原时区后转换
+dt = from_iso_format("2025-09-15T13:11:15.588000")  # 无时区，自动添加默认时区
+dt_with_tz = from_iso_format("2025-09-15T13:11:15Z")  # 有时区，保留原时区后转换
 
 # 方式4：格式化为 ISO 字符串（自动包含时区）
 iso_str = to_iso_format(now)
-# 返回: "2025-09-16T20:20:06.517301+08:00"
+# 返回: "2025-09-16T12:20:06.517301Z"
 
 # 方式5：转换为时间戳
 ts = to_timestamp_ms(now)
@@ -963,7 +963,7 @@ dt = datetime(2025, 1, 1, 12, 0, 0)
 
 # 新代码（正确）
 from common_utils.datetime_utils import from_iso_format
-dt = from_iso_format("2025-01-01T12:00:00")  # 自动添加上海时区
+dt = from_iso_format("2025-01-01T12:00:00")  # 自动添加默认时区
 
 # ----------------
 
@@ -982,7 +982,7 @@ from common_utils.datetime_utils import get_now_with_timezone, to_timezone
 from zoneinfo import ZoneInfo
 
 # 获取上海时间
-dt_shanghai = get_now_with_timezone()
+dt_shanghai = get_now_with_timezone(ZoneInfo("Asia/Shanghai"))
 
 # 转换为 UTC
 dt_utc = to_timezone(dt_shanghai, ZoneInfo("UTC"))
@@ -1038,7 +1038,7 @@ def process_datetime_input(dt_str: str) -> datetime.datetime:
     """处理外部输入的时间字符串"""
     try:
         # 使用工具函数解析，自动处理时区
-        # 如果输入没有时区信息，自动添加上海时区
+        # 如果输入没有时区信息，自动添加默认时区
         dt = from_iso_format(dt_str)
         return dt
     except Exception as e:
@@ -1059,13 +1059,13 @@ def serialize_datetime(dt: datetime.datetime) -> str:
     # 使用工具函数格式化，自动包含时区信息
     return to_iso_format(dt)
 
-# 示例输出："2025-01-01T12:00:00+08:00"
+# 示例输出："2025-01-01T12:00:00Z"
 ```
 
 #### 6. 常见问题和注意事项
 
-**Q: 为什么选择上海时区作为默认时区？**  
-A: 项目主要服务中国用户，上海时区（Asia/Shanghai，UTC+8）是最常用的时区。
+**Q: 为什么选择 UTC 作为默认时区？**  
+A: 项目面向国际化用户，UTC 是国际通用的标准时区，便于全球用户统一处理时间。可通过环境变量 `TZ` 自定义时区。
 
 **Q: 可以使用 pytz 库吗？**  
 A: Python 3.9+ 推荐使用标准库的 `zoneinfo`，它是官方推荐的时区处理方案，`pytz` 已逐步被淘汰。
@@ -1074,7 +1074,7 @@ A: Python 3.9+ 推荐使用标准库的 `zoneinfo`，它是官方推荐的时区
 A: 建议存储 UTC 时区，在展示时再转换为用户所需时区。这样可以避免夏令时等问题。
 
 **Q: 如何处理历史数据中的 naive datetime？**  
-A: 需要编写数据迁移脚本，为所有 naive datetime 添加上海时区信息。参考[数据迁移规范](#数据迁移与-schema-变更流程)。
+A: 需要编写数据迁移脚本，为所有 naive datetime 添加时区信息（建议 UTC）。参考[数据迁移规范](#数据迁移与-schema-变更流程)。
 
 ### 检查清单
 

@@ -465,7 +465,7 @@ async def test_timezone_handling():
         # Create times in different timezones
         utc_time = get_now_with_timezone(ZoneInfo("UTC"))
         tokyo_time = get_now_with_timezone(ZoneInfo("Asia/Tokyo"))
-        shanghai_time = get_now_with_timezone()  # Default Shanghai timezone
+        shanghai_time = get_now_with_timezone(ZoneInfo("Asia/Shanghai"))
 
         logger.info("Original UTC time: %s", to_iso_format(utc_time))
         logger.info("Original Tokyo time: %s", to_iso_format(tokyo_time))

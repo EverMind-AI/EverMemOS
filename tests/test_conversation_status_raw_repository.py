@@ -162,7 +162,7 @@ async def test_timezone_handling():
         update_data = {
             "old_msg_start_time": utc_time,
             "new_msg_start_time": tokyo_time,
-            "last_memcell_time": shanghai_time,  # Use default Shanghai time zone
+            "last_memcell_time": shanghai_time,
         }
 
         # Record original time in ISO format for comparison

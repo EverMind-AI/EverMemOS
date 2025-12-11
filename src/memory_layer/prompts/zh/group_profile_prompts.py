@@ -15,7 +15,7 @@ CONTENT_ANALYSIS_PROMPT = """
 **重要证据提取：**
 - 每个对话片段都以"=== MEMCELL_ID: xxxx ==="作为前缀来标识 memcell
 - 提供证据时，仅使用这些"=== MEMCELL_ID: xxx ==="标记中的确切 memcell ID
-- 不要使用时间戳（如 [2025-09-01T09:30:55.669000+08:00]）作为 memcell ID - 这些不是 memcell ID！
+- 不要使用时间戳（如 [2025-09-01T09:30:55.669000+00:00]）作为 memcell ID - 这些不是 memcell ID！
 - 仅引用对话输入中以"=== MEMCELL_ID: ==="格式出现的 memcell ID
 - 示例：如果您看到"=== MEMCELL_ID: abc-123-def ==="，在证据列表中使用"abc-123-def"
 
@@ -154,7 +154,7 @@ BEHAVIOR_ANALYSIS_PROMPT = """
 **重要证据提取：**
 - 每个对话片段都以"=== MEMCELL_ID: xxxx ==="作为前缀来标识 memcell
 - 提供证据时，仅使用这些"=== MEMCELL_ID: xxx ==="标记中的确切 memcell ID
-- 不要使用时间戳（如 [2025-09-01T09:30:55.669000+08:00]）作为 memcell ID - 这些不是 memcell ID！
+- 不要使用时间戳（如 [2025-09-01T09:30:55.669000+00:00]）作为 memcell ID - 这些不是 memcell ID！
 - 仅引用对话输入中以"=== MEMCELL_ID: ==="格式出现的 memcell ID
 - 示例：如果您看到"=== MEMCELL_ID: abc-123-def ==="，在证据列表中使用"abc-123-def"
 
@@ -310,4 +310,3 @@ AGGREGATION_PROMPT = """
 
 重点关注在时间段内合并信息，识别一致模式，并提供基于证据的见解。
 """
-

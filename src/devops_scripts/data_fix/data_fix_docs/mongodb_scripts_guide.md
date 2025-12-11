@@ -100,8 +100,8 @@ python src/bootstrap.py src/devops_scripts/data_fix/mongo_fix_episodic_memory_mi
   --limit 1000 \
   --batch 200 \
   --concurrency 8 \
-  --start-created-at "2025-09-16T20:20:06+08:00" \
-  --end-created-at "2025-09-30T23:59:59+08:00"
+  --start-created-at "2025-09-16T20:20:06+00:00" \
+  --end-created-at "2025-09-30T23:59:59+00:00"
 ```
 
 ### 参数说明
@@ -127,8 +127,8 @@ python src/bootstrap.py src/devops_scripts/data_fix/mongo_fix_episodic_memory_mi
 
 # 修复指定时间范围内的文档
 python src/bootstrap.py src/devops_scripts/data_fix/mongo_fix_episodic_memory_missing_vector.py \
-  --start-created-at "2025-09-01T00:00:00+08:00" \
-  --end-created-at "2025-09-30T23:59:59+08:00" \
+  --start-created-at "2025-09-01T00:00:00+00:00" \
+  --end-created-at "2025-09-30T23:59:59+00:00" \
   --batch 500 \
   --concurrency 16
 
@@ -192,9 +192,9 @@ TARGET_VECTOR_MODEL = "Qwen/Qwen3-Embedding-4B"
 ```
 🔍 开始扫描需修复文档（limit=1000, batch=200, concurrency=8）
 📦 拉取到候选 200 条（已累计处理=0/1000）
-⏱️ 当前处理到 created_at=2025-09-25T15:30:45+08:00
+⏱️ 当前处理到 created_at=2025-09-25T15:30:45+00:00
 📦 拉取到候选 200 条（已累计处理=200/1000）
-⏱️ 当前处理到 created_at=2025-09-24T10:20:30+08:00
+⏱️ 当前处理到 created_at=2025-09-24T10:20:30+00:00
 ...
 ✅ 修复完成 | total=1000, succeeded=995, failed=5
 ❌ 修复失败 doc=66f2a1b3c4d5e6f789012345, error=Timeout calling vectorize service
