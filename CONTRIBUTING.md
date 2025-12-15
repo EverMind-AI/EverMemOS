@@ -61,25 +61,39 @@ docker-compose up -d
 
 ### Commit Messages
 
-We use [Gitemoji](https://gitmoji.dev/) for commit messages:
+We use [Gitmoji](https://gitmoji.dev/) for commit messages.
 
+**Format**: `<emoji> <type>: <description>`
+
+**Examples**:
 ```
 ✨ feat: Add new memory retrieval algorithm
 🐛 fix: Fix memory leak in vector indexing
 📝 docs: Update API documentation
 ♻️ refactor: Simplify memory extraction logic
 ✅ test: Add tests for profile extraction
+⚡ perf: Optimize vector search performance
 ```
 
-**Format**: `<emoji> <type>: <description>`
+**Common Gitmoji**:
 
-Common types:
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation
-- `refactor`: Code refactoring
-- `test`: Adding tests
-- `perf`: Performance improvement
+| Emoji | Code | Usage |
+|-------|------|-------|
+| ✨ | `:sparkles:` | New feature |
+| 🐛 | `:bug:` | Bug fix |
+| 🚑 | `:ambulance:` | Critical hotfix |
+| 📝 | `:memo:` | Documentation |
+| ♻️ | `:recycle:` | Refactor code |
+| 🔥 | `:fire:` | Remove code/files |
+| ✅ | `:white_check_mark:` | Add tests |
+| ⚡ | `:zap:` | Performance improvement |
+| 🔧 | `:wrench:` | Configuration changes |
+| 🗃️ | `:card_file_box:` | Database changes |
+| ⬆️ | `:arrow_up:` | Upgrade dependencies |
+| 🐳 | `:whale:` | Docker related |
+| 🚀 | `:rocket:` | Deployment |
+
+See [gitmoji.dev](https://gitmoji.dev/) for full reference.
 
 ### Pull Request Process
 
