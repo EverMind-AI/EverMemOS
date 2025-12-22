@@ -30,7 +30,7 @@ class GeminiAdapter(LLMBackendAdapter):
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.api_key = config.get("api_key") or os.getenv("MONGODB_HOST")
+        self.api_key = config.get("api_key") or os.getenv("GEMINI_API_KEY")
         self.max_retries = config.get("max_retries", 3)
 
         if not self.api_key:

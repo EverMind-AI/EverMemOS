@@ -179,6 +179,14 @@ class FileCheckResult:
 ANALYSIS_PROMPT_TEMPLATE = '''You are a security expert reviewing code before it's published to GitHub.
 Your goal is to find REAL sensitive data that could cause harm if leaked, NOT placeholder/test data.
 
+## CRITICAL: Check Configuration Names Carefully
+
+For EVERY line that sets a default value for a configuration (e.g., os.getenv("X", "default"), get_env("X", "default")):
+- Split the default value by "_" or "-"  
+- Check: Is each word a COMMON English word or standard tech term?
+- If ANY word is NOT recognizable as a dictionary word, flag it as MEDIUM
+- This applies to: Kafka topics, queue names, bucket names, service names, group IDs, etc.
+
 ## Severity Levels
 
 ### HIGH severity (must fix before commit)
@@ -186,16 +194,37 @@ Your goal is to find REAL sensitive data that could cause harm if leaked, NOT pl
 - REAL passwords: complex passwords that appear to be actual credentials
 - Private keys, certificates, tokens that look real
 - Real personal data: actual phone numbers, ID cards, real names of specific real individuals
-- Real internal infrastructure: specific company internal IPs/domains
 
 ### MEDIUM severity (should review)
+- Internal IPs/domains that appear to be REAL infrastructure configuration
+  
+  Principle: Ask "Does this look like a placeholder/example, or a real server address?"
+  - Placeholder IPs have predictable patterns: x.x.0.1, x.x.1.1, x.x.0.0, x.x.255.255
+  - Real IPs have arbitrary middle/end segments that look like actual assignments
+  - Example: 192.168.1.1 is clearly a placeholder (common router default)
+  - Example: 192.168.47.83 looks like a real assigned IP (arbitrary numbers)
+
+- Internal configuration names that reveal real infrastructure
+  
+  PRINCIPLE: Configuration names should only contain DICTIONARY WORDS or INDUSTRY-STANDARD terms.
+  
+  Flag as MEDIUM if a configuration name contains:
+  - Abbreviations that are NOT industry-standard (API, HTTP, DB, SQL, JSON are standard)
+  - Words that are NOT in an English dictionary
+  - Words that look like they could be project names, product names, or company abbreviations
+  
+  The test: Can you find this word in a standard English dictionary or official technical documentation?
+  If not, it's likely internal terminology that reveals infrastructure details.
+  
+  NOTE: Even in os.getenv("VAR", "fallback") - if the fallback looks specific, flag it!
+  
+- Internal domains that look real (specific hostnames, not generic like "example.internal")
 - Data that MIGHT be real but you're not sure
 - Potential real user references that aren't obviously test data
 
 ### LOW severity (just a reminder, okay to commit)
 - Simple/obvious placeholder passwords: "123456", "123", "password", "admin", "test", "root", "memsys123"
   These are clearly NOT real secrets - no one uses these as actual passwords
-- Default values in code with os.getenv("VAR", "simple_default") patterns
 - Documentation examples showing connection formats
 - Anything that looks like intentional test/demo data
 
@@ -208,15 +237,22 @@ Ask yourself: Would a real person use this as their actual password/key?
 - "123" or "xxxx" → Obviously fake → SAFE
 
 ## What is SAFE (DO NOT flag)
-- Placeholder patterns: "xxxx", "your-xxx", "${VAR}", "{{placeholder}}"
-- Localhost, 127.0.0.1, example IPs like 192.168.1.1, 10.0.0.1
-- Generic domains: example.com, test.com, company.com, corp.com, demo.com, localhost
-- Obviously fictional test names (any language): 张三, 李四, John Doe, Alice, Bob, user_001, etc.
-- Test emails with generic/fake domains (company.com, example.com, test.com, etc.)
-- Fake phone numbers: 13800138000, sequential numbers, etc.
-- Code constructing strings with variables (not hardcoded secrets)
-- Documentation and README examples
-- Test file data that's obviously fictional
+
+Apply this principle: "Does it look intentionally fake/placeholder, or accidentally real?"
+
+- Placeholder patterns: strings with "xxxx", "your-", "${VAR}", "{{...}}", "<placeholder>"
+- IPs that are OBVIOUSLY examples: 
+  Pattern: ends with .0.1, .1.1, .0.0, .255.255, or is localhost/127.0.0.1
+  These are universally recognized defaults, not real infrastructure
+- Generic/example domains: contains "example", "test", "demo", "sample", "foo", "bar", or is localhost
+- Generic configuration names: "test-topic", "my-queue", "example-db", "default", "sample-bucket"
+  These use common placeholder words, not project-specific terms
+- Test names: Names that are culturally known as placeholder names (like John Doe in English)
+- Test emails: Uses obviously fake domains or placeholder usernames
+- Test phone numbers: Sequential digits, repeated patterns, or known test numbers
+- Environment variable reads WITHOUT fallback: os.getenv("SECRET") with no default is correct practice
+- Documentation showing formats/examples
+- Test file data with obviously fictional content
 
 ## Response Format
 
@@ -233,7 +269,14 @@ File path: __FILE_PATH__
 __CONTENT__
 ```
 
-Be very conservative. Simple passwords like "123456" are LOW, not HIGH. Only flag HIGH for things that look like REAL secrets.'''
+IMPORTANT: When reviewing, you MUST check these in order:
+1. API keys and passwords - flag if they look REAL (complex, not "123456")
+2. IP addresses in defaults - flag if they look ASSIGNED (not .0.1 or .1.1 patterns)
+3. Configuration names (Kafka topics, queues, buckets, etc.) - flag if they contain NON-DICTIONARY words
+   For each configuration name, split by "_" or "-" and check: is each part a common English word?
+   If you find a word that is NOT in a standard dictionary, it's likely an internal codename - flag as MEDIUM.
+
+Be conservative on passwords (simple ones like "123456" are LOW), but be STRICT on configuration names.'''
 
 
 def build_analysis_prompt(file_path: str, content: str) -> str:

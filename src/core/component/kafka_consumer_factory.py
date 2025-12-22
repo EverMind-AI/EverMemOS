@@ -74,8 +74,8 @@ def get_default_kafka_config(env_prefix: str = "") -> Dict[str, Any]:
     kafka_servers_str = get_env("KAFKA_SERVERS", "")
     kafka_servers = [server.strip() for server in kafka_servers_str.split(",")]
 
-    kafka_topic = get_env("KAFKA_TOPIC", "")
-    kafka_group_id = get_env("KAFKA_GROUP_ID", "aic_test_0908")
+    kafka_topic = get_env("KAFKA_TOPIC", "test_topic")
+    kafka_group_id = get_env("KAFKA_GROUP_ID", "test_group")
     max_poll_interval_ms = int(get_env("MAX_POLL_INTERVAL_MS", "3600000"))
     session_timeout_ms = int(get_env("SESSION_TIMEOUT_MS", "10000"))
     heartbeat_interval_ms = int(get_env("HEARTBEAT_INTERVAL_MS", "3000"))
