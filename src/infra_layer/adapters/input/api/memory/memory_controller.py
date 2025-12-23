@@ -32,6 +32,13 @@ from infra_layer.adapters.out.persistence.document.memory.conversation_meta impo
 from infra_layer.adapters.out.persistence.repository.conversation_meta_raw_repository import (
     ConversationMetaRawRepository,
 )
+from infra_layer.adapters.input.api.dto.memory_dto import (
+    MemorizeMessageRequest,
+    FetchMemoriesParams,
+    SearchMemoriesRequest,
+    ConversationMetaCreateRequest,
+    ConversationMetaPatchRequest,
+)
 from core.request.timeout_background import timeout_to_background
 from core.request import log_request
 from core.component.redis_provider import RedisProvider
@@ -72,30 +79,6 @@ class MemoryController(BaseController):
         - Extract single message into memory units (memcells)
         - Suitable for real-time message processing scenarios
         - Return list of saved memories
-        
-        ## Input format (simple direct):
-        ```json
-        {
-          "group_id": "group_123",
-          "group_name": "Project Discussion Group",
-          "message_id": "msg_001",
-          "create_time": "2025-01-15T10:00:00+00:00",
-          "sender": "user_001",
-          "sender_name": "Zhang San",
-          "content": "Today let's discuss the technical solution for the new feature",
-          "refer_list": ["msg_000"]
-        }
-        ```
-        
-        ## Field descriptions:
-        - **group_id** (optional): Group ID
-        - **group_name** (optional): Group name
-        - **message_id** (required): Message ID
-        - **create_time** (required): Message creation time (ISO 8601 format)
-        - **sender** (required): Sender user ID
-        - **sender_name** (optional): Sender name
-        - **content** (required): Message content
-        - **refer_list** (optional): List of referenced message IDs
         
         ## Interface description:
         - Receive simple direct single message format, no conversion required
@@ -181,7 +164,9 @@ class MemoryController(BaseController):
     @log_request()
     @timeout_to_background()
     async def memorize_single_message(
-        self, fastapi_request: FastAPIRequest
+        self,
+        fastapi_request: FastAPIRequest,
+        request_body: MemorizeMessageRequest = None,  # OpenAPI documentation only
     ) -> Dict[str, Any]:
         """
         Store single message memory data
@@ -190,6 +175,7 @@ class MemoryController(BaseController):
 
         Args:
             fastapi_request: FastAPI request object
+            request_body: Message request body (used for OpenAPI documentation only)
 
         Returns:
             Dict[str, Any]: Memory storage response, containing list of saved memories
@@ -197,6 +183,7 @@ class MemoryController(BaseController):
         Raises:
             HTTPException: When request processing fails
         """
+        del request_body  # Used for OpenAPI documentation only
         try:
             # 1. Get JSON body from request (simple direct format)
             message_data = await fastapi_request.json()
@@ -342,14 +329,20 @@ class MemoryController(BaseController):
             },
         },
     )
-    async def fetch_memories(self, fastapi_request: FastAPIRequest) -> Dict[str, Any]:
+    async def fetch_memories(
+        self,
+        fastapi_request: FastAPIRequest,
+        request_body: FetchMemoriesParams = None,  # OpenAPI documentation (body params)
+    ) -> Dict[str, Any]:
         """
         Retrieve user memory data
 
-        Directly retrieve stored core memories by user ID via KV method
+        Directly retrieve stored core memories by user ID via KV method.
+        Parameters are passed via request body (GET with body, similar to Elasticsearch style).
 
         Args:
             fastapi_request: FastAPI request object
+            request_body: Request body parameters (used for OpenAPI documentation only)
 
         Returns:
             Dict[str, Any]: Memory retrieval response
@@ -357,6 +350,7 @@ class MemoryController(BaseController):
         Raises:
             HTTPException: When request processing fails
         """
+        del request_body  # Used for OpenAPI documentation only
         try:
             # Get params from query params first
             params = dict(fastapi_request.query_params)
@@ -423,6 +417,8 @@ class MemoryController(BaseController):
         - **keyword**: Keyword-based BM25 search, suitable for exact matching, fast (default method)
         - **vector**: Semantic vector-based similarity search, suitable for fuzzy queries and semantic similarity
         - **hybrid**: Hybrid search strategy combining advantages of keyword and vector search (recommended)
+        - **rrf**: RRF fusion search, keyword + vector + RRF ranking fusion
+        - **agentic**: LLM-guided multi-round intelligent retrieval
         
         ## Result description:
         - Memories returned organized by group
@@ -509,14 +505,20 @@ class MemoryController(BaseController):
             },
         },
     )
-    async def search_memories(self, fastapi_request: FastAPIRequest) -> Dict[str, Any]:
+    async def search_memories(
+        self,
+        fastapi_request: FastAPIRequest,
+        request_body: SearchMemoriesRequest = None,  # OpenAPI documentation (body params)
+    ) -> Dict[str, Any]:
         """
         Search relevant memory data
 
-        Retrieve relevant memory data based on query text using keyword, vector, or hybrid methods
+        Retrieve relevant memory data based on query text using keyword, vector, or hybrid methods.
+        Parameters are passed via request body (GET with body, similar to Elasticsearch style).
 
         Args:
             fastapi_request: FastAPI request object
+            request_body: Request body parameters (used for OpenAPI documentation only)
 
         Returns:
             Dict[str, Any]: Memory search response
@@ -524,6 +526,7 @@ class MemoryController(BaseController):
         Raises:
             HTTPException: When request processing fails
         """
+        del request_body  # Used for OpenAPI documentation only
         try:
             # Get params from query params first
             query_params = dict(fastapi_request.query_params)
@@ -534,20 +537,20 @@ class MemoryController(BaseController):
                     if isinstance(body_data := json.loads(body), dict):
                         query_params.update(body_data)
 
-            query = query_params.get("query")
+            query_text = query_params.get("query")
             logger.info(
                 "Received search request: user_id=%s, query=%s, retrieve_method=%s",
                 query_params.get("user_id"),
-                query,
+                query_text,
                 query_params.get("retrieve_method"),
             )
 
             # Directly use converter to transform
             retrieve_request = convert_dict_to_retrieve_mem_request(
-                query_params, query=query
+                query_params, query=query_text
             )
             logger.info(
-                f"After conversion: retrieve_method={retrieve_request.retrieve_method}"
+                "After conversion: retrieve_method=%s", retrieve_request.retrieve_method
             )
 
             # Use retrieve_mem method (supports keyword, vector, hybrid)
@@ -597,7 +600,9 @@ class MemoryController(BaseController):
         """,
     )
     async def save_conversation_meta(
-        self, fastapi_request: FastAPIRequest
+        self,
+        fastapi_request: FastAPIRequest,
+        request_body: ConversationMetaCreateRequest = None,  # OpenAPI documentation only
     ) -> Dict[str, Any]:
         """
         Save conversation metadata
@@ -606,6 +611,7 @@ class MemoryController(BaseController):
 
         Args:
             fastapi_request: FastAPI request object
+            request_body: Conversation metadata request body (used for OpenAPI documentation only)
 
         Returns:
             Dict[str, Any]: Save response, containing saved metadata information
@@ -613,6 +619,7 @@ class MemoryController(BaseController):
         Raises:
             HTTPException: When request processing fails
         """
+        del request_body  # Used for OpenAPI documentation only
         try:
             # 1. Get JSON body from request
             request_data = await fastapi_request.json()
@@ -753,19 +760,6 @@ class MemoryController(BaseController):
         - Only update fields provided in the request, keep unchanged fields as-is
         - Suitable for scenarios requiring modification of partial information
         
-        ## Request example:
-        ```json
-        {
-          "group_id": "group_123",
-          "name": "New conversation name",
-          "tags": ["tag1", "tag2"]
-        }
-        ```
-        
-        ## Field descriptions:
-        - **group_id** (required): Group ID of the conversation to update
-        - All other fields are optional, only provide fields that need updating
-        
         ## Fields that can be updated:
         - **name**: Conversation name
         - **description**: Conversation description
@@ -842,7 +836,9 @@ class MemoryController(BaseController):
         },
     )
     async def patch_conversation_meta(
-        self, fastapi_request: FastAPIRequest
+        self,
+        fastapi_request: FastAPIRequest,
+        request_body: ConversationMetaPatchRequest = None,  # OpenAPI documentation only
     ) -> Dict[str, Any]:
         """
         Partially update conversation metadata
@@ -851,6 +847,7 @@ class MemoryController(BaseController):
 
         Args:
             fastapi_request: FastAPI request object
+            request_body: Patch request body (used for OpenAPI documentation only)
 
         Returns:
             Dict[str, Any]: Update response, containing updated metadata information
@@ -858,6 +855,7 @@ class MemoryController(BaseController):
         Raises:
             HTTPException: When request processing fails
         """
+        del request_body  # Used for OpenAPI documentation only
         try:
             # 1. Get JSON body from request
             request_data = await fastapi_request.json()
