@@ -235,21 +235,26 @@ class ChatUI:
             subject = (mem.get("subject") or "").strip()
             summary = (mem.get("summary") or "").strip()
             episode = (mem.get("episode") or "").strip()
+            foresight = (mem.get("foresight") or "").strip()  # Foresight content field
             atomic_fact = (mem.get("atomic_fact") or "").strip()
             content = (mem.get("content") or "").strip()
             
             # Select first non-empty field
-            display_text = subject or summary or episode or atomic_fact or content or "(No Content)"
+            display_text = subject or summary or episode or foresight or atomic_fact or content or "(No Content)"
             
             # Limit display length
             if len(display_text) > 80:
                 display_text = display_text[:77] + "..."
             
             # Build display line: show time if available, otherwise omit
+            score = mem.get("score")
+            score_text = ""
+            if isinstance(score, (int, float)):
+                score_text = f"{score:.3f} | "
             if event_time:
-                lines.append(f"📌 [{i}]  {event_time}  │  {display_text}")
+                lines.append(f"📌 [{i}]  {event_time}  │  {score_text}{display_text}")
             else:
-                lines.append(f"📌 [{i}]  {display_text}")
+                lines.append(f"📌 [{i}]  {score_text}{display_text}")
         
         if lines:
             print()

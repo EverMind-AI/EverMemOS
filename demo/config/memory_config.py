@@ -97,7 +97,7 @@ class ChatModeConfig:
     
     # Core parameters (usually no need to modify)
     api_base_url: str = field(default_factory=lambda: os.getenv("API_BASE_URL", "http://localhost:1995"))
-    top_k_memories: int = 20
+    top_k_memories: int = 10
     conversation_history_size: int = 10
     time_range_days: int = 365
     show_retrieved_memories: bool = True

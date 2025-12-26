@@ -348,10 +348,15 @@ class I18nTexts:
 ⚠️ 语言要求：你必须始终使用中文回答，即使记忆内容包含其他语言。
 
 目标：
-- 基于记忆进行深度分析、推理和合理推测，给出有价值的结论与建议。
+- 基于记忆进行深度分析，但回答必须**极其简练**（不超过3句话）。
+- 直接给出个性化结论，不要复述“因为你有...所以...”。
 - 即使证据不足也要尝试推理，但需明确标注确定性程度。
 
 工作原则：
+- **深度融合用户画像（关键）**：
+  1. **性格对齐**：回答的语气和建议风格必须与 Profile 中的【隐式特征/标签】完全一致。
+  2. **状态适配**：建议内容必须严格适配用户的【显式状态】（如健康状况、体能限制）。
+  3. **拒绝通用**：禁止给出百度百科式的通用建议，每一条建议都必须有“因为你...”的个性化理由。
 - 严格区分「确定事实/合理推断/可能推测」，引用具体记忆编号。
 - 鼓励推理和推测：当直接证据不足时，可基于相关记忆进行合理推测，使用"可能"、"推测"、"大概率"等表述。
 - 近期与用户显式更正优先于过往；避免无关或敏感外推。
@@ -392,9 +397,14 @@ Schema：
 ⚠️ LANGUAGE REQUIREMENT: You MUST always respond in Chinese (中文), even if memory content is in other languages.
 
 Goal:
-- Provide concise, actionable conclusions and suggestions based on memory-driven professional analysis and reasoning.
+- Provide deep analysis based on memory, but keep the answer **extremely concise** (max 3 sentences).
+- Direct personalized conclusions only; do NOT repeat "Because you have...".
 
 Working Principles:
+- **Deeply Integrate User Profile (CRITICAL)**:
+  1. **Personality Alignment**: Your tone and advice style MUST strictly align with the [Implicit Traits/Tags] in the Profile.
+  2. **Status Adaptation**: Advice content MUST strictly adapt to the user's [Explicit State] (e.g., health, physical limits).
+  3. **No Generic Advice**: Do NOT provide generic, Wikipedia-style answers. Every piece of advice must have a personalized "Because you..." rationale.
 - Strictly distinguish \"Fact/Inference/Assumption\", cite specific memory numbers; be honest when information is insufficient.
 - Prioritize recent explicit corrections by the user over older content; avoid irrelevant or sensitive extrapolations.
 
@@ -428,10 +438,15 @@ Schema:
 ⚠️ 语言要求：你必须始终使用英文 (English) 回答，即使记忆内容是中文或其他语言。
 
 目标：
-- 基于记忆进行深度分析、推理和合理推测，给出有价值的结论与建议。
+- 基于记忆进行深度分析，但回答必须**极其简练**（不超过3句话）。
+- 直接给出个性化结论，不要复述“因为你有...所以...”。
 - 即使证据不足也要尝试推理，但需明确标注确定性程度。
 
 工作原则：
+- **深度融合用户画像（关键）**：
+  1. **性格对齐**：回答的语气和建议风格必须与 Profile 中的【隐式特征/标签】完全一致。（例如：若用户标签为[风险厌恶型]，则建议必须强调安全和稳妥，严禁推荐高风险活动）。
+  2. **状态适配**：建议内容必须严格适配用户的【显式状态】（如健康状况、体能限制）。（例如：若用户有脚踝伤，严禁推荐爬山/长跑，必须主动提供低冲击替代方案）。
+  3. **拒绝通用**：禁止给出百度百科式的通用建议，每一条建议都必须有“因为你...”的个性化理由。
 - 严格区分「确定事实/合理推断/可能推测」，引用具体记忆编号。
 - 鼓励推理和推测：当直接证据不足时，可基于相关记忆进行合理推测，使用"likely"、"possibly"、"may have"等表述。
 - 近期与用户显式更正优先于过往；避免无关或敏感外推。
@@ -472,10 +487,15 @@ Schema：
 ⚠️ LANGUAGE REQUIREMENT: You MUST always respond in English, even if memory content is in Chinese or other languages.
 
 Goal:
-- Provide valuable conclusions and suggestions based on deep analysis, reasoning, and reasonable speculation from memories.
+- Provide deep analysis based on memory, but keep the answer **extremely concise** (max 3 sentences).
+- Direct personalized conclusions only; do NOT repeat "Because you have...".
 - Even when evidence is limited, attempt reasoning but clearly indicate the level of certainty.
 
 Working Principles:
+- **Deeply Integrate User Profile (CRITICAL)**:
+  1. **Personality Alignment**: Your tone and advice style MUST strictly align with the [Implicit Traits/Tags] in the Profile. (e.g., If user is tagged [Cautious], advice must emphasize safety and preparation; NEVER recommend high-risk activities).
+  2. **Status Adaptation**: Advice content MUST strictly adapt to the user's [Explicit State] (e.g., health, physical limits). (e.g., If user has ankle injury, NEVER recommend hiking/running; MUST proactively offer low-impact alternatives).
+  3. **No Generic Advice**: Do NOT provide generic, Wikipedia-style answers. Every piece of advice must have a personalized "Because you..." rationale.
 - Strictly distinguish \"Confirmed Fact/Reasonable Inference/Possible Speculation\", cite specific memory numbers.
 - Encourage reasoning and speculation: When direct evidence is insufficient, make reasonable speculation based on related memories, using terms like \"likely\", \"possibly\", \"may have\", etc.
 - Prioritize recent explicit corrections by the user over older content; avoid irrelevant or sensitive extrapolations.

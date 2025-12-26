@@ -610,7 +610,8 @@ class FetchMemoryServiceImpl(FetchMemoryServiceInterface):
                     
                     memories = []
                     for up in user_profiles:
-                        profile_data = up.profile_data or {}
+                        # Avoid mutating persisted dict instances (reduce hidden side effects)
+                        profile_data = dict(up.profile_data or {})
                         # Generate readable_profile if not present (for life profiles)
                         if "readable_profile" not in profile_data and "explicit_info" in profile_data:
                             profile_data["readable_profile"] = self._render_readable_profile(profile_data)

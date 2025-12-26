@@ -28,6 +28,7 @@ class ChatSession:
         retrieval_mode: str,  # "keyword" / "vector" / "hybrid" / "rrf" / "agentic"
         data_source: str,     # "episode" / "event_log"
         texts: I18nTexts,
+        user_id: str = "user_001",  # User ID for profile fetch
     ):
         """Initialize conversation session
 
@@ -39,8 +40,10 @@ class ChatSession:
             retrieval_mode: Retrieval mode (keyword/vector/hybrid/rrf/agentic)
             data_source: Data source (episode/event_log)
             texts: I18nTexts object
+            user_id: User ID for fetching profile
         """
         self.group_id = group_id
+        self.user_id = user_id
         self.config = config
         self.llm_config = llm_config
         self.scenario_type = scenario_type
@@ -219,172 +222,154 @@ class ChatSession:
         except Exception as e:
             print(f"[{self.texts.get('error_label')}] {e}")
 
-    async def retrieve_memories(self, query: str) -> List[Dict[str, Any]]:
-        """Retrieve relevant memories - via HTTP API call
-
-        Args:
-            query: User query
-
-        Returns:
-            List of retrieved memories
-        """
-        # 🔥 Select HTTP API endpoint based on retrieval mode
-        if self.retrieval_mode == "agentic":
-            # Agentic Retrieval API
-            result = await self._call_retrieve_agentic_api(query)
-        else:
-            # Lightweight Retrieval API
-            result = await self._call_retrieve_lightweight_api(query)
-
-        # Extract results and metadata
-        # memories is grouped: [{"group_id": [Memory, ...]}, ...]
-        raw_memories = result.get("memories", [])
-        metadata = result.get("metadata", {})
+    async def retrieve_memories(self, query: str) -> Dict[str, List[Dict[str, Any]]]:
+        """Retrieve memories (episodes, foresights, profile) in parallel."""
+        import asyncio
         
-        # Flatten grouped memories to flat list
-        memories = []
-        for group_dict in raw_memories:
-            for group_id, mem_list in group_dict.items():
-                memories.extend(mem_list)
+        tasks = [
+            self._search(query, memory_types=["episodic_memory"]),
+            self._search(query, memory_types=["foresight"]),
+            self._fetch_profile(),
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        # Save metadata (for UI display)
-        self.last_retrieval_metadata = metadata
-
-        return memories
-
-    async def _call_retrieve_lightweight_api(self, query: str) -> Dict[str, Any]:
-        """Call Lightweight Retrieval API (aligned with test_v1api_search.py)
-
-        Args:
-            query: User query
-
-        Returns:
-            Retrieval result dictionary
-        """
-        payload = {
-            "query": query,
-            "group_id": self.group_id,  # Pass group ID for filtering
-            "top_k": self.config.top_k_memories,
-            "memory_types": self.data_source,  # episodic_memory / event_log / foresight
-            "retrieve_method": self.retrieval_mode,  # keyword / vector / hybrid / rrf / agentic
+        all_memories = {"episodes": [], "foresights": [], "profiles": []}
+        
+        for i, (key, res) in enumerate(zip(["episodes", "foresights", "profiles"], results)):
+            if isinstance(res, Exception):
+                print(f"[Warning] {key}: {res}")
+            elif key == "profiles":
+                all_memories[key] = res
+            else:
+                all_memories[key] = self._flatten_result(res)
+        
+        # Metadata
+        latency = sum(
+            float(self._get_metadata(r).get("total_latency_ms", 0) or 0)
+            for r in results[:2] if not isinstance(r, Exception)
+        )
+        self.last_retrieval_metadata = {
+            "retrieval_mode": self.retrieval_mode,
+            "total_latency_ms": latency,
+            "episodes_count": len(all_memories["episodes"]),
+            "foresights_count": len(all_memories["foresights"]),
+            "profiles_count": len(all_memories["profiles"]),
         }
-        # Group chat scenario: Don't pass user_id, retrieve group-level shared memories
-        # Assistant scenario: Can pass user_id for personal memories (currently not passing, using group memories)
+        return all_memories
 
-        # Debug logs (shown only in dev environment)
-        # print(f"\n[DEBUG] Lightweight Retrieval Request:")
-        # print(f"  - API URL: {self.retrieve_url}")
-        # print(f"  - query: {query}")
-        # print(f"  - user_id: user_001")
-        # print(f"  - retrieval_mode: {self.retrieval_mode}")
-        # print(f"  - data_source: {self.data_source}")
-        # print(f"  - memory_scope: all")
-        # print(f"  - top_k: {self.config.top_k_memories}")
+    # ==================== Unified Search API (aligned with test_v1api_search.py) ====================
 
-        try:
-            # 🔥 Use GET with params for /api/v1/memories/search
-            async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-                response = await client.get(self.retrieve_url, params=payload)
-                response.raise_for_status()
-                api_response = response.json()
-
-                # Check API response status
-                if api_response.get("status") == "ok":
-                    result = api_response.get(
-                        "result", {"memories": [], "metadata": {}}
-                    )
-                    # memories_count = len(result.get("memories", []))
-                    # print(f"  ✅ Retrieval success: {memories_count} memories")
-                    return result
-                else:
-                    error_msg = api_response.get('message', 'Unknown error')
-                    # print(f"  ❌ API Error: {error_msg}")
-                    raise RuntimeError(f"API Error: {error_msg}")
-
-        except httpx.HTTPStatusError as e:
-            error_msg = f"HTTP {e.response.status_code}: {e.response.text}"
-            raise RuntimeError(error_msg)
-        except httpx.TimeoutException:
-            error_msg = "Request timeout (over 30s)"
-            raise RuntimeError(error_msg)
-        except httpx.ConnectError as e:
-            error_msg = f"Connection failed: Cannot connect to {self.api_base_url}\nPlease ensure V1 API service is started: uv run python src/bootstrap.py src/run.py"
-            raise RuntimeError(error_msg) from e
-        except Exception as e:
-            error_msg = f"Retrieval failed: {type(e).__name__}: {e}"
-            raise RuntimeError(error_msg)
-
-    async def _call_retrieve_agentic_api(self, query: str) -> Dict[str, Any]:
-        """Call Agentic Retrieval API (aligned with test_v1api_search.py)
-
-        Args:
-            query: User query
-
-        Returns:
-            Retrieval result dictionary
-        """
-        payload = {
+    async def _search(
+        self,
+        query: str,
+        memory_types: List[str] = None,
+        retrieve_method: str = None,
+        top_k: int = None,
+        user_id: str = None,
+        group_id: str = None,
+        timeout: float = 120.0,
+    ) -> Dict[str, Any]:
+        """Unified search API call (same as test_v1api_search.test_search_memories)."""
+        params = {
             "query": query,
-            "group_id": self.group_id,  # Pass group ID for filtering
-            "top_k": self.config.top_k_memories,
-            "memory_types": self.data_source,  # episodic_memory / event_log / foresight
-            "retrieve_method": "agentic",  # Force agentic mode
+            "retrieve_method": retrieve_method or self.retrieval_mode,
+            "top_k": top_k or self.config.top_k_memories,
         }
-        # Group chat scenario: Don't pass user_id, retrieve group-level shared memories
+        if user_id:
+            params["user_id"] = user_id
+        if group_id or self.group_id:
+            params["group_id"] = group_id or self.group_id
+        if memory_types:
+            params["memory_types"] = ",".join(memory_types)
 
-        # Debug logs (shown only in dev environment)
-        # print(f"\n[DEBUG] Agentic Retrieval Request:")
-        # print(f"  - API URL: {self.retrieve_url}")
-        # print(f"  - query: {query}")
-        # print(f"  - user_id: user_001")
-        # print(f"  - top_k: {self.config.top_k_memories}")
-        # print(f"  - time_range_days: {self.config.time_range_days}")
+        async with httpx.AsyncClient(timeout=timeout, verify=False) as client:
+            response = await client.get(self.retrieve_url, params=params)
+            response.raise_for_status()
+            return response.json()
 
-        # Show friendly wait hint (Internationalized)
-        print(f"\n⏳ {self.texts.get('agentic_retrieving')}")
+    async def _fetch_profile(self) -> List[Dict[str, Any]]:
+        """Fetch profile via GET /api/v1/memories."""
+        url = f"{self.api_base_url}/api/v1/memories"
+        params = {"user_id": self.user_id, "memory_type": "profile", "limit": 10}
 
-        try:
-            # 🔥 Agentic retrieval takes longer: increased to 180s (3 mins)
-            # Because it involves LLM calls, sufficiency judgment, multi-round retrieval etc.
-            async with httpx.AsyncClient(timeout=180.0, verify=False) as client:
-                response = await client.get(self.retrieve_url, params=payload)
-                response.raise_for_status()
-                api_response = response.json()
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
 
-                # Check API response status
-                if api_response.get("status") == "ok":
-                    result = api_response.get(
-                        "result", {"memories": [], "metadata": {}}
-                    )
-                    # memories_count = len(result.get("memories", []))
-                    # print(f"  ✅ Retrieval success: {memories_count} memories")
-                    return result
-                else:
-                    error_msg = api_response.get('message', 'Unknown error')
-                    # print(f"  ❌ API Error: {error_msg}")
-                    raise RuntimeError(f"API Error: {error_msg}")
+        if data.get("status") != "ok":
+            raise RuntimeError(f"API Error: {data.get('message')}")
 
-        except httpx.HTTPStatusError as e:
-            error_msg = f"HTTP {e.response.status_code}: {e.response.text}"
-            raise RuntimeError(error_msg)
-        except httpx.TimeoutException:
-            error_msg = "Request timeout (over 180s)\nHint: Agentic retrieval involves LLM calls and multi-round retrieval, taking longer\nSuggestion: Use RRF/Embedding/BM25 retrieval modes (faster)"
-            raise RuntimeError(error_msg)
-        except httpx.ConnectError as e:
-            error_msg = f"Connection failed: Cannot connect to {self.api_base_url}\nPlease ensure V1 API service is started: uv run python src/bootstrap.py src/run.py"
-            raise RuntimeError(error_msg) from e
-        except Exception as e:
-            error_msg = f"Agentic retrieval failed: {type(e).__name__}: {e}"
-            raise RuntimeError(error_msg)
+        raw_items = data.get("result", {}).get("memories", []) or []
+        records: List[Dict[str, Any]] = []
+        for entry in raw_items:
+            if not isinstance(entry, dict):
+                continue
+            if len(entry) == 1:
+                grouped_value = next(iter(entry.values()))
+                if isinstance(grouped_value, list):
+                    records.extend(r for r in grouped_value if isinstance(r, dict))
+                    continue
+
+            records.append(entry)
+        return records
+
+    def _get_metadata(self, resp: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract metadata from API response."""
+        if not resp or not isinstance(resp, dict):
+            return {}
+        result = resp.get("result") if isinstance(resp.get("result"), dict) else resp
+        return (result or {}).get("metadata", {}) or {}
+
+    def _flatten_result(self, resp: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Flatten grouped search result to flat list."""
+        if not resp or not isinstance(resp, dict):
+            return []
+
+        result = resp.get("result") if isinstance(resp.get("result"), dict) else resp
+        if not result:
+            return []
+
+        memories = result.get("memories", []) or []
+        scores = result.get("scores", []) or []
+
+        # Already flat list?
+        if memories and isinstance(memories[0], dict):
+            if not any(isinstance(v, list) for v in memories[0].values()):
+                return list(memories)
+
+        # Grouped: [{gid: [mem...]}, ...] + [{gid: [score...]}, ...]
+        score_map = {}
+        for s in scores:
+            if isinstance(s, dict):
+                for gid, slist in s.items():
+                    if isinstance(slist, list):
+                        score_map[gid] = slist
+
+        flat = []
+        for grp in memories:
+            if not isinstance(grp, dict):
+                continue
+            for gid, mlist in grp.items():
+                if not isinstance(mlist, list):
+                    continue
+                gscores = score_map.get(gid, [])
+                for i, m in enumerate(mlist):
+                    if isinstance(m, dict):
+                        item = dict(m)
+                        if "score" not in item and i < len(gscores):
+                            item["score"] = gscores[i]
+                        flat.append(item)
+        return flat
 
     def build_prompt(
-        self, user_query: str, memories: List[Dict[str, Any]]
+        self, user_query: str, memories: Dict[str, List[Dict[str, Any]]]
     ) -> List[Dict[str, str]]:
         """Build Prompt
 
         Args:
             user_query: User query
-            memories: Retrieved memory list
+            memories: Dict with "episodes", "foresights", "profiles"
 
         Returns:
             List of Chat Messages
@@ -396,42 +381,51 @@ class ChatSession:
         system_content = self.texts.get(f"prompt_system_role_{lang_key}")
         messages.append({"role": "system", "content": system_content})
 
-        # Retrieved Memories
-        if memories:
-            memory_lines = []
-            for i, mem in enumerate(memories, start=1):
-                # Use datetime_utils to uniformly handle time format
+        # Build memory context
+        memory_sections: List[str] = []
+
+        # 1) Profile (no numbering)
+        profiles = memories.get("profiles") or []
+        first_profile = profiles[0] if profiles else None
+        if isinstance(first_profile, dict):
+            profile_text = (first_profile.get("profile_data", {}) or {}).get(
+                "readable_profile"
+            )
+            if profile_text:
+                memory_sections.append(f"【User Profile】\n{profile_text}")
+
+        # 2) Foresights (no numbering)
+        foresights = memories.get("foresights", [])
+        if foresights:
+            foresight_lines: List[str] = []
+            for f in foresights[:self.config.top_k_memories]:
+                if not isinstance(f, dict):
+                    continue
+                content = f.get("foresight") or f.get("summary")
+                if content:
+                    foresight_lines.append(f"  - {content}")
+            if foresight_lines:
+                memory_sections.append("【Foresights】\n" + "\n".join(foresight_lines))
+
+        # 3) Episodes (numbered, aligned with UI)
+        episodes = memories.get("episodes", [])
+        if episodes:
+            episode_lines: List[str] = []
+            for i, mem in enumerate(episodes[:self.config.top_k_memories], start=1):
+                if not isinstance(mem, dict):
+                    continue
                 raw_timestamp = mem.get("timestamp", "")
                 iso_timestamp = to_iso_format(raw_timestamp)
-                # Only take date part (first 10 characters, e.g., 2025-12-04)
                 timestamp = iso_timestamp[:10] if iso_timestamp else ""
-                subject = mem.get("subject", "")
-                summary = mem.get("summary", "")
-                episode = mem.get("episode", "")
+                content = mem.get("summary") or mem.get("episode") or mem.get("subject")
+                if content:
+                    episode_lines.append(f"  [{i}] ({timestamp}) {content}")
+            if episode_lines:
+                memory_sections.append("【Related Memories】\n" + "\n".join(episode_lines))
 
-                parts = [
-                    f"[{i}] {self.texts.get('prompt_memory_date', date=timestamp)}"
-                ]
-                if subject:
-                    parts.append(
-                        self.texts.get("prompt_memory_subject", subject=subject)
-                    )
-                if summary:
-                    parts.append(
-                        self.texts.get("prompt_memory_content", content=summary)
-                    )
-                if episode:
-                    parts.append(
-                        self.texts.get("prompt_memory_episode", episode=episode)
-                    )
-
-                memory_lines.append(" | ".join(parts))
-
-            memory_content = self.texts.get("prompt_memories_prefix") + "\n".join(
-                memory_lines
-            )
-            messages.append({"role": "system", "content": memory_content})
-
+        # Add all memory sections as one system message
+        if memory_sections:
+            messages.append({"role": "system", "content": "\n\n".join(memory_sections)})
         # Conversation History
         for user_q, assistant_a in self.conversation_history[
             -self.config.conversation_history_size :
@@ -441,7 +435,6 @@ class ChatSession:
 
         # Current Question
         messages.append({"role": "user", "content": user_query})
-
         return messages
 
     async def chat(self, user_input: str) -> str:
@@ -460,8 +453,10 @@ class ChatSession:
 
         # Show Retrieval Results
         if self.config.show_retrieved_memories and memories:
+            # Combine all memory types for display (episodes have numbers)
+            all_memories = memories.get("episodes", [])[:5]
             ChatUI.print_retrieved_memories(
-                memories[:5],
+                all_memories,
                 texts=self.texts,
                 retrieval_metadata=self.last_retrieval_metadata,
             )

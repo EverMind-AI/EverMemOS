@@ -177,6 +177,16 @@ class ChatOrchestrator:
         chat_config = ChatModeConfig()
         llm_config = LLMConfig()
         
+        # Extract user_id from group_id (format: chat_user_001_assistant -> user_001)
+        user_id = "user_001"  # Default
+        if "_" in group_id:
+            parts = group_id.split("_")
+            # Try to find user_XXX pattern
+            for i, part in enumerate(parts):
+                if part == "user" and i + 1 < len(parts):
+                    user_id = f"user_{parts[i + 1]}"
+                    break
+        
         session = ChatSession(
             group_id=group_id,
             config=chat_config,
@@ -185,6 +195,7 @@ class ChatOrchestrator:
             retrieval_mode=retrieval_mode,
             data_source="episodic_memory",  # Use API memory_types value
             texts=texts,
+            user_id=user_id,
         )
         
         if not await session.initialize():
