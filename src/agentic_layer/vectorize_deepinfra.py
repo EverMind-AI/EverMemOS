@@ -37,14 +37,10 @@ class DeepInfraVectorizeConfig:
 
     def __post_init__(self):
         """Load configuration from environment variables"""
-        if not self.api_key:
-            self.api_key = os.getenv("DEEPINFRA_API_KEY", "")
-        if not self.base_url:
-            self.base_url = os.getenv(
-                "DEEPINFRA_BASE_URL", "https://api.deepinfra.com/v1/openai"
-            )
-        if not self.model:
-            self.model = os.getenv("DEEPINFRA_MODEL", "Qwen/Qwen3-Embedding-4B")
+        # Always read from environment variables, they override defaults
+        self.api_key = os.getenv("DEEPINFRA_API_KEY", self.api_key)
+        self.base_url = os.getenv("DEEPINFRA_BASE_URL", self.base_url)
+        self.model = os.getenv("DEEPINFRA_MODEL", self.model)
 
         self.timeout = int(os.getenv("VECTORIZE_TIMEOUT", str(self.timeout)))
         self.max_retries = int(os.getenv("VECTORIZE_MAX_RETRIES", str(self.max_retries)))

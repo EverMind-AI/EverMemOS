@@ -38,12 +38,10 @@ class CustomVectorizeConfig:
 
     def __post_init__(self):
         """Load configuration from environment variables"""
-        if not self.base_url:
-            self.base_url = os.getenv("CUSTOM_EMBEDDING_URL", "http://localhost:8000/v1")
-        if not self.api_key:
-            self.api_key = os.getenv("CUSTOM_EMBEDDING_API_KEY", "EMPTY")
-        if not self.model:
-            self.model = os.getenv("CUSTOM_EMBEDDING_MODEL", "Qwen/Qwen3-Embedding-4B")
+        # Always read from environment variables, they override defaults
+        self.base_url = os.getenv("CUSTOM_EMBEDDING_URL", self.base_url)
+        self.api_key = os.getenv("CUSTOM_EMBEDDING_API_KEY", self.api_key)
+        self.model = os.getenv("CUSTOM_EMBEDDING_MODEL", self.model)
 
         self.timeout = int(os.getenv("VECTORIZE_TIMEOUT", str(self.timeout)))
         self.max_retries = int(os.getenv("VECTORIZE_MAX_RETRIES", str(self.max_retries)))
@@ -138,14 +136,22 @@ class CustomVectorizeService(VectorizeServiceInterface):
                     return response
 
                 except Exception as e:
+                    error_msg = str(e)
                     logger.error(
-                        f"Custom service API error (attempt {attempt + 1}/{self.config.max_retries}): {e}"
+                        f"Custom service API error (attempt {attempt + 1}/{self.config.max_retries}): {error_msg}"
                     )
+                    
+                    # Log detailed error for debugging
+                    if "Connection" in error_msg or "timeout" in error_msg.lower():
+                        logger.warning(
+                            f"Network issue connecting to {self.config.base_url}: {error_msg}"
+                        )
+                    
                     if attempt < self.config.max_retries - 1:
                         await asyncio.sleep(2**attempt)
                         continue
                     else:
-                        raise VectorizeError(f"Custom service API request failed: {e}")
+                        raise VectorizeError(f"Custom service API request failed after {self.config.max_retries} attempts: {error_msg}")
 
     def _parse_embeddings_response(self, response) -> List[np.ndarray]:
         """Parse embeddings from API response"""
@@ -166,7 +172,6 @@ class CustomVectorizeService(VectorizeServiceInterface):
                     f"Client-side truncation: {len(emb)}D → {self.config.dimensions}D"
                 )
                 emb = emb[: self.config.dimensions]
-
             embeddings.append(emb)
         return embeddings
 
