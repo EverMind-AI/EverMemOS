@@ -13,6 +13,7 @@ Usage:
 
 import logging
 import os
+import time
 from typing import Optional, List, Tuple
 from dataclasses import dataclass, field
 import numpy as np
@@ -24,6 +25,11 @@ from agentic_layer.vectorize_vllm import VllmVectorizeService, VllmVectorizeConf
 from agentic_layer.vectorize_deepinfra import (
     DeepInfraVectorizeService,
     DeepInfraVectorizeConfig,
+)
+from agentic_layer.metrics.vectorize_metrics import (
+    record_vectorize_request,
+    record_vectorize_fallback,
+    record_vectorize_error,
 )
 
 logger = logging.getLogger(__name__)
@@ -255,6 +261,7 @@ class HybridVectorizeService(VectorizeServiceInterface):
             "get_embedding",
             lambda: self.primary_service.get_embedding(text, instruction, is_query),
             lambda: self.fallback_service.get_embedding(text, instruction, is_query) if self.fallback_service else None,
+            batch_size=1,
         )
     
     async def get_embedding_with_usage(
@@ -265,6 +272,7 @@ class HybridVectorizeService(VectorizeServiceInterface):
             "get_embedding_with_usage",
             lambda: self.primary_service.get_embedding_with_usage(text, instruction, is_query),
             lambda: self.fallback_service.get_embedding_with_usage(text, instruction, is_query) if self.fallback_service else None,
+            batch_size=1,
         )
     
     async def get_embeddings(
@@ -278,6 +286,7 @@ class HybridVectorizeService(VectorizeServiceInterface):
             "get_embeddings",
             lambda: self.primary_service.get_embeddings(texts, instruction, is_query),
             lambda: self.fallback_service.get_embeddings(texts, instruction, is_query) if self.fallback_service else None,
+            batch_size=len(texts),
         )
     
     async def get_embeddings_batch(
@@ -287,17 +296,25 @@ class HybridVectorizeService(VectorizeServiceInterface):
         is_query: bool = False,
     ) -> List[List[np.ndarray]]:
         """Get embeddings for multiple batches with automatic fallback"""
+        total_texts = sum(len(batch) for batch in text_batches)
         return await self.execute_with_fallback(
             "get_embeddings_batch",
             lambda: self.primary_service.get_embeddings_batch(text_batches, instruction, is_query),
             lambda: self.fallback_service.get_embeddings_batch(text_batches, instruction, is_query) if self.fallback_service else None,
+            batch_size=total_texts,
         )
     
     def get_model_name(self) -> str:
         """Get the current model name (from primary service)"""
         return self.primary_service.get_model_name()
 
-    async def execute_with_fallback(self, operation_name: str, primary_func, fallback_func):
+    async def execute_with_fallback(
+        self,
+        operation_name: str,
+        primary_func,
+        fallback_func,
+        batch_size: int = 1,
+    ):
         """
         Execute operation with automatic fallback logic
         
@@ -305,6 +322,7 @@ class HybridVectorizeService(VectorizeServiceInterface):
             operation_name: Name of the operation for logging
             primary_func: Function to call on primary service
             fallback_func: Function to call on fallback service (or None if no fallback)
+            batch_size: Number of texts being processed (for metrics)
             
         Returns:
             Result from primary or fallback service
@@ -312,16 +330,41 @@ class HybridVectorizeService(VectorizeServiceInterface):
         Raises:
             VectorizeError: If both services fail
         """
+        start_time = time.perf_counter()
+        
         # Try primary service first
         try:
             result = await primary_func()
+            duration = time.perf_counter() - start_time
+            
+            # Record success metrics
+            record_vectorize_request(
+                provider=self.config.primary_provider,
+                operation=operation_name,
+                status='success',
+                duration_seconds=duration,
+                batch_size=batch_size,
+            )
+            
             # Reset failure count on success
             self.config._primary_failure_count = 0
             return result
 
         except Exception as primary_error:
+            primary_duration = time.perf_counter() - start_time
+            
             # Increment failure count
             self.config._primary_failure_count += 1
+            
+            # Determine error type
+            error_type = self._classify_error(primary_error)
+            
+            # Record error metrics
+            record_vectorize_error(
+                provider=self.config.primary_provider,
+                operation=operation_name,
+                error_type=error_type,
+            )
 
             logger.warning(
                 f"Primary service ({self.config.primary_provider}) {operation_name} failed "
@@ -330,31 +373,90 @@ class HybridVectorizeService(VectorizeServiceInterface):
 
             # Check if fallback is enabled
             if not self.config.enable_fallback or fallback_func is None:
+                # Record failed request (no fallback)
+                record_vectorize_request(
+                    provider=self.config.primary_provider,
+                    operation=operation_name,
+                    status='error',
+                    duration_seconds=primary_duration,
+                    batch_size=batch_size,
+                )
                 logger.error("Fallback disabled or not configured, re-raising error")
                 raise VectorizeError(
                     f"Primary service failed and fallback is disabled: {primary_error}"
                 )
 
-            # Check if exceeded max failures
+            # Determine fallback reason
+            fallback_reason = error_type
             if self.config._primary_failure_count >= self.config.max_primary_failures:
+                fallback_reason = 'max_failures_exceeded'
                 logger.warning(
                     f"⚠️ Primary service exceeded max failures ({self.config.max_primary_failures}), "
                     f"using {self.config.fallback_provider} fallback"
                 )
 
+            # Record fallback event
+            record_vectorize_fallback(
+                primary_provider=self.config.primary_provider,
+                fallback_provider=self.config.fallback_provider,
+                reason=fallback_reason,
+            )
+
             # Try fallback service
+            fallback_start = time.perf_counter()
             try:
                 logger.info(f"🔄 Falling back to {self.config.fallback_provider} for {operation_name}")
                 result = await fallback_func()
+                fallback_duration = time.perf_counter() - fallback_start
+                
+                # Record fallback success metrics
+                record_vectorize_request(
+                    provider=self.config.fallback_provider,
+                    operation=operation_name,
+                    status='fallback',
+                    duration_seconds=fallback_duration,
+                    batch_size=batch_size,
+                )
+                
                 return result
 
             except Exception as fallback_error:
+                fallback_duration = time.perf_counter() - fallback_start
+                
+                # Record fallback error
+                record_vectorize_error(
+                    provider=self.config.fallback_provider,
+                    operation=operation_name,
+                    error_type=self._classify_error(fallback_error),
+                )
+                record_vectorize_request(
+                    provider=self.config.fallback_provider,
+                    operation=operation_name,
+                    status='error',
+                    duration_seconds=fallback_duration,
+                    batch_size=batch_size,
+                )
+                
                 logger.error(f"❌ Fallback also failed: {fallback_error}")
                 raise VectorizeError(
                     f"Both primary and fallback services failed. "
                     f"Primary ({self.config.primary_provider}): {primary_error}, "
                     f"Fallback ({self.config.fallback_provider}): {fallback_error}"
                 )
+    
+    def _classify_error(self, error: Exception) -> str:
+        """Classify error type for metrics"""
+        error_str = str(error).lower()
+        if 'timeout' in error_str or 'timed out' in error_str:
+            return 'timeout'
+        elif 'rate' in error_str and 'limit' in error_str:
+            return 'rate_limit'
+        elif 'validation' in error_str or 'invalid' in error_str:
+            return 'validation_error'
+        elif isinstance(error, VectorizeError):
+            return 'api_error'
+        else:
+            return 'unknown'
 
     def get_failure_count(self) -> int:
         """Get current primary service failure count"""

@@ -1,0 +1,58 @@
+"""
+Agentic Layer Metrics
+
+Memory retrieval flow metrics including:
+- Vectorize (Embedding) metrics
+- Rerank metrics
+- Retrieve pipeline metrics
+"""
+
+from .vectorize_metrics import (
+    VECTORIZE_REQUESTS_TOTAL,
+    VECTORIZE_DURATION_SECONDS,
+    VECTORIZE_BATCH_SIZE,
+    VECTORIZE_FALLBACK_TOTAL,
+    VECTORIZE_ERRORS_TOTAL,
+    VECTORIZE_TOKENS_TOTAL,
+)
+
+from .rerank_metrics import (
+    RERANK_REQUESTS_TOTAL,
+    RERANK_DURATION_SECONDS,
+    RERANK_DOCUMENTS_TOTAL,
+    RERANK_FALLBACK_TOTAL,
+    RERANK_ERRORS_TOTAL,
+)
+
+from .retrieve_metrics import (
+    RETRIEVE_REQUESTS_TOTAL,
+    RETRIEVE_DURATION_SECONDS,
+    RETRIEVE_RESULTS_COUNT,
+    RETRIEVE_STAGE_DURATION_SECONDS,
+    RETRIEVE_ERRORS_TOTAL,
+)
+
+__all__ = [
+    # Vectorize metrics
+    'VECTORIZE_REQUESTS_TOTAL',
+    'VECTORIZE_DURATION_SECONDS',
+    'VECTORIZE_BATCH_SIZE',
+    'VECTORIZE_FALLBACK_TOTAL',
+    'VECTORIZE_ERRORS_TOTAL',
+    'VECTORIZE_TOKENS_TOTAL',
+    
+    # Rerank metrics
+    'RERANK_REQUESTS_TOTAL',
+    'RERANK_DURATION_SECONDS',
+    'RERANK_DOCUMENTS_TOTAL',
+    'RERANK_FALLBACK_TOTAL',
+    'RERANK_ERRORS_TOTAL',
+    
+    # Retrieve metrics
+    'RETRIEVE_REQUESTS_TOTAL',
+    'RETRIEVE_DURATION_SECONDS',
+    'RETRIEVE_RESULTS_COUNT',
+    'RETRIEVE_STAGE_DURATION_SECONDS',
+    'RETRIEVE_ERRORS_TOTAL',
+]
+

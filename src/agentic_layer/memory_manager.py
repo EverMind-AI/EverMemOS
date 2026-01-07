@@ -67,6 +67,11 @@ from infra_layer.adapters.out.search.repository.event_log_milvus_repository impo
 from .vectorize_service import get_vectorize_service
 from .rerank_service import get_rerank_service
 from api_specs.memory_models import MemoryType, RetrieveMethod
+from agentic_layer.metrics.retrieve_metrics import (
+    record_retrieve_request,
+    record_retrieve_stage,
+    record_retrieve_error,
+)
 import os
 from memory_layer.llm.llm_provider import LLMProvider
 from agentic_layer.agentic_utils import (
@@ -244,16 +249,42 @@ class MemoryManager:
         self, retrieve_mem_request: 'RetrieveMemRequest'
     ) -> RetrieveMemResponse:
         """Keyword-based memory retrieval"""
+        start_time = time.perf_counter()
+        memory_type = retrieve_mem_request.memory_types[0].value if retrieve_mem_request.memory_types else 'unknown'
+        
         try:
-            hits = await self.get_keyword_search_results(retrieve_mem_request)
+            hits = await self.get_keyword_search_results(retrieve_mem_request, retrieve_method='keyword_search')
+            duration = time.perf_counter() - start_time
+            status = 'success' if hits else 'empty_result'
+            
+            record_retrieve_request(
+                memory_type=memory_type,
+                retrieve_method='keyword_search',
+                status=status,
+                duration_seconds=duration,
+                results_count=len(hits),
+            )
+            
             return await self._to_response(hits, retrieve_mem_request)
         except Exception as e:
+            duration = time.perf_counter() - start_time
+            record_retrieve_request(
+                memory_type=memory_type,
+                retrieve_method='keyword_search',
+                status='error',
+                duration_seconds=duration,
+                results_count=0,
+            )
             logger.error(f"Error in retrieve_mem_keyword: {e}", exc_info=True)
             return await self._to_response([], retrieve_mem_request)
 
     async def get_keyword_search_results(
-        self, retrieve_mem_request: 'RetrieveMemRequest'
+        self, retrieve_mem_request: 'RetrieveMemRequest', retrieve_method: str = 'keyword_search'
     ) -> List[Dict[str, Any]]:
+        """Keyword search with stage-level metrics"""
+        stage_start = time.perf_counter()
+        memory_type = retrieve_mem_request.memory_types[0].value if retrieve_mem_request.memory_types else 'unknown'
+        
         try:
             # Get parameters from Request
             if not retrieve_mem_request:
@@ -311,10 +342,29 @@ class MemoryManager:
                     r['id'] = r.get('_id', '')  # Unify ES '_id' to 'id'
                     r['score'] = r.get('_score', 0.0)  # Unified score field
 
+            # Record stage metrics
+            record_retrieve_stage(
+                retrieve_method=retrieve_method,
+                stage='keyword_search',
+                memory_type=memory_type,
+                duration_seconds=time.perf_counter() - stage_start,
+            )
+            
             return results or []
         except Exception as e:
+            record_retrieve_stage(
+                retrieve_method=retrieve_method,
+                stage='keyword_search',
+                memory_type=memory_type,
+                duration_seconds=time.perf_counter() - stage_start,
+            )
+            record_retrieve_error(
+                retrieve_method=retrieve_method,
+                stage='keyword_search',
+                error_type=self._classify_retrieve_error(e),
+            )
             logger.error(f"Error in get_keyword_search_results: {e}")
-            return []
+            raise
 
     # Vector-based memory retrieval
     @trace_logger(operation_name="agentic_layer vector memory retrieval")
@@ -322,16 +372,41 @@ class MemoryManager:
         self, retrieve_mem_request: 'RetrieveMemRequest'
     ) -> RetrieveMemResponse:
         """Vector-based memory retrieval"""
+        start_time = time.perf_counter()
+        memory_type = retrieve_mem_request.memory_types[0].value if retrieve_mem_request.memory_types else 'unknown'
+        
         try:
-            hits = await self.get_vector_search_results(retrieve_mem_request)
+            hits = await self.get_vector_search_results(retrieve_mem_request, retrieve_method='vector_search')
+            duration = time.perf_counter() - start_time
+            status = 'success' if hits else 'empty_result'
+            
+            record_retrieve_request(
+                memory_type=memory_type,
+                retrieve_method='vector_search',
+                status=status,
+                duration_seconds=duration,
+                results_count=len(hits),
+            )
+            
             return await self._to_response(hits, retrieve_mem_request)
         except Exception as e:
+            duration = time.perf_counter() - start_time
+            record_retrieve_request(
+                memory_type=memory_type,
+                retrieve_method='vector_search',
+                status='error',
+                duration_seconds=duration,
+                results_count=0,
+            )
             logger.error(f"Error in retrieve_mem_vector: {e}")
             return await self._to_response([], retrieve_mem_request)
 
     async def get_vector_search_results(
-        self, retrieve_mem_request: 'RetrieveMemRequest'
+        self, retrieve_mem_request: 'RetrieveMemRequest', retrieve_method: str = 'vector_search'
     ) -> List[Dict[str, Any]]:
+        """Vector search with stage-level metrics (embedding + milvus_search)"""
+        memory_type = retrieve_mem_request.memory_types[0].value if retrieve_mem_request.memory_types else 'unknown'
+        
         try:
             # Get parameters from Request
             logger.debug(
@@ -350,6 +425,7 @@ class MemoryManager:
             top_k = retrieve_mem_request.top_k
             start_time = retrieve_mem_request.start_time
             end_time = retrieve_mem_request.end_time
+            mem_type = retrieve_mem_request.memory_types[0]
 
             logger.debug(
                 f"retrieve_mem_vector called with query: {query}, user_id: {user_id}, group_id: {group_id}, top_k: {top_k}"
@@ -358,16 +434,22 @@ class MemoryManager:
             # Get vectorization service
             vectorize_service = get_vectorize_service()
 
-            # Convert query text to vector
+            # Convert query text to vector (embedding stage)
             logger.debug(f"Starting to vectorize query text: {query}")
+            embedding_start = time.perf_counter()
             query_vector = await vectorize_service.get_embedding(query)
             query_vector_list = query_vector.tolist()  # Convert to list format
+            record_retrieve_stage(
+                retrieve_method=retrieve_method,
+                stage='embedding',
+                memory_type=memory_type,
+                duration_seconds=time.perf_counter() - embedding_start,
+            )
             logger.debug(
                 f"Query text vectorization completed, vector dimension: {len(query_vector_list)}"
             )
 
             # Select Milvus repository based on memory type
-            mem_type = retrieve_mem_request.memory_types[0]
             match mem_type:
                 case MemoryType.FORESIGHT:
                     milvus_repo = get_bean_by_type(ForesightMilvusRepository)
@@ -409,6 +491,7 @@ class MemoryManager:
                     current_time_dt = from_iso_format(retrieve_mem_request.current_time)
 
             # Call Milvus vector search (pass different parameters based on memory type)
+            milvus_start = time.perf_counter()
             if mem_type == MemoryType.FORESIGHT:
                 # Foresight: supports time range and validity filtering, supports radius parameter
                 search_results = await milvus_repo.vector_search(
@@ -434,6 +517,12 @@ class MemoryManager:
                     score_threshold=0.0,
                     radius=retrieve_mem_request.radius,
                 )
+            record_retrieve_stage(
+                retrieve_method=retrieve_method,
+                stage='milvus_search',
+                memory_type=memory_type,
+                duration_seconds=time.perf_counter() - milvus_start,
+            )
 
             for r in search_results:
                 r['memory_type'] = mem_type.value
@@ -442,8 +531,19 @@ class MemoryManager:
 
             return search_results
         except Exception as e:
+            record_retrieve_stage(
+                retrieve_method=retrieve_method,
+                stage='vector_search',
+                memory_type=memory_type,
+                duration_seconds=time.perf_counter() - milvus_start,
+            )
+            record_retrieve_error(
+                retrieve_method=retrieve_method,
+                stage='vector_search',
+                error_type=self._classify_retrieve_error(e),
+            )
             logger.error(f"Error in get_vector_search_results: {e}")
-            return []
+            raise
 
     # Hybrid memory retrieval
     @trace_logger(operation_name="agentic_layer hybrid memory retrieval")
@@ -451,45 +551,110 @@ class MemoryManager:
         self, retrieve_mem_request: 'RetrieveMemRequest'
     ) -> RetrieveMemResponse:
         """Hybrid memory retrieval: keyword + vector + rerank"""
+        start_time = time.perf_counter()
+        memory_type = retrieve_mem_request.memory_types[0].value if retrieve_mem_request.memory_types else 'unknown'
+        
         try:
-            hits = await self._search_hybrid(retrieve_mem_request)
+            hits = await self._search_hybrid(retrieve_mem_request, retrieve_method='hybrid')
+            duration = time.perf_counter() - start_time
+            status = 'success' if hits else 'empty_result'
+            
+            record_retrieve_request(
+                memory_type=memory_type,
+                retrieve_method='hybrid',
+                status=status,
+                duration_seconds=duration,
+                results_count=len(hits),
+            )
+            
             return await self._to_response(hits, retrieve_mem_request)
         except Exception as e:
+            duration = time.perf_counter() - start_time
+            record_retrieve_request(
+                memory_type=memory_type,
+                retrieve_method='hybrid',
+                status='error',
+                duration_seconds=duration,
+                results_count=0,
+            )
             logger.error(f"Error in retrieve_mem_hybrid: {e}")
             return await self._to_response([], retrieve_mem_request)
 
     # ================== Core Internal Methods ==================
 
-    async def _rerank(self, query: str, hits: List[Dict], top_k: int) -> List[Dict]:
-        """Rerank hits using rerank service"""
+    async def _rerank(
+        self, query: str, hits: List[Dict], top_k: int,
+        memory_type: str = 'unknown', retrieve_method: str = 'hybrid'
+    ) -> List[Dict]:
+        """Rerank hits using rerank service with stage metrics"""
         if not hits:
             return []
+        
+        stage_start = time.perf_counter()
         try:
-            return await get_rerank_service().rerank_memories(query, hits, top_k)
+            result = await get_rerank_service().rerank_memories(query, hits, top_k)
+            record_retrieve_stage(
+                retrieve_method=retrieve_method,
+                stage='rerank',
+                memory_type=memory_type,
+                duration_seconds=time.perf_counter() - stage_start,
+            )
+            return result
         except Exception as e:
-            raise e
+            record_retrieve_error(
+                retrieve_method=retrieve_method,
+                stage='rerank',
+                error_type=self._classify_retrieve_error(e),
+            )
+            raise
 
-    async def _search_hybrid(self, request: 'RetrieveMemRequest') -> List[Dict]:
+    async def _search_hybrid(self, request: 'RetrieveMemRequest', retrieve_method: str = 'hybrid') -> List[Dict]:
         """Core hybrid search: keyword + vector + rerank, returns flat list"""
-        kw_results = await self.get_keyword_search_results(request)
-        vec_results = await self.get_vector_search_results(request)
+        memory_type = request.memory_types[0].value if request.memory_types else 'unknown'
+        
+        kw_results = await self.get_keyword_search_results(request, retrieve_method=retrieve_method)
+        vec_results = await self.get_vector_search_results(request, retrieve_method=retrieve_method)
         # Deduplicate by id
         seen_ids = {h.get('id') for h in kw_results}
         merged_results = kw_results + [
             h for h in vec_results if h.get('id') not in seen_ids
         ]
-        return await self._rerank(request.query, merged_results, request.top_k)
+        return await self._rerank(request.query, merged_results, request.top_k, memory_type, retrieve_method)
 
-    async def _search_rrf(self, request: 'RetrieveMemRequest') -> List[Dict]:
+    async def _search_rrf(self, request: 'RetrieveMemRequest', retrieve_method: str = 'rrf') -> List[Dict]:
         """Core RRF search: keyword + vector + RRF fusion, returns flat list"""
-
-        kw = await self.get_keyword_search_results(request)
-        vec = await self.get_vector_search_results(request)
-        # RRF fusion
+        memory_type = request.memory_types[0].value if request.memory_types else 'unknown'
+        
+        kw = await self.get_keyword_search_results(request, retrieve_method=retrieve_method)
+        vec = await self.get_vector_search_results(request, retrieve_method=retrieve_method)
+        
+        # RRF fusion with stage metrics
+        rrf_start = time.perf_counter()
         kw_tuples = [(h, h.get('score', 0)) for h in kw]
         vec_tuples = [(h, h.get('score', 0)) for h in vec]
         fused = reciprocal_rank_fusion(kw_tuples, vec_tuples, k=60)
+        record_retrieve_stage(
+            retrieve_method=retrieve_method,
+            stage='rrf_fusion',
+            memory_type=memory_type,
+            duration_seconds=time.perf_counter() - rrf_start,
+        )
+        
         return [dict(doc, score=score) for doc, score in fused[: request.top_k]]
+
+    def _classify_retrieve_error(self, error: Exception) -> str:
+        """Classify error type for metrics"""
+        error_str = str(error).lower()
+        if 'timeout' in error_str or 'timed out' in error_str:
+            return 'timeout'
+        elif 'connection' in error_str or 'connect' in error_str:
+            return 'connection_error'
+        elif 'not found' in error_str or 'notfound' in error_str:
+            return 'not_found'
+        elif 'validation' in error_str or 'invalid' in error_str:
+            return 'validation_error'
+        else:
+            return 'unknown'
 
     async def _to_response(
         self, hits: List[Dict], req: 'RetrieveMemRequest'
@@ -538,10 +703,32 @@ class MemoryManager:
         self, retrieve_mem_request: 'RetrieveMemRequest'
     ) -> RetrieveMemResponse:
         """RRF-based memory retrieval: keyword + vector + RRF fusion"""
+        start_time = time.perf_counter()
+        memory_type = retrieve_mem_request.memory_types[0].value if retrieve_mem_request.memory_types else 'unknown'
+        
         try:
-            hits = await self._search_rrf(retrieve_mem_request)
+            hits = await self._search_rrf(retrieve_mem_request, retrieve_method='rrf')
+            duration = time.perf_counter() - start_time
+            status = 'success' if hits else 'empty_result'
+            
+            record_retrieve_request(
+                memory_type=memory_type,
+                retrieve_method='rrf',
+                status=status,
+                duration_seconds=duration,
+                results_count=len(hits),
+            )
+            
             return await self._to_response(hits, retrieve_mem_request)
         except Exception as e:
+            duration = time.perf_counter() - start_time
+            record_retrieve_request(
+                memory_type=memory_type,
+                retrieve_method='rrf',
+                status='error',
+                duration_seconds=duration,
+                results_count=0,
+            )
             logger.error(f"Error in retrieve_mem_rrf: {e}", exc_info=True)
             return await self._to_response([], retrieve_mem_request)
 
@@ -554,10 +741,11 @@ class MemoryManager:
 
         Process: Round 1 (Hybrid) → Rerank → LLM sufficiency check → Round 2 (multi-query) → Merge → Final Rerank
         """
-
+        start_time = time.perf_counter()
         req = retrieve_mem_request  # alias
         top_k = req.top_k
         config = AgenticConfig()
+        memory_type = req.memory_types[0].value if req.memory_types else 'unknown'
 
         try:
             llm_provider = LLMProvider(
@@ -579,14 +767,22 @@ class MemoryManager:
                 top_k=config.round1_top_n,
                 memory_types=req.memory_types,
             )
-            round1 = await self._search_hybrid(req1)
+            round1 = await self._search_hybrid(req1, retrieve_method='agentic')
             logger.info(f"Round 1: {len(round1)} memories")
 
             if not round1:
+                duration = time.perf_counter() - start_time
+                record_retrieve_request(
+                    memory_type=memory_type,
+                    retrieve_method='agentic',
+                    status='empty_result',
+                    duration_seconds=duration,
+                    results_count=0,
+                )
                 return await self._to_response([], req)
 
             # ========== Rerank → Top 5 for LLM ==========
-            topn = await self._rerank(req.query, round1, config.round1_rerank_top_n)
+            topn = await self._rerank(req.query, round1, config.round1_rerank_top_n, memory_type, 'agentic')
             topn_pairs = [(m, m.get("score", 0)) for m in topn]
 
             # ========== LLM sufficiency check ==========
@@ -601,6 +797,14 @@ class MemoryManager:
             )
 
             if is_sufficient:
+                duration = time.perf_counter() - start_time
+                record_retrieve_request(
+                    memory_type=memory_type,
+                    retrieve_method='agentic',
+                    status='success',
+                    duration_seconds=duration,
+                    results_count=len(round1[:top_k]),
+                )
                 return await self._to_response(round1[:top_k], req)
 
             # ========== Round 2: Multi-query ==========
@@ -623,7 +827,8 @@ class MemoryManager:
                         group_id=req.group_id,
                         top_k=config.round2_per_query_top_n,
                         memory_types=req.memory_types,
-                    )
+                    ),
+                    retrieve_method='agentic'
                 )
 
             round2_results = await asyncio.gather(
@@ -640,10 +845,28 @@ class MemoryManager:
             logger.info(f"Combined: {len(combined)} memories")
 
             # ========== Final Rerank ==========
-            final = await self._rerank(req.query, combined, top_k)
+            final = await self._rerank(req.query, combined, top_k, memory_type, 'agentic')
+            
+            duration = time.perf_counter() - start_time
+            record_retrieve_request(
+                memory_type=memory_type,
+                retrieve_method='agentic',
+                status='success',
+                duration_seconds=duration,
+                results_count=len(final[:top_k]),
+            )
+            
             return await self._to_response(final[:top_k], req)
 
         except Exception as e:
+            duration = time.perf_counter() - start_time
+            record_retrieve_request(
+                memory_type=memory_type,
+                retrieve_method='agentic',
+                status='error',
+                duration_seconds=duration,
+                results_count=0,
+            )
             logger.error(f"Error in retrieve_mem_agentic: {e}", exc_info=True)
             return await self._to_response([], req)
 

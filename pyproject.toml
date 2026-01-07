@@ -5,7 +5,7 @@ description = "Memory System with Dynamic and Static Memory Management"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    # 核心依赖 - Core Dependencies
+    # Core Dependencies
     "langgraph>=0.2.6",
     "langgraph-api",
     "langgraph-cli",
@@ -17,47 +17,47 @@ dependencies = [
     "langchain-anthropic>=0.3.17",
     "langchain-google-genai>=2.1.8",
     "google-genai>=1.21.0",
-    # 数据处理 - Data Processing
+    # Data Processing
     "numpy>=1.24.0",
     "pandas>=2.0.0",
     "scikit-learn>=1.3.0",
     # OpenAI API
     "openai>=1.0.0",
-    # 数据验证和配置 - Data Validation & Configuration
+    # Data Validation & Configuration
     "pydantic[email]>=2.7.1",
     "pydantic-settings>=2.0.0",
     "python-dotenv>=1.0.1",
     "pyyaml>=6.0.0",
-    # Web框架和API - Web Framework & API
+    # Web Framework & API
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
     "greenlet>=3.2.0",
-    # HTTP客户端和文件处理 - HTTP Client & File Processing
+    # HTTP Client & File Processing
     "aiohttp>=3.8.0",
     "python-multipart>=0.0.6",
     "aiofiles>=24.1.0",
-    # 消息队列 - Message Queue
+    # Message Queue
     "aiokafka>=0.11.0",
-    # 认证和安全 - Authentication & Security
+    # Authentication & Security
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
-    # 数据库和缓存 - Database & Cache
+    # Database & Cache
     "redis>=5.0.0",
     "sqlmodel>=0.0.19",
     "asyncpg>=0.29.0",
     "psycopg[binary,pool]>=3.1.0",
     # MongoDB ODM - MongoDB Object Document Mapper
-    "beanie>=1.26.0", # 基于Pydantic的异步MongoDB ODM
-    "pymongo>=4.15.4", # MongoDB官方Python驱动（Beanie底层依赖）
+    "beanie>=1.26.0",  # Async MongoDB ODM based on Pydantic
+    "pymongo>=4.15.4",  # Official MongoDB Python driver (Beanie's underlying dependency)
     # Elasticsearch
     "elasticsearch-dsl[async]>=8.17.1,<9",
     # Milvus
     "pymilvus~=2.5.0",
-    # 分词
+    # Tokenization
     "jieba==0.42.1",
-    # 图处理 - Graph Processing
+    # Graph Processing
     "igraph>=0.10.0",
-    # 工具库 - Utilities
+    # Utilities
     "tqdm>=4.65.0",
     "arq>=0.26.0",
     "python-snappy>=0.7.3",
@@ -71,6 +71,7 @@ dependencies = [
     "aiolimiter>=1.2.1",
     "nltk>=3.9.2",
     "tiktoken>=0.12.0",
+    "prometheus-client>=0.20.0",
 ]
 
 [build-system]
@@ -116,7 +117,7 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short"
 
 [dependency-groups]
-# 开发依赖 - 本地开发时使用
+# Development dependencies - for local development
 dev = [
     "black>=25.1.0",
     "ipdb>=0.13.13",
@@ -136,26 +137,26 @@ cpu = [
 gpu = [
 ]
 
-# 完整开发环境 - 包含开发工具
+# Full development environment - includes dev tools
 dev-full = [
     {include-group = "dev"},
     {include-group = "cpu"},
 ]
 
-# 生产环境 - 仅包含 GPU
+# Production environment - GPU only
 prod = [
     {include-group = "gpu"},
 ]
 
-# Evaluation 评测框架依赖
+# Evaluation framework dependencies
 evaluation = [
-    # 终端美化和进度显示
+    # Terminal formatting and progress display
     "rich>=13.0.0",
-    # HTTP 请求库（在线 API 调用）
+    # HTTP request library (for online API calls)
     "requests>=2.31.0",
 ]
 
-# Evaluation + 所有在线 API 客户端（完整测试环境）
+# Evaluation + all online API clients (full testing environment)
 evaluation-full = [
     {include-group = "evaluation"},
     # Online Memory Systems API 客户端

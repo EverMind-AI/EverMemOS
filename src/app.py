@@ -11,6 +11,7 @@ from core.observation.logger import get_logger
 from core.interface.controller.base_controller import BaseController
 from core.middleware.user_context_middleware import UserContextMiddleware
 from core.middleware.app_logic_middleware import AppLogicMiddleware
+from core.middleware.prometheus_middleware import PrometheusMiddleware
 from fastapi.middleware import Middleware
 
 from base_app import create_base_app
@@ -123,6 +124,9 @@ def create_business_app(
     fastapi_app.user_middleware.append(Middleware(AppLogicMiddleware))
     # Not directly interfacing with users
     # fastapi_app.user_middleware.append(Middleware(UserContextMiddleware))
+    
+    # Add Prometheus HTTP metrics middleware
+    fastapi_app.user_middleware.append(Middleware(PrometheusMiddleware))
 
     return fastapi_app
 
