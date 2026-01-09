@@ -13,6 +13,7 @@ Usage:
 
 import logging
 import os
+import time
 from typing import Optional, Any, List, Dict
 from dataclasses import dataclass, field
 
@@ -21,6 +22,11 @@ from core.di import service
 from agentic_layer.rerank_interface import RerankServiceInterface, RerankError
 from agentic_layer.rerank_vllm import VllmRerankService, VllmRerankConfig
 from agentic_layer.rerank_deepinfra import DeepInfraRerankService, DeepInfraRerankConfig
+from agentic_layer.metrics.rerank_metrics import (
+    record_rerank_request,
+    record_rerank_fallback,
+    record_rerank_error,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -238,17 +244,43 @@ class HybridRerankService(RerankServiceInterface):
         instruction: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Rerank memories with automatic fallback"""
-        return await self.execute_with_fallback(
-            "rerank_memories",
-            lambda: self.primary_service.rerank_memories(
-                query, hits, top_k, instruction
-            ),
-            lambda: (
-                self.fallback_service.rerank_memories(query, hits, top_k, instruction)
-                if self.fallback_service
-                else None
-            ),
-        )
+        start_time = time.perf_counter()
+        documents_count = len(hits)
+        
+        try:
+            result = await self.execute_with_fallback(
+                "rerank_memories",
+                lambda: self.primary_service.rerank_memories(
+                    query, hits, top_k, instruction
+                ),
+                lambda: (
+                    self.fallback_service.rerank_memories(query, hits, top_k, instruction)
+                    if self.fallback_service
+                    else None
+                ),
+            )
+            
+            # Record success metrics
+            duration = time.perf_counter() - start_time
+            record_rerank_request(
+                provider=self.config.primary_provider,
+                status='success',
+                duration_seconds=duration,
+                documents_count=documents_count,
+            )
+            
+            return result
+            
+        except Exception as e:
+            # Record error metrics (fallback failure is recorded in execute_with_fallback)
+            duration = time.perf_counter() - start_time
+            record_rerank_request(
+                provider=self.config.primary_provider,
+                status='error',
+                duration_seconds=duration,
+                documents_count=documents_count,
+            )
+            raise
 
     def get_model_name(self) -> str:
         """Get the current model name (from primary service)"""
@@ -304,6 +336,13 @@ class HybridRerankService(RerankServiceInterface):
                 f"Primary service ({self.config.primary_provider}) {operation_name} failed "
                 f"(count: {self.config._primary_failure_count}): {primary_error}"
             )
+            
+            # Record primary error
+            error_type = self._classify_error(primary_error)
+            record_rerank_error(
+                provider=self.config.primary_provider,
+                error_type=error_type,
+            )
 
             # Check if fallback is enabled
             if not self.config.enable_fallback or fallback_func is None:
@@ -312,8 +351,10 @@ class HybridRerankService(RerankServiceInterface):
                     f"Primary service failed and fallback is disabled: {primary_error}"
                 )
 
-            # Check if exceeded max failures
+            # Determine fallback reason
+            fallback_reason = 'error'
             if self.config._primary_failure_count >= self.config.max_primary_failures:
+                fallback_reason = 'max_failures_exceeded'
                 logger.warning(
                     f"⚠️ Primary service exceeded max failures ({self.config.max_primary_failures}), "
                     f"using {self.config.fallback_provider} fallback"
@@ -324,16 +365,50 @@ class HybridRerankService(RerankServiceInterface):
                 logger.info(
                     f"🔄 Falling back to {self.config.fallback_provider} for {operation_name}"
                 )
+                
+                # Record fallback event
+                record_rerank_fallback(
+                    primary_provider=self.config.primary_provider,
+                    fallback_provider=self.config.fallback_provider,
+                    reason=fallback_reason,
+                )
+                
                 result = await fallback_func()
                 return result
 
             except Exception as fallback_error:
                 logger.error(f"❌ Fallback also failed: {fallback_error}")
+                
+                # Record fallback error
+                fallback_error_type = self._classify_error(fallback_error)
+                record_rerank_error(
+                    provider=self.config.fallback_provider,
+                    error_type=fallback_error_type,
+                )
+                
                 raise RerankError(
                     f"Both primary and fallback services failed. "
                     f"Primary ({self.config.primary_provider}): {primary_error}, "
                     f"Fallback ({self.config.fallback_provider}): {fallback_error}"
                 )
+    
+    def _classify_error(self, error: Exception) -> str:
+        """Classify error type for metrics"""
+        error_str = str(error).lower()
+        error_type = type(error).__name__.lower()
+        
+        if 'timeout' in error_str or 'timeout' in error_type:
+            return 'timeout'
+        elif 'rate' in error_str and 'limit' in error_str:
+            return 'rate_limit'
+        elif 'validation' in error_str or 'invalid' in error_str:
+            return 'validation_error'
+        elif 'connection' in error_str or 'connect' in error_type:
+            return 'connection_error'
+        elif 'api' in error_str or 'http' in error_str:
+            return 'api_error'
+        else:
+            return 'unknown'
 
     def get_failure_count(self) -> int:
         """Get current primary service failure count"""

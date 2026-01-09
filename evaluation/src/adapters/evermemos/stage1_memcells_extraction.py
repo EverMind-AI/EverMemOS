@@ -35,9 +35,9 @@ from memory_layer.memory_extractor.episode_memory_extractor import (
 )
 
 from memory_layer.prompts.en.episode_mem_prompts import (
-    EPISODE_GENERATION_PROMPT_R,
-    GROUP_EPISODE_GENERATION_PROMPT_R,
-    DEFAULT_CUSTOM_INSTRUCTIONS_R,
+    EPISODE_GENERATION_PROMPT,
+    GROUP_EPISODE_GENERATION_PROMPT,
+    DEFAULT_CUSTOM_INSTRUCTIONS,
 )
 from memory_layer.memory_extractor.base_memory_extractor import MemoryExtractRequest
 from memory_layer.memory_extractor.event_log_extractor import EventLogExtractor
@@ -231,9 +231,9 @@ async def memcell_extraction_from_conversation(
 
     episode_extractor = EpisodeMemoryExtractor(
         llm_provider=llm_provider,
-        episode_prompt=EPISODE_GENERATION_PROMPT_R,
-        group_episode_prompt=GROUP_EPISODE_GENERATION_PROMPT_R,
-        custom_instructions=DEFAULT_CUSTOM_INSTRUCTIONS_R,
+        episode_prompt=EPISODE_GENERATION_PROMPT,
+        group_episode_prompt=GROUP_EPISODE_GENERATION_PROMPT,
+        custom_instructions=DEFAULT_CUSTOM_INSTRUCTIONS,
     )
     # If foresight extraction is enabled, create ForesightExtractor
     foresight_extractor = None
