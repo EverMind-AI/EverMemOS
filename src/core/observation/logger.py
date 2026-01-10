@@ -42,14 +42,24 @@ class LoggerProvider:
         log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
 
         # Configure root logger
+        # Get log file path from environment variable, default to logs/app.log
+        log_file = os.getenv('LOG_FILE', 'logs/app.log')
+
+        # Create logs directory if it doesn't exist
+        log_dir = os.path.dirname(log_file)
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir, exist_ok=True)
+
+        handlers = [logging.StreamHandler(sys.stdout)]
+
+        # Add file handler if LOG_FILE is set or use default
+        if log_file:
+            handlers.append(logging.FileHandler(log_file, encoding='utf-8'))
+
         logging.basicConfig(
             level=getattr(logging, log_level),
             format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
-            handlers=[
-                logging.StreamHandler(sys.stdout),
-                # Can add file handler
-                # logging.FileHandler('app.log', encoding='utf-8')
-            ],
+            handlers=handlers,
         )
 
     def _setup_logging(self):
