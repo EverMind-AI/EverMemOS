@@ -1070,6 +1070,46 @@ class TestEdgeCases:
         assert result is None, "Updating non-existent ID should return None"
         logger.info(f"✅ Non-existent ID update handled correctly: returned None")
 
+    async def test_20_verify_audit_fields(self, repository, test_user_id):
+        """
+        Test: Verify created_at and updated_at are set correctly
+        Bug fix: After removing AuditBase from MemCellLite, these fields were not set
+        """
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: Verify created_at and updated_at fields")
+
+        # 1. Create and append MemCell
+        original = create_test_memcell(user_id=test_user_id, summary="Test audit fields")
+        created = await repository.append_memcell(original)
+        assert created is not None, "append_memcell should return MemCell"
+
+        # 2. Verify audit fields are set after append
+        assert created.created_at is not None, "❌ BUG: created_at should not be None!"
+        assert created.updated_at is not None, "❌ BUG: updated_at should not be None!"
+        logger.info(f"✅ After append: created_at={created.created_at}, updated_at={created.updated_at}")
+
+        # 3. Retrieve from KV-Storage and verify persistence
+        retrieved = await repository.get_by_event_id(str(created.id))
+        assert retrieved is not None, "get_by_event_id should return MemCell"
+        assert retrieved.created_at is not None, "❌ BUG: created_at should persist in KV-Storage!"
+        assert retrieved.updated_at is not None, "❌ BUG: updated_at should persist in KV-Storage!"
+        logger.info(f"✅ After retrieve: created_at={retrieved.created_at}, updated_at={retrieved.updated_at}")
+
+        # 4. Verify timezones are consistent
+        assert retrieved.created_at.tzinfo == retrieved.timestamp.tzinfo, "created_at timezone should match timestamp"
+        assert retrieved.updated_at.tzinfo == retrieved.timestamp.tzinfo, "updated_at timezone should match timestamp"
+        logger.info(f"✅ Timezone consistency verified: {retrieved.timestamp.tzinfo}")
+
+        # 5. Verify created_at equals updated_at for newly created records
+        time_diff = abs((retrieved.created_at - retrieved.updated_at).total_seconds())
+        assert time_diff < 1, "created_at and updated_at should be nearly identical for new records"
+        logger.info(f"✅ created_at ≈ updated_at (diff: {time_diff:.6f}s)")
+
+        # Cleanup
+        await repository.delete_by_event_id(str(created.id))
+        logger.info("✅ Audit fields verification passed")
+
 
 # ==================== Main Test Runner ====================
 

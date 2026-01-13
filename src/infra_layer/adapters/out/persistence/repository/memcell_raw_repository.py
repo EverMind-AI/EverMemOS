@@ -90,7 +90,7 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             keywords=memcell.keywords,
         )
 
-    async def _process_query_results(
+    async def _memcell_lite_to_full(
         self, results: List[MemCellLite]
     ) -> List[MemCell]:
         """
@@ -168,12 +168,12 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             return full_memcell
 
         except Exception as e:
-            logger.error(f"❌ Failed to retrieve MemCell by event_id: {event_id}, error: {e}")
+            logger.error("❌ Failed to retrieve MemCell by event_id: %s", e)
             return None
 
     async def get_by_event_ids(
         self, event_ids: List[str], projection_model: Optional[Type[BaseModel]] = None
-    ) -> Dict[str, MemCell]:
+    ) -> Dict[str, Any]:
         """
         Batch get MemCell by event_id list
 
@@ -215,7 +215,10 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
                     logger.debug(f"⚠️  MemCell not found in KV-Storage: {event_id}")
 
             logger.debug(
-                f"✅ Batch retrieved {len(result_dict)}/{len(event_ids)} MemCells from KV-Storage"
+                "✅ Successfully batch retrieved MemCell by event_ids: requested %d, found %d, projection: %s",
+                len(event_ids),
+                len(result_dict),
+                "yes" if projection_model else "no",
             )
 
             return result_dict
@@ -237,6 +240,15 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
 
             # Copy generated ID back to full MemCell
             memcell.id = memcell_lite.id
+
+            # Set audit fields (created_at/updated_at) for full MemCell
+            # Since MemCellLite no longer inherits AuditBase, we need to set these manually
+            now = get_now_with_timezone()
+            if memcell.created_at is None:
+                memcell.created_at = now
+            if memcell.updated_at is None:
+                memcell.updated_at = now
+
             logger.info(f"✅ MemCell appended to MongoDB: {memcell.event_id}")
 
             # 2. Write to KV-Storage (always full MemCell)
@@ -296,10 +308,8 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             memcell.updated_at = get_now_with_timezone()
 
             # 3. Update MongoDB (only indexed fields in MemCellLite)
-            memcell_lite = self._memcell_to_lite(memcell)
-
             # Find and update lite document
-            lite_doc = await MemCellLite.find_one({"_id": ObjectId(event_id)})
+            lite_doc = await self.model.find_one({"_id": ObjectId(event_id)})
             if not lite_doc:
                 logger.error(f"❌ MongoDB record not found for update: {event_id}")
                 return None
@@ -311,7 +321,7 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             updated_count = 0
             for field in indexed_fields:
                 if field in update_data:
-                    setattr(lite_doc, field, getattr(memcell_lite, field))
+                    setattr(lite_doc, field, getattr(memcell, field))
                     updated_count += 1
 
             await lite_doc.save(session=session)
@@ -325,12 +335,13 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
                     await kv_storage.put(key=event_id, value=json_value)
                     logger.debug(f"✅ KV-Storage update success: {event_id}")
                 except Exception as kv_error:
-                    logger.warning(f"⚠️  KV-Storage update failed for {event_id}: {kv_error}")
+                    logger.error(f"⚠️  KV-Storage update failed for {event_id}: {kv_error}")
+                    raise kv_error
 
             return memcell
         except Exception as e:
-            logger.error("❌ Failed to update MemCell: %s", e)
-            return None
+            logger.error("❌ Failed to update MemCell by event_id: %s", e)
+            raise e
 
     async def delete_by_event_id(
         self,
@@ -395,17 +406,7 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             Returns True if deletion succeeds, otherwise False
         """
         try:
-            # 1. Try to delete from MongoDB
-            mongo_exists = False
-            memcell = await MemCellLite.find_one({"_id": ObjectId(event_id)})
-            if memcell:
-                await memcell.delete(session=session)
-                mongo_exists = True
-                logger.debug("✅ MemCell deleted from MongoDB: %s", event_id)
-            else:
-                logger.warning(f"⚠️  MemCell not found in MongoDB: {event_id}, will try to delete from KV")
-
-            # 2. Always try to delete from KV-Storage (regardless of MongoDB result)
+            # 1. First delete from KV-Storage (data source)
             kv_deleted = False
             kv_storage = self._get_kv_storage()
             if kv_storage:
@@ -418,11 +419,23 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
                 except Exception as kv_error:
                     logger.warning(f"⚠️  KV-Storage delete failed: {kv_error}")
 
-            # Return True if deleted from either storage
-            return mongo_exists or kv_deleted
+            # 2. Then delete from MongoDB (index)
+            mongo_deleted = False
+            memcell = await self.model.find_one({"_id": ObjectId(event_id)})
+            if memcell:
+                await memcell.delete(session=session)
+                mongo_deleted = True
+                logger.debug("✅ MemCell deleted from MongoDB: %s", event_id)
+            else:
+                logger.warning(f"⚠️  MemCell not found in MongoDB: {event_id}")
+
+            # Return True only if deleted from both storages (strict consistency)
+            return kv_deleted and mongo_deleted
         except Exception as e:
             logger.error("❌ Failed to hard delete MemCell by event_id: %s", e)
             return False
+
+    # ==================== Query Methods ====================
 
     async def find_by_user_id(
         self,
@@ -444,24 +457,28 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             List of MemCell
         """
         try:
-            # Build query
-            query = MemCellLite.find({"user_id": user_id})
+            query = self.model.find({"user_id": user_id})
 
-            # Apply sorting
-            sort_order = "-timestamp" if sort_desc else "timestamp"
-            query = query.sort(sort_order)
+            # Sorting
+            if sort_desc:
+                query = query.sort("-timestamp")
+            else:
+                query = query.sort("timestamp")
 
-            # Apply pagination
-            if skip is not None:
+            # Pagination
+            if skip:
                 query = query.skip(skip)
-            if limit is not None:
+            if limit:
                 query = query.limit(limit)
 
-            # Execute query
             results = await query.to_list()
-            logger.debug(f"✅ Found {len(results)} MemCell for user: {user_id}")
+            logger.debug(
+                "✅ Successfully queried MemCell by user ID: %s, found %d records",
+                user_id,
+                len(results),
+            )
 
-            full_memcells = await self._process_query_results(results)
+            full_memcells = await self._memcell_lite_to_full(results)
             return full_memcells
         except Exception as e:
             logger.error("❌ Failed to query MemCell by user ID: %s", e)
@@ -474,10 +491,11 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
         end_time: datetime,
         limit: Optional[int] = None,
         skip: Optional[int] = None,
-        sort_desc: bool = True,
     ) -> List[MemCell]:
         """
         Query MemCell by user ID and time range
+
+        Check both user_id field and participants array, match if user_id is in either
 
         Args:
             user_id: User ID
@@ -490,31 +508,37 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             List of MemCell
         """
         try:
-            # Build query with time range
-            query_filter = And(
-                Eq(MemCellLite.user_id, user_id),
-                GTE(MemCellLite.timestamp, start_time),
-                LT(MemCellLite.timestamp, end_time),
-            )
-            query = MemCellLite.find(query_filter)
+            # Check both user_id field and participants array
+            # Use OR logic: user_id matches OR user_id is in participants
+            # Note: MongoDB automatically checks if array contains the value when using Eq on array fields
+            query = self.model.find(
+                And(
+                    Or(
+                        Eq(MemCell.user_id, user_id),
+                        Eq(
+                            MemCell.participants, user_id
+                        ),  # MongoDB checks if array contains the value
+                    ),
+                    GTE(MemCell.timestamp, start_time),
+                    LT(MemCell.timestamp, end_time),
+                )
+            ).sort("-timestamp")
 
-            # Apply sorting
-            sort_order = "-timestamp" if sort_desc else "timestamp"
-            query = query.sort(sort_order)
-
-            # Apply pagination
-            if skip is not None:
+            if skip:
                 query = query.skip(skip)
-            if limit is not None:
+            if limit:
                 query = query.limit(limit)
 
-            # Execute query
             results = await query.to_list()
             logger.debug(
-                f"✅ Found {len(results)} MemCell for user {user_id} in time range"
+                "✅ Successfully queried MemCell by user and time range: %s, time range: %s - %s, found %d records",
+                user_id,
+                start_time,
+                end_time,
+                len(results),
             )
 
-            full_memcells = await self._process_query_results(results)
+            full_memcells = await self._memcell_lite_to_full(results)
             return full_memcells
         except Exception as e:
             logger.error("❌ Failed to query MemCell by user and time range: %s", e)
@@ -540,24 +564,26 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             List of MemCell
         """
         try:
-            # Build query
-            query = MemCellLite.find({"group_id": group_id})
+            query = self.model.find({"group_id": group_id})
 
-            # Apply sorting
-            sort_order = "-timestamp" if sort_desc else "timestamp"
-            query = query.sort(sort_order)
+            if sort_desc:
+                query = query.sort("-timestamp")
+            else:
+                query = query.sort("timestamp")
 
-            # Apply pagination
-            if skip is not None:
+            if skip:
                 query = query.skip(skip)
-            if limit is not None:
+            if limit:
                 query = query.limit(limit)
 
-            # Execute query
             results = await query.to_list()
-            logger.debug(f"✅ Found {len(results)} MemCell for group: {group_id}")
+            logger.debug(
+                "✅ Successfully queried MemCell by group ID: %s, found %d records",
+                group_id,
+                len(results),
+            )
 
-            full_memcells = await self._process_query_results(results)
+            full_memcells = await self._memcell_lite_to_full(results)
             return full_memcells
         except Exception as e:
             logger.error("❌ Failed to query MemCell by group ID: %s", e)
@@ -569,7 +595,7 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
         end_time: datetime,
         limit: Optional[int] = None,
         skip: Optional[int] = None,
-        sort_desc: bool = True,
+        sort_desc: bool = False,
     ) -> List[MemCell]:
         """
         Query MemCell by time range
@@ -579,37 +605,41 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             end_time: End time
             limit: Limit number of returned results
             skip: Number of results to skip
-            sort_desc: Whether to sort by time in descending order
+            sort_desc: Whether to sort by time in descending order, default False (ascending)
 
         Returns:
             List of MemCell
         """
         try:
-            # Build query with time range
-            query_filter = And(
-                GTE(MemCellLite.timestamp, start_time),
-                LT(MemCellLite.timestamp, end_time),
+            query = self.model.find(
+                {"timestamp": {"$gte": start_time, "$lt": end_time}}
             )
-            query = MemCellLite.find(query_filter)
 
-            # Apply sorting
-            sort_order = "-timestamp" if sort_desc else "timestamp"
-            query = query.sort(sort_order)
+            if sort_desc:
+                query = query.sort("-timestamp")
+            else:
+                query = query.sort("timestamp")
 
-            # Apply pagination
-            if skip is not None:
+            if skip:
                 query = query.skip(skip)
-            if limit is not None:
+            if limit:
                 query = query.limit(limit)
 
-            # Execute query
             results = await query.to_list()
-            logger.debug(f"✅ Found {len(results)} MemCell in time range")
+            logger.debug(
+                "✅ Successfully queried MemCell by time range: time range: %s - %s, found %d records",
+                start_time,
+                end_time,
+                len(results),
+            )
 
-            full_memcells = await self._process_query_results(results)
+            full_memcells = await self._memcell_lite_to_full(results)
             return full_memcells
         except Exception as e:
             logger.error("❌ Failed to query MemCell by time range: %s", e)
+            import traceback
+
+            logger.error("Detailed error information: %s", traceback.format_exc())
             return []
 
     async def find_by_participants(
@@ -632,28 +662,29 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             List of MemCell
         """
         try:
-            # Build query based on match mode
             if match_all:
                 # Match all participants
-                query = MemCellLite.find({"participants": {"$all": participants}})
+                query = self.model.find({"participants": {"$all": participants}})
             else:
                 # Match any participant
-                query = MemCellLite.find({"participants": {"$in": participants}})
+                query = self.model.find({"participants": {"$in": participants}})
 
-            # Apply sorting
             query = query.sort("-timestamp")
 
-            # Apply pagination
-            if skip is not None:
+            if skip:
                 query = query.skip(skip)
-            if limit is not None:
+            if limit:
                 query = query.limit(limit)
 
-            # Execute query
             results = await query.to_list()
-            logger.debug(f"✅ Found {len(results)} MemCell for participants")
+            logger.debug(
+                "✅ Successfully queried MemCell by participants: %s, match mode: %s, found %d records",
+                participants,
+                'all' if match_all else 'any',
+                len(results),
+            )
 
-            full_memcells = await self._process_query_results(results)
+            full_memcells = await self._memcell_lite_to_full(results)
             return full_memcells
         except Exception as e:
             logger.error("❌ Failed to query MemCell by participants: %s", e)
@@ -679,32 +710,33 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             List of MemCell
         """
         try:
-            # Build query based on match mode
             if match_all:
-                # Match all keywords
-                query = MemCellLite.find({"keywords": {"$all": keywords}})
+                query = self.model.find({"keywords": {"$all": keywords}})
             else:
-                # Match any keyword
-                query = MemCellLite.find({"keywords": {"$in": keywords}})
+                query = self.model.find({"keywords": {"$in": keywords}})
 
-            # Apply sorting
             query = query.sort("-timestamp")
 
-            # Apply pagination
-            if skip is not None:
+            if skip:
                 query = query.skip(skip)
-            if limit is not None:
+            if limit:
                 query = query.limit(limit)
 
-            # Execute query
             results = await query.to_list()
-            logger.debug(f"✅ Found {len(results)} MemCell matching keywords")
+            logger.debug(
+                "✅ Successfully queried MemCell by keywords: %s, match mode: %s, found %d records",
+                keywords,
+                'all' if match_all else 'any',
+                len(results),
+            )
 
-            full_memcells = await self._process_query_results(results)
+            full_memcells = await self._memcell_lite_to_full(results)
             return full_memcells
         except Exception as e:
-            logger.error("❌ Failed to search MemCell by keywords: %s", e)
+            logger.error("❌ Failed to query MemCell by keywords: %s", e)
             return []
+
+    # ==================== Batch Operations ====================
 
     async def delete_by_user_id(
         self,
@@ -781,11 +813,19 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
                 kv_storage = self._get_kv_storage()
                 if kv_storage:
                     try:
-                        deleted_count = await kv_storage.batch_delete(keys=event_ids)
-                        logger.info(f"✅ KV-Storage batch delete: {deleted_count} records")
+                        kv_deleted_count = await kv_storage.batch_delete(keys=event_ids)
+                        logger.debug(f"✅ KV-Storage batch delete: {kv_deleted_count} records")
                     except Exception as kv_error:
                         logger.warning(f"⚠️  KV-Storage batch delete failed: {kv_error}")
 
+            # 3. Then delete from MongoDB (index)
+            result = await self.model.find({"user_id": user_id}).delete(session=session)
+            count = result.deleted_count if result else 0
+            logger.info(
+                "✅ Successfully deleted all MemCell of user: %s, deleted %d records",
+                user_id,
+                count,
+            )
             return count
         except Exception as e:
             logger.error("❌ Failed to hard delete all MemCell of user: %s", e)
@@ -983,6 +1023,8 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             logger.error("❌ Failed to restore MemCell within time range: %s", e)
             return 0
 
+    # ==================== Statistics and Aggregation Queries ====================
+
     async def count_by_user_id(self, user_id: str) -> int:
         """
         Count number of MemCell for a user
@@ -994,15 +1036,19 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             Number of records
         """
         try:
-            count = await MemCellLite.find({"user_id": user_id}).count()
-            logger.debug(f"✅ Count for user {user_id}: {count}")
+            count = await self.model.find({"user_id": user_id}).count()
+            logger.debug(
+                "✅ Successfully counted user MemCell: %s, total %d records",
+                user_id,
+                count,
+            )
             return count
         except Exception as e:
-            logger.error("❌ Failed to count MemCell by user ID: %s", e)
+            logger.error("❌ Failed to count user MemCell: %s", e)
             return 0
 
     async def count_by_time_range(
-        self, start_time: datetime, end_time: datetime
+        self, start_time: datetime, end_time: datetime, user_id: Optional[str] = None
     ) -> int:
         """
         Count number of MemCell within time range
@@ -1010,25 +1056,34 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
         Args:
             start_time: Start time
             end_time: End time
+            user_id: Optional user ID filter
 
         Returns:
             Number of records
         """
         try:
-            query_filter = And(
-                GTE(MemCellLite.timestamp, start_time),
-                LT(MemCellLite.timestamp, end_time),
+            conditions = [
+                GTE(MemCell.timestamp, start_time),
+                LT(MemCell.timestamp, end_time),
+            ]
+
+            if user_id:
+                conditions.append(Eq(MemCell.user_id, user_id))
+
+            count = await self.model.find(And(*conditions)).count()
+            logger.debug(
+                "✅ Successfully counted MemCell within time range: %s - %s, user: %s, total %d records",
+                start_time,
+                end_time,
+                user_id or 'all',
+                count,
             )
-            count = await MemCellLite.find(query_filter).count()
-            logger.debug(f"✅ Count in time range: {count}")
             return count
         except Exception as e:
-            logger.error("❌ Failed to count MemCell by time range: %s", e)
+            logger.error("❌ Failed to count MemCell within time range: %s", e)
             return 0
 
-    async def get_latest_by_user(
-        self, user_id: str, limit: int = 10
-    ) -> List[MemCell]:
+    async def get_latest_by_user(self, user_id: str, limit: int = 10) -> List[MemCell]:
         """
         Get latest MemCell records for a user
 
@@ -1040,19 +1095,22 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             List of MemCell
         """
         try:
-            # Query with limit and sort
-            results = await (
-                MemCellLite.find({"user_id": user_id})
+            results = (
+                await self.model.find({"user_id": user_id})
                 .sort("-timestamp")
                 .limit(limit)
                 .to_list()
             )
-            logger.debug(f"✅ Found {len(results)} latest MemCell for user: {user_id}")
+            logger.debug(
+                "✅ Successfully retrieved latest user MemCell: %s, returned %d records",
+                user_id,
+                len(results),
+            )
 
-            full_memcells = await self._process_query_results(results)
+            full_memcells = await self._memcell_lite_to_full(results)
             return full_memcells
         except Exception as e:
-            logger.error("❌ Failed to get latest MemCell by user: %s", e)
+            logger.error("❌ Failed to retrieve latest user MemCell: %s", e)
             return []
 
 
