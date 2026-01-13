@@ -53,10 +53,10 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             self._kv_storage = get_bean_by_type(MemCellKVStorage)
             logger.info("✅ MemCell KV-Storage initialized successfully")
         except Exception as e:
-            logger.warning(
+            logger.error(
                 f"⚠️  MemCell KV-Storage not available: {e}. "
-                "Repository will operate in MongoDB-only mode."
             )
+            raise e
 
     def _get_kv_storage(self) -> Optional[MemCellKVStorage]:
         """
@@ -67,6 +67,7 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
         """
         if self._kv_storage is None:
             logger.debug("KV-Storage not available, skipping KV operations")
+            raise Exception("KV-Storage not available")
         return self._kv_storage
 
     def _memcell_to_lite(self, memcell: MemCell) -> MemCellLite:
@@ -254,9 +255,11 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
                     if success:
                         logger.debug(f"✅ KV-Storage write success: {memcell.event_id}")
                     else:
-                        logger.warning(f"⚠️  KV-Storage write failed for {memcell.event_id}")
+                        logger.error(f"⚠️  KV-Storage write failed for {memcell.event_id}")
+                        return None
                 except Exception as kv_error:
-                    logger.warning(f"⚠️  KV-Storage write error for {memcell.event_id}: {kv_error}")
+                    logger.error(f"⚠️  KV-Storage write error for {memcell.event_id}: {kv_error}")
+                    return None
 
             return memcell
         except Exception as e:
@@ -334,7 +337,7 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             return memcell
         except Exception as e:
             logger.error("❌ Failed to update MemCell: %s", e)
-            raise e
+            return None
 
     async def delete_by_event_id(
         self,

@@ -24,6 +24,7 @@ async def init_database():
     from motor.motor_asyncio import AsyncIOMotorClient
     from beanie import init_beanie
     from infra_layer.adapters.out.persistence.document.memory.memcell import MemCell
+    from infra_layer.adapters.out.persistence.document.memory.memcell_lite import MemCellLite
     from core.di import get_container
 
     # Load environment variables from .env file
@@ -46,8 +47,8 @@ async def init_database():
     client = AsyncIOMotorClient(mongo_uri)
     database = client[db_name]
 
-    # Initialize Beanie with MemCell document
-    await init_beanie(database=database, document_models=[MemCell])
+    # Initialize Beanie with MemCell and MemCellLite documents
+    await init_beanie(database=database, document_models=[MemCell, MemCellLite])
 
     # Initialize DI container and manually register repository
     # (Avoid full scan which loads unnecessary components)
