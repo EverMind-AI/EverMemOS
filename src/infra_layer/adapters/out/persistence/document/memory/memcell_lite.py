@@ -15,7 +15,6 @@ from core.oxm.mongo.document_base import DocumentBase
 from pydantic import Field, ConfigDict
 from pymongo import IndexModel, ASCENDING, DESCENDING
 from beanie import PydanticObjectId
-from core.oxm.mongo.audit_base import AuditBase
 
 
 class DataTypeEnum(str, Enum):
@@ -24,12 +23,15 @@ class DataTypeEnum(str, Enum):
     CONVERSATION = "Conversation"
 
 
-class MemCellLite(DocumentBase, AuditBase):
+class MemCellLite(DocumentBase):
     """
     MemCell Lite Model - Minimal storage version
 
     Contains only indexed and query fields for MongoDB.
     Full MemCell data is stored in KV-Storage as backup.
+
+    Note: Does not inherit from AuditBase - created_at/updated_at are only
+    maintained in the full MemCell stored in KV-Storage.
     """
 
     # Core indexed fields

@@ -88,8 +88,6 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             participants=memcell.participants,
             type=memcell.type,
             keywords=memcell.keywords,
-            created_at=memcell.created_at,
-            updated_at=memcell.updated_at,
         )
 
     async def _process_query_results(
@@ -237,10 +235,8 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             memcell_lite = self._memcell_to_lite(memcell)
             await memcell_lite.insert(session=session)
 
-            # Copy generated ID and audit fields back to full MemCell
+            # Copy generated ID back to full MemCell
             memcell.id = memcell_lite.id
-            memcell.created_at = memcell_lite.created_at
-            memcell.updated_at = memcell_lite.updated_at
             logger.info(f"✅ MemCell appended to MongoDB: {memcell.event_id}")
 
             # 2. Write to KV-Storage (always full MemCell)
@@ -317,9 +313,6 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
                 if field in update_data:
                     setattr(lite_doc, field, getattr(memcell_lite, field))
                     updated_count += 1
-
-            # Sync the same updated_at timestamp to MongoDB
-            lite_doc.updated_at = memcell.updated_at
 
             await lite_doc.save(session=session)
             logger.debug(f"✅ Updated {updated_count} indexed fields in MongoDB: {event_id}")
