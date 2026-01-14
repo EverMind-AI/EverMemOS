@@ -25,6 +25,8 @@ async def init_database():
     from beanie import init_beanie
     from infra_layer.adapters.out.persistence.document.memory.memcell import MemCell
     from infra_layer.adapters.out.persistence.document.memory.memcell_lite import MemCellLite
+    from infra_layer.adapters.out.persistence.document.memory.episodic_memory import EpisodicMemory
+    from infra_layer.adapters.out.persistence.document.memory.episodic_memory_lite import EpisodicMemoryLite
     from core.di import get_container
 
     # Load environment variables from .env file
@@ -47,15 +49,34 @@ async def init_database():
     client = AsyncIOMotorClient(mongo_uri)
     database = client[db_name]
 
-    # Initialize Beanie with MemCell and MemCellLite documents
-    await init_beanie(database=database, document_models=[MemCell, MemCellLite])
+    # Initialize Beanie with all document models
+    await init_beanie(database=database, document_models=[MemCell, MemCellLite, EpisodicMemory, EpisodicMemoryLite])
 
-    # Initialize DI container and manually register repository
+    # Initialize DI container and manually register repositories
     # (Avoid full scan which loads unnecessary components)
     container = get_container()
     from infra_layer.adapters.out.persistence.repository.memcell_raw_repository import MemCellRawRepository
+    from infra_layer.adapters.out.persistence.repository.episodic_memory_raw_repository import EpisodicMemoryRawRepository
+    from infra_layer.adapters.out.persistence.kv_storage.in_memory_kv_storage import InMemoryKVStorage
+    from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import KVStorageInterface
 
-    # Register repository manually (only if not already registered)
+    # Register KV-Storage (single instance for all memory types)
+    try:
+        container.get_bean("memcell_kv_storage")
+    except:
+        kv_storage_instance = InMemoryKVStorage()
+        container.register_bean(
+            bean_type=KVStorageInterface,
+            bean_name="memcell_kv_storage",
+            instance=kv_storage_instance
+        )
+        container.register_bean(
+            bean_type=KVStorageInterface,
+            bean_name="episodic_memory_kv_storage",
+            instance=kv_storage_instance
+        )
+
+    # Register MemCell repository manually (only if not already registered)
     try:
         container.get_bean("MemCellRawRepository")
     except:
@@ -63,6 +84,16 @@ async def init_database():
             bean_type=MemCellRawRepository,
             bean_name="MemCellRawRepository",
             instance=MemCellRawRepository()
+        )
+
+    # Register EpisodicMemory repository manually (only if not already registered)
+    try:
+        container.get_bean("EpisodicMemoryRawRepository")
+    except:
+        container.register_bean(
+            bean_type=EpisodicMemoryRawRepository,
+            bean_name="EpisodicMemoryRawRepository",
+            instance=EpisodicMemoryRawRepository()
         )
 
     yield

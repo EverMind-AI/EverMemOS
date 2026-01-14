@@ -357,19 +357,19 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemoryLite]):
                 logger.error("❌ Failed to synchronize vector: %s", e)
 
         try:
+            # Set audit fields BEFORE creating Lite model
+            now = get_now_with_timezone()
+            if episodic_memory.created_at is None:
+                episodic_memory.created_at = now
+            if episodic_memory.updated_at is None:
+                episodic_memory.updated_at = now
+
             # 1. Write EpisodicMemoryLite to MongoDB (indexed fields only)
             episodic_lite = self._episodic_to_lite(episodic_memory)
             await episodic_lite.insert(session=session)
 
             # Copy generated ID back to full EpisodicMemory
             episodic_memory.id = episodic_lite.id
-
-            # Set audit fields for full EpisodicMemory
-            now = get_now_with_timezone()
-            if episodic_memory.created_at is None:
-                episodic_memory.created_at = now
-            if episodic_memory.updated_at is None:
-                episodic_memory.updated_at = now
 
             logger.info(
                 "✅ Successfully appended episodic memory: event_id=%s, user_id=%s",
