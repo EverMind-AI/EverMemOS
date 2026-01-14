@@ -12,14 +12,14 @@ from typing import Optional, List, Dict
 from threading import Lock
 from core.observation.logger import get_logger
 from core.di.decorators import repository
-from .memcell_kv_storage import MemCellKVStorage
+from .kv_storage_interface import KVStorageInterface
 
 logger = get_logger(__name__)
 
 
 @repository("memcell_kv_storage", primary=True)
 @repository("episodic_memory_kv_storage", primary=True)
-class InMemoryKVStorage(MemCellKVStorage):
+class InMemoryKVStorage(KVStorageInterface):
     """
     In-memory implementation of generic KV-Storage using Python dict.
 

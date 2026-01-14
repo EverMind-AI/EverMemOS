@@ -24,7 +24,7 @@ from infra_layer.adapters.out.persistence.document.memory.memcell import (
 from infra_layer.adapters.out.persistence.document.memory.memcell_lite import (
     MemCellLite,
 )
-from infra_layer.adapters.out.persistence.kv_storage import MemCellKVStorage
+from infra_layer.adapters.out.persistence.kv_storage import KVStorageInterface
 
 logger = get_logger(__name__)
 
@@ -48,9 +48,9 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
         super().__init__(MemCellLite)
 
         # Inject KV-Storage with graceful degradation
-        self._kv_storage: Optional[MemCellKVStorage] = None
+        self._kv_storage: Optional[KVStorageInterface] = None
         try:
-            self._kv_storage = get_bean_by_type(MemCellKVStorage)
+            self._kv_storage = get_bean_by_type(KVStorageInterface)
             logger.info("✅ MemCell KV-Storage initialized successfully")
         except Exception as e:
             logger.error(
@@ -58,7 +58,7 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             )
             raise e
 
-    def _get_kv_storage(self) -> Optional[MemCellKVStorage]:
+    def _get_kv_storage(self) -> Optional[KVStorageInterface]:
         """
         Get KV-Storage instance with availability check.
 

@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, List, Dict
 
 
-class MemCellKVStorage(ABC):
+class KVStorageInterface(ABC):
     """
     Abstract interface for generic key-value storage.
 
