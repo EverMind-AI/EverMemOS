@@ -64,12 +64,25 @@ All user details are centrally stored in `conversation_meta.user_details`:
 "user_details": {
   "user_101": {
     "full_name": "Alex",
-    "role": "Tech Lead",
+    "role": "user",
+    "custom_role": "Tech Lead",
     "department": "Technology",
     "email": "alex@example.com"
+  },
+  "robot_001": {
+    "full_name": "AI Assistant",
+    "role": "assistant"
   }
 }
 ```
+
+**Field Descriptions**:
+- `full_name`: User's display name (optional)
+- `role`: User type role (`user` for human, `assistant` for AI) (optional)
+- `custom_role`: User's job/position role (e.g., Tech Lead, Product Manager) (optional)
+- `department`: Department (optional)
+- `email`: Email address (optional)
+- `extra`: Additional extended information (optional)
 
 ### 4. Message Structure
 
@@ -81,9 +94,43 @@ Each message uses user ID as `sender`, with an optional `sender_name` for readab
   "create_time": "2025-02-01T10:00:00+00:00",
   "sender": "user_103",
   "sender_name": "Chen",
+  "role": "user",
   "type": "text",
   "content": "Message content",
   "refer_list": []
+}
+```
+
+### 4.1 Message Sender Role
+
+The optional `role` field identifies the source of the message:
+
+- **user**: Message from a human user
+- **assistant**: Message from an AI assistant
+
+This is compatible with OpenAI/mem0/memos message format.
+
+**Human Message Example**:
+```json
+{
+  "message_id": "msg_001",
+  "sender": "user_101",
+  "sender_name": "Alex",
+  "role": "user",
+  "type": "text",
+  "content": "Can you help me summarize this document?"
+}
+```
+
+**AI Response Example**:
+```json
+{
+  "message_id": "msg_002",
+  "sender": "robot_001",
+  "sender_name": "AI Assistant",
+  "role": "assistant",
+  "type": "text",
+  "content": "Here's the summary of the document..."
 }
 ```
 

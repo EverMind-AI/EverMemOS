@@ -62,6 +62,7 @@ Memory API 提供了专门用于处理群聊记忆的接口，采用简单直接
   "create_time": "2025-01-15T02:00:00Z",
   "sender": "user_001",
   "sender_name": "张三",
+  "role": "user",
   "content": "今天讨论下新功能的技术方案",
   "refer_list": ["msg_000"]
 }
@@ -77,6 +78,7 @@ Memory API 提供了专门用于处理群聊记忆的接口，采用简单直接
 | create_time | string | 是 | 消息创建时间（ISO 8601格式） |
 | sender | string | 是 | 发送者用户ID |
 | sender_name | string | 否 | 发送者名称（默认使用 sender） |
+| role | string | 否 | 消息来源角色：`user`（人类）或 `assistant`（AI） |
 | content | string | 是 | 消息内容 |
 | refer_list | array | 否 | 引用的消息ID列表 |
 
@@ -168,6 +170,7 @@ Memory API 提供了专门用于处理群聊记忆的接口，采用简单直接
   "create_time": "2025-01-15T02:00:00Z",
   "sender": "user_001",
   "sender_name": "张三",
+  "role": "user",
   "content": "今天讨论下新功能的技术方案",
   "refer_list": []
 }
@@ -186,8 +189,24 @@ Memory API 提供了专门用于处理群聊记忆的接口，采用简单直接
   "create_time": "2025-01-15T02:05:00Z",
   "sender": "user_456",
   "sender_name": "李四",
+  "role": "user",
   "content": "帮我总结下今天的会议内容",
   "refer_list": []
+}
+```
+
+**AI 响应示例**：
+```json
+{
+  "group_id": "bot_conversation_123",
+  "group_name": "与AI助手的对话",
+  "message_id": "bot_msg_002",
+  "create_time": "2025-01-15T02:05:30Z",
+  "sender": "ai_assistant",
+  "sender_name": "AI助手",
+  "role": "assistant",
+  "content": "根据会议记录，今天讨论的要点如下...",
+  "refer_list": ["bot_msg_001"]
 }
 ```
 
@@ -212,6 +231,7 @@ async def process_message(message):
                 "create_time": message["create_time"],
                 "sender": message["sender"],
                 "sender_name": message["sender_name"],
+                "role": message.get("role"),
                 "content": message["content"],
                 "refer_list": message.get("refer_list", [])
             }
@@ -240,6 +260,7 @@ curl -X POST http://localhost:1995/api/v1/memories \
     "create_time": "2025-01-15T02:00:00Z",
     "sender": "user_001",
     "sender_name": "张三",
+    "role": "user",
     "content": "今天讨论下新功能的技术方案",
     "refer_list": []
   }'
@@ -260,6 +281,7 @@ async def call_memory_api():
         "create_time": "2025-01-15T02:00:00Z",
         "sender": "user_001",
         "sender_name": "张三",
+        "role": "user",
         "content": "今天讨论下新功能的技术方案",
         "refer_list": []
     }
@@ -721,13 +743,14 @@ asyncio.run(search_memories())
   "user_details": {
     "user_001": {
       "full_name": "张三",
-      "role": "developer",
+      "role": "user",
+      "custom_role": "developer",
       "extra": {"department": "工程部"}
     },
-    "user_002": {
-      "full_name": "李四",
-      "role": "designer",
-      "extra": {"department": "设计部"}
+    "bot_001": {
+      "full_name": "AI助手",
+      "role": "assistant",
+      "extra": {"type": "ai"}
     }
   },
   "tags": ["工作", "技术"]
@@ -748,6 +771,15 @@ asyncio.run(search_memories())
 | default_timezone | string | 否 | 默认时区（默认使用系统时区） |
 | user_details | object | 否 | 参与者详情，key 为用户ID，value 为用户详情对象 |
 | tags | array | 否 | 标签列表 |
+
+**user_details 对象字段说明**：
+
+| 字段 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| full_name | string | 否 | 用户显示名称 |
+| role | string | 否 | 用户类型角色：`user`（人类）或 `assistant`（AI） |
+| custom_role | string | 否 | 用户职位角色（如 developer, designer, manager） |
+| extra | object | 否 | 额外扩展信息 |
 
 #### 响应格式
 
@@ -800,7 +832,7 @@ asyncio.run(search_memories())
 | description | string | 否 | 新的描述 |
 | scene_desc | string | 否 | 新的场景描述 |
 | tags | array | 否 | 新的标签列表 |
-| user_details | object | 否 | 新的用户详情（会完整替换现有的 user_details） |
+| user_details | object | 否 | 新的用户详情（会完整替换现有的 user_details），字段说明参见 [user_details 对象字段说明](#user_details-对象字段说明) |
 | default_timezone | string | 否 | 新的默认时区 |
 
 **可更新的字段**：

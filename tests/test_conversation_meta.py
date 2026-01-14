@@ -168,6 +168,7 @@ class ConversationMetaTester:
                 "default_user": {
                     "full_name": "Default User",
                     "role": "user",
+                    "custom_role": "member",
                     "extra": {"is_default": True},
                 }
             },
@@ -224,12 +225,14 @@ class ConversationMetaTester:
             "user_details": {
                 "user_001": {
                     "full_name": "Test User",
-                    "role": "developer",
+                    "role": "user",
+                    "custom_role": "developer",
                     "extra": {"department": "Engineering"},
                 },
                 "bot_001": {
                     "full_name": "AI Assistant",
                     "role": "assistant",
+                    "custom_role": "assistant",
                     "extra": {"type": "ai"},
                 },
             },
@@ -287,7 +290,8 @@ class ConversationMetaTester:
             "user_details": {
                 "user_001": {
                     "full_name": "Updated User",
-                    "role": "lead",
+                    "role": "user",
+                    "custom_role": "lead",
                     "extra": {"department": "Engineering", "updated": True},
                 }
             },
@@ -638,12 +642,14 @@ class ConversationMetaTester:
             "user_details": {
                 "user_001": {
                     "full_name": "Patched User",
-                    "role": "admin",
+                    "role": "user",
+                    "custom_role": "admin",
                     "extra": {"patched": True, "level": 10},
                 },
                 "new_user": {
                     "full_name": "New User Added",
-                    "role": "guest",
+                    "role": "user",
+                    "custom_role": "guest",
                     "extra": {},
                 },
             },

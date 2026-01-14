@@ -62,6 +62,7 @@ Store a single group chat message memory
   "create_time": "2025-01-15T02:00:00Z",
   "sender": "user_001",
   "sender_name": "Zhang San",
+  "role": "user",
   "content": "Let's discuss the technical approach for the new feature today",
   "refer_list": ["msg_000"]
 }
@@ -77,6 +78,7 @@ Store a single group chat message memory
 | create_time | string | Yes | Message creation time (ISO 8601 format) |
 | sender | string | Yes | Sender user ID |
 | sender_name | string | No | Sender name (defaults to sender) |
+| role | string | No | Message sender role: `user` (human) or `assistant` (AI) |
 | content | string | Yes | Message content |
 | refer_list | array | No | List of referenced message IDs |
 
@@ -168,6 +170,7 @@ Suitable for processing real-time message streams from chat applications, storin
   "create_time": "2025-01-15T02:00:00Z",
   "sender": "user_001",
   "sender_name": "Zhang San",
+  "role": "user",
   "content": "Let's discuss the technical approach for the new feature today",
   "refer_list": []
 }
@@ -186,8 +189,24 @@ After a chatbot receives a user message, it can directly call the Memory API to 
   "create_time": "2025-01-15T02:05:00Z",
   "sender": "user_456",
   "sender_name": "Li Si",
+  "role": "user",
   "content": "Help me summarize today's meeting content",
   "refer_list": []
+}
+```
+
+**AI Response Example**:
+```json
+{
+  "group_id": "bot_conversation_123",
+  "group_name": "Conversation with AI Assistant",
+  "message_id": "bot_msg_002",
+  "create_time": "2025-01-15T02:05:30Z",
+  "sender": "ai_assistant",
+  "sender_name": "AI Assistant",
+  "role": "assistant",
+  "content": "Based on the meeting notes, here are the key points discussed today...",
+  "refer_list": ["bot_msg_001"]
 }
 ```
 
@@ -212,6 +231,7 @@ async def process_message(message):
                 "create_time": message["create_time"],
                 "sender": message["sender"],
                 "sender_name": message["sender_name"],
+                "role": message.get("role"),
                 "content": message["content"],
                 "refer_list": message.get("refer_list", [])
             }
@@ -240,6 +260,7 @@ curl -X POST http://localhost:1995/api/v1/memories \
     "create_time": "2025-01-15T02:00:00Z",
     "sender": "user_001",
     "sender_name": "Zhang San",
+    "role": "user",
     "content": "Let'\''s discuss the technical approach for the new feature today",
     "refer_list": []
   }'
@@ -260,6 +281,7 @@ async def call_memory_api():
         "create_time": "2025-01-15T02:00:00Z",
         "sender": "user_001",
         "sender_name": "Zhang San",
+        "role": "user",
         "content": "Let's discuss the technical approach for the new feature today",
         "refer_list": []
     }
@@ -721,13 +743,14 @@ Save conversation metadata, including scene, participants, tags, etc.
   "user_details": {
     "user_001": {
       "full_name": "Zhang San",
-      "role": "developer",
+      "role": "user",
+      "custom_role": "developer",
       "extra": {"department": "Engineering"}
     },
-    "user_002": {
-      "full_name": "Li Si",
-      "role": "designer",
-      "extra": {"department": "Design"}
+    "bot_001": {
+      "full_name": "AI Assistant",
+      "role": "assistant",
+      "extra": {"type": "ai"}
     }
   },
   "tags": ["work", "technical"]
@@ -748,6 +771,15 @@ Save conversation metadata, including scene, participants, tags, etc.
 | default_timezone | string | No | Default timezone (defaults to system timezone) |
 | user_details | object | No | Participant details, key is user ID, value is user detail object |
 | tags | array | No | Tag list |
+
+**user_details Object Fields**:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| full_name | string | No | User's display name |
+| role | string | No | User type role: `user` (human) or `assistant` (AI) |
+| custom_role | string | No | User's job/position role (e.g., developer, designer, manager) |
+| extra | object | No | Additional extended information |
 
 #### Response Format
 
@@ -800,7 +832,7 @@ Partially update conversation metadata, only updating the provided fields.
 | description | string | No | New description |
 | scene_desc | string | No | New scene description |
 | tags | array | No | New tag list |
-| user_details | object | No | New user details (completely replaces existing user_details) |
+| user_details | object | No | New user details (completely replaces existing user_details). See [user_details Object Fields](#user_details-object-fields) for field descriptions |
 | default_timezone | string | No | New default timezone |
 
 **Updatable Fields**:

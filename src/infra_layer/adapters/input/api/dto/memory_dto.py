@@ -6,10 +6,12 @@ Request and response data transfer objects for Memory API.
 These models are used to define OpenAPI parameter documentation.
 """
 
+from token import OP
 from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field, model_validator
 from core.oxm.constants import MAGIC_ALL
+from api_specs.memory_models import MessageSenderRole
 
 
 class MemorizeMessageRequest(BaseModel):
@@ -39,6 +41,14 @@ class MemorizeMessageRequest(BaseModel):
         description="Sender name (uses sender if not provided)",
         examples=["John"],
     )
+    role: Optional[str] = Field(
+        default=None,
+        description="""Message sender role, used to identify the source of the message.
+Enum values from MessageSenderRole:
+- user: Message from a human user
+- assistant: Message from an AI assistant""",
+        examples=["user", "assistant"],
+    )
     content: str = Field(
         ...,
         description="Message content",
@@ -50,6 +60,15 @@ class MemorizeMessageRequest(BaseModel):
         examples=[["msg_000"]],
     )
 
+    @model_validator(mode="after")
+    def validate_role(self):
+        """Validate that role is a valid MessageSenderRole value"""
+        if self.role is not None and not MessageSenderRole.is_valid(self.role):
+            raise ValueError(
+                f"Invalid role '{self.role}'. Must be one of: {[r.value for r in MessageSenderRole]}"
+            )
+        return self
+
     model_config = {
         "json_schema_extra": {
             "example": {
@@ -59,6 +78,7 @@ class MemorizeMessageRequest(BaseModel):
                 "create_time": "2025-01-15T10:00:00+00:00",
                 "sender": "user_001",
                 "sender_name": "John",
+                "role": "user",
                 "content": "Let's discuss the technical solution for the new feature today",
                 "refer_list": ["msg_000"],
             }
@@ -209,15 +229,36 @@ Note: profile type is not supported in search interface""",
 class UserDetailRequest(BaseModel):
     """User detail request model"""
 
-    full_name: str = Field(..., description="User full name", examples=["John Smith"])
+    full_name: Optional[str] = Field(
+        default=None, description="User full name", examples=["John Smith"]
+    )
     role: Optional[str] = Field(
-        default=None, description="User role", examples=["developer"]
+        default=None,
+        description="""User type role, used to identify if this user is a human or AI.
+Enum values from MessageSenderRole:
+- user: Human user
+- assistant: AI assistant/bot""",
+        examples=["user", "assistant"],
+    )
+    custom_role: Optional[str] = Field(
+        default=None,
+        description="User's job/position role (e.g. developer, designer, manager)",
+        examples=["developer"],
     )
     extra: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Additional information",
         examples=[{"department": "Engineering"}],
     )
+
+    @model_validator(mode="after")
+    def validate_role(self):
+        """Validate that role is a valid MessageSenderRole value"""
+        if self.role is not None and not MessageSenderRole.is_valid(self.role):
+            raise ValueError(
+                f"Invalid role '{self.role}'. Must be one of: {[r.value for r in MessageSenderRole]}"
+            )
+        return self
 
 
 class ConversationMetaCreateRequest(BaseModel):
@@ -268,13 +309,15 @@ class ConversationMetaCreateRequest(BaseModel):
             {
                 "user_001": {
                     "full_name": "John Smith",
-                    "role": "developer",
+                    "role": "user",
+                    "custom_role": "developer",
                     "extra": {"department": "Engineering"},
                 },
-                "user_002": {
-                    "full_name": "Jane Doe",
-                    "role": "designer",
-                    "extra": {"department": "Design"},
+                "bot_001": {
+                    "full_name": "AI Assistant",
+                    "role": "assistant",
+                    "custom_role": "assistant",
+                    "extra": {"type": "ai"},
                 },
             }
         ],
@@ -303,9 +346,14 @@ class ConversationMetaCreateRequest(BaseModel):
                         "user_details": {
                             "user_001": {
                                 "full_name": "John Smith",
-                                "role": "developer",
+                                "role": "user",
+                                "custom_role": "developer",
                                 "extra": {"department": "Engineering"},
-                            }
+                            },
+                            "bot_001": {
+                                "full_name": "AI Assistant",
+                                "role": "assistant",
+                            },
                         },
                         "tags": ["work", "technical"],
                     },
@@ -378,7 +426,15 @@ class ConversationMetaPatchRequest(BaseModel):
     user_details: Optional[Dict[str, UserDetailRequest]] = Field(
         default=None,
         description="New user details (will completely replace existing user_details)",
-        examples=[{"user_001": {"full_name": "John Smith", "role": "lead"}}],
+        examples=[
+            {
+                "user_001": {
+                    "full_name": "John Smith",
+                    "role": "user",
+                    "custom_role": "lead",
+                }
+            }
+        ],
     )
     default_timezone: Optional[str] = Field(
         default=None, description="New default timezone", examples=["Asia/Shanghai"]
@@ -526,7 +582,12 @@ class ConversationMetaResponse(BaseModel):
                 "conversation_created_at": "2025-01-15T10:00:00+00:00",
                 "default_timezone": "UTC",
                 "user_details": {
-                    "user_001": {"full_name": "John", "role": "developer"}
+                    "user_001": {
+                        "full_name": "John",
+                        "role": "user",
+                        "custom_role": "developer",
+                    },
+                    "bot_001": {"full_name": "AI Assistant", "role": "assistant"},
                 },
                 "tags": ["work", "tech"],
                 "is_default": False,

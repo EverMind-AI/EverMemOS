@@ -8,21 +8,28 @@ The format design considers extensibility, readability, and data completeness.
 from typing import TypedDict, List, Optional, Literal, Dict, Any
 
 
+# Role type for identifying message/user source (human or AI)
+# Compatible with OpenAI/mem0/memos message format
+RoleType = Literal["user", "assistant"]
+
+
 # User detailed information
 class UserDetail(TypedDict, total=False):
     """User detailed information
 
     Attributes:
-        full_name: User full name
-        role: User role (e.g. product manager, technical lead, etc.)
+        full_name: User full name (optional)
+        role: User type role ("user" for human, "assistant" for AI)
+        custom_role: User's job/position role (e.g. product manager, technical lead, etc.)
         email: Email address (optional)
         avatar_url: Avatar URL (optional)
         department: Department (optional)
         extra: Other extended information (optional)
     """
 
-    full_name: str
-    role: Optional[str]
+    full_name: Optional[str]
+    role: Optional[RoleType]
+    custom_role: Optional[str]
     email: Optional[str]
     avatar_url: Optional[str]
     department: Optional[str]
@@ -103,6 +110,9 @@ class Message(TypedDict, total=False):
         create_time: Message creation time (ISO 8601 format, it is recommended to include timezone information)
         sender: Sender user ID
         sender_name: Sender name (optional, for quick view, detailed information in user_details)
+        role: Message sender role (optional), used to identify the source of the message.
+              "user" for human messages, "assistant" for AI messages.
+              Compatible with OpenAI/mem0/memos message format.
         type: Message type (text/image/file etc.)
         content: Message content, according to type different may be text, file URL etc.
         refer_list: Referenced message list (optional)
@@ -117,6 +127,7 @@ class Message(TypedDict, total=False):
     create_time: str
     sender: str
     sender_name: Optional[str]
+    role: Optional[RoleType]
     type: MessageType
     content: str
     refer_list: Optional[List[Any]]  # Can be MessageReference or str (message_id)
@@ -214,27 +225,32 @@ def create_example_group_chat() -> GroupChatFormat:
             "user_details": {
                 "user_101": {
                     "full_name": "Alex",
-                    "role": "Technical Lead",
+                    "role": "user",
+                    "custom_role": "Technical Lead",
                     "department": "Technology Department",
                 },
                 "user_102": {
                     "full_name": "Betty",
-                    "role": "Product Manager",
+                    "role": "user",
+                    "custom_role": "Product Manager",
                     "department": "Product Department",
                 },
                 "user_103": {
                     "full_name": "Chen",
-                    "role": "Project Manager",
+                    "role": "user",
+                    "custom_role": "Project Manager",
                     "department": "Project Management Department",
                 },
                 "user_104": {
                     "full_name": "Dylan",
-                    "role": "Backend Engineer",
+                    "role": "user",
+                    "custom_role": "Backend Engineer",
                     "department": "Technology Department",
                 },
                 "user_105": {
                     "full_name": "Emily",
-                    "role": "Frontend Engineer",
+                    "role": "user",
+                    "custom_role": "Frontend Engineer",
                     "department": "Technology Department",
                 },
             },

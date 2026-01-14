@@ -14,6 +14,59 @@ from datetime import datetime
 from common_utils.datetime_utils import get_now_with_timezone
 
 
+class MessageSenderRole(str, Enum):
+    """Enumeration of message sender roles
+
+    Used to identify the source of a message in conversations.
+    Compatible with OpenAI/mem0/memos message format.
+
+    Values:
+        USER: Message from a human user
+        ASSISTANT: Message from an AI assistant
+    """
+
+    USER = "user"
+    ASSISTANT = "assistant"
+
+    @classmethod
+    def from_string(cls, role_str: Optional[str]) -> Optional['MessageSenderRole']:
+        """
+        Convert string to MessageSenderRole enum
+
+        Args:
+            role_str: Role string, such as "user", "assistant"
+
+        Returns:
+            MessageSenderRole enum value, returns None if conversion fails
+        """
+        if not role_str:
+            return None
+
+        try:
+            role_lower = role_str.lower()
+            for role in cls:
+                if role.value == role_lower:
+                    return role
+            return None
+        except Exception:
+            return None
+
+    @classmethod
+    def is_valid(cls, role_str: Optional[str]) -> bool:
+        """
+        Check if the given string is a valid role
+
+        Args:
+            role_str: Role string to validate
+
+        Returns:
+            True if valid, False otherwise
+        """
+        if not role_str:
+            return True  # None is allowed (optional field)
+        return cls.from_string(role_str) is not None
+
+
 class RetrieveMethod(str, Enum):
     """Enumeration of retrieval methods"""
 

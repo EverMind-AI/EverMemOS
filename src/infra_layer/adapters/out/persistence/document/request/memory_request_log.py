@@ -39,6 +39,10 @@ class MemoryRequestLog(DocumentBase, AuditBase):
     )
     sender: Optional[str] = Field(default=None, description="Sender ID")
     sender_name: Optional[str] = Field(default=None, description="Sender name")
+    role: Optional[str] = Field(
+        default=None,
+        description="Message sender role: 'user' for human, 'assistant' for AI",
+    )
     content: Optional[str] = Field(default=None, description="Message content")
     group_name: Optional[str] = Field(default=None, description="Group name")
     refer_list: Optional[List[str]] = Field(

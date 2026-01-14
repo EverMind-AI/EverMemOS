@@ -404,6 +404,7 @@ class MemoryControllerTester:
                 "sender": "assistant_001",
                 "sender_name": "AI Assistant",
                 "content": "Of course! Coffee comes in many varieties, from strong espresso to mild Americano. You can choose based on your taste. I suggest starting with Americano.",
+                "role": "assistant",
                 "refer_list": [],
             },
             {
@@ -426,6 +427,7 @@ class MemoryControllerTester:
                 "sender": "assistant_001",
                 "sender_name": "AI Assistant",
                 "content": "I understand your preference! Black Americano can fully experience the flavor of coffee beans. I suggest choosing dark roasted beans for a stronger taste.",
+                "role": "assistant",
                 "refer_list": [],
             },
             # Scenario 2: Start new topic (trigger boundary via longer time gap + topic switch)
@@ -438,6 +440,7 @@ class MemoryControllerTester:
                 "sender": self.user_id,
                 "sender_name": "Test User",
                 "content": "By the way, how is the weekend project progressing?",
+                "role": "user",
                 "refer_list": [],
             },
             {
