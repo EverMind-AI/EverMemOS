@@ -303,10 +303,6 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
                 if hasattr(memcell, key):
                     setattr(memcell, key, value)
 
-            # Manually update the updated_at timestamp
-            # (memcell is a plain Pydantic object from KV, not a Beanie document)
-            memcell.updated_at = get_now_with_timezone()
-
             # 3. Update MongoDB (only indexed fields in MemCellLite)
             # Find and update lite document
             lite_doc = await self.model.find_one({"_id": ObjectId(event_id)})
@@ -324,8 +320,13 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
                     setattr(lite_doc, field, getattr(memcell, field))
                     updated_count += 1
 
+            # Save Lite model (AuditBase will automatically update updated_at)
             await lite_doc.save(session=session)
             logger.debug(f"✅ Updated {updated_count} indexed fields in MongoDB: {event_id}")
+
+            # CRITICAL: Copy updated_at from Lite back to full MemCell for consistency
+            # This ensures MongoDB and KV-Storage have the EXACT same timestamp
+            memcell.updated_at = lite_doc.updated_at
 
             # 4. Update KV-Storage (always full MemCell)
             kv_storage = self._get_kv_storage()
