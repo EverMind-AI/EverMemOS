@@ -88,6 +88,8 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             participants=memcell.participants,
             type=memcell.type,
             keywords=memcell.keywords,
+            created_at=memcell.created_at,
+            updated_at=memcell.updated_at,
         )
 
     async def _memcell_lite_to_full(
@@ -234,20 +236,19 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
         Append MemCell
         """
         try:
-            # 1. Write MemCellLite to MongoDB (indexed fields only)
-            memcell_lite = self._memcell_to_lite(memcell)
-            await memcell_lite.insert(session=session)
-
-            # Copy generated ID back to full MemCell
-            memcell.id = memcell_lite.id
-
-            # Set audit fields (created_at/updated_at) for full MemCell
-            # Since MemCellLite no longer inherits AuditBase, we need to set these manually
+            # Set audit fields BEFORE creating Lite model
             now = get_now_with_timezone()
             if memcell.created_at is None:
                 memcell.created_at = now
             if memcell.updated_at is None:
                 memcell.updated_at = now
+
+            # 1. Write MemCellLite to MongoDB (indexed fields only, including audit fields)
+            memcell_lite = self._memcell_to_lite(memcell)
+            await memcell_lite.insert(session=session)
+
+            # Copy generated ID back to full MemCell
+            memcell.id = memcell_lite.id
 
             logger.info(f"✅ MemCell appended to MongoDB: {memcell.event_id}")
 

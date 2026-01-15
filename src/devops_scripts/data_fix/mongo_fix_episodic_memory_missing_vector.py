@@ -16,8 +16,15 @@ import asyncio
 from typing import Any, Dict, List, Optional, Tuple
 
 from core.observation.logger import get_logger
+from core.di import get_bean_by_type
 from infra_layer.adapters.out.persistence.document.memory.episodic_memory import (
     EpisodicMemory,
+)
+from infra_layer.adapters.out.persistence.document.memory.episodic_memory_lite import (
+    EpisodicMemoryLite,
+)
+from infra_layer.adapters.out.persistence.repository.episodic_memory_raw_repository import (
+    EpisodicMemoryRawRepository,
 )
 from agentic_layer.vectorize_service import get_vectorize_service
 from common_utils.datetime_utils import from_iso_format, to_iso_format
@@ -41,21 +48,17 @@ async def _fetch_candidates(
     Returns two types of documents:
     1) Documents where episode is not empty but vector is missing/None/empty array
     2) Documents where vector_model is not equal to the target model (TARGET_VECTOR_MODEL) (i.e., need re-processing)
+
+    Note: In Dual Storage architecture:
+    - MongoDB stores EpisodicMemoryLite (indexed fields only)
+    - KV-Storage stores complete EpisodicMemory (including episode, vector)
+    - We query MongoDB for IDs, then fetch full objects from KV-Storage
     """
-    and_filters: List[Dict[str, Any]] = [
-        {"episode": {"$exists": True, "$ne": ""}},
-        {
-            "$or": [
-                {"vector": {"$exists": False}},
-                {"vector": None},
-                {"vector": []},
-                {"vector_model": {"$ne": TARGET_VECTOR_MODEL}},
-                {"vector_model": {"$exists": False}},
-                {"vector_model": None},
-                {"vector_model": ""},
-            ]
-        },
-    ]
+    # Get repository instance
+    repo = get_bean_by_type(EpisodicMemoryRawRepository)
+
+    # Build query for MongoDB (only indexed fields: created_at, user_id, etc.)
+    and_filters: List[Dict[str, Any]] = []
 
     # created_at filter conditions (range + pagination anchor)
     created_at_filter: Dict[str, Any] = {}
@@ -69,12 +72,44 @@ async def _fetch_candidates(
     if created_at_filter:
         and_filters.append({"created_at": created_at_filter})
 
-    query: Dict[str, Any] = {"$and": and_filters}
+    # Build MongoDB query
+    query: Dict[str, Any] = {"$and": and_filters} if and_filters else {}
 
-    cursor = EpisodicMemory.find(query).sort("-created_at").limit(size)  # Recent first
+    # Step 1: Query MongoDB for IDs (using EpisodicMemoryLite)
+    # Note: We fetch more records than needed (size * 3) because we'll filter in memory
+    # This is because episode/vector fields are not in MongoDB, so we can't filter there
+    cursor = EpisodicMemoryLite.find(query).sort("-created_at").limit(size * 3)
+    lite_results = await cursor.to_list()
 
-    results = await cursor.to_list()
-    return results
+    if not lite_results:
+        return []
+
+    # Step 2: Fetch full objects from KV-Storage via Repository
+    # Use the repository's internal method to reconstruct full objects
+    full_objects = await repo._episodic_lite_to_full(lite_results)
+
+    # Step 3: Filter in memory for documents needing vector processing
+    candidates = []
+    for obj in full_objects:
+        # Skip if episode is empty
+        if not obj.episode:
+            continue
+
+        # Check if vector is missing or model is wrong
+        needs_processing = (
+            not obj.vector
+            or len(obj.vector) == 0
+            or obj.vector_model != TARGET_VECTOR_MODEL
+            or not obj.vector_model
+        )
+
+        if needs_processing:
+            candidates.append(obj)
+            # Stop when we have enough candidates
+            if len(candidates) >= size:
+                break
+
+    return candidates
 
 
 async def _process_one(
@@ -83,6 +118,11 @@ async def _process_one(
     """
     Process a single document: vectorize episode and write back vector and vector_model.
 
+    In Dual Storage architecture:
+    - vector and vector_model are stored in KV-Storage (full object)
+    - MongoDB only stores indexed fields (no vector)
+    - We only need to update KV-Storage
+
     Returns (doc_id, error); error is None on success.
     """
     async with semaphore:
@@ -90,15 +130,27 @@ async def _process_one(
             if not document.episode:
                 return str(document.id), "episode is empty, skipping"
 
+            # Generate vector
             vectorize_service = get_vectorize_service()
             embedding = await vectorize_service.get_embedding(document.episode)
             vector_list = embedding.tolist()  # Consistent with repository logic
             model_name = vectorize_service.get_model_name()
 
-            # Update precisely by _id to avoid overwriting other fields
-            await EpisodicMemory.find({"_id": document.id}).update(
-                {"$set": {"vector": vector_list, "vector_model": model_name}}
-            )
+            # Update the document object
+            document.vector = vector_list
+            document.vector_model = model_name
+
+            # Write back to KV-Storage (source of truth for full data)
+            repo = get_bean_by_type(EpisodicMemoryRawRepository)
+            kv_storage = repo._get_kv_storage()
+
+            json_value = document.model_dump_json(by_alias=True, exclude_none=False)
+            success = await kv_storage.put(key=str(document.id), value=json_value)
+
+            if not success:
+                return str(document.id), "Failed to write to KV-Storage"
+
+            # Note: MongoDB does not need updating because it doesn't store vector fields
 
             return str(document.id), None
         except Exception as exc:  # noqa: BLE001 Non-critical error, log and continue

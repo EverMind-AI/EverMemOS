@@ -30,8 +30,8 @@ class MemCellLite(DocumentBase):
     Contains only indexed and query fields for MongoDB.
     Full MemCell data is stored in KV-Storage as backup.
 
-    Note: Does not inherit from AuditBase - created_at/updated_at are only
-    maintained in the full MemCell stored in KV-Storage.
+    Note: Does not inherit from AuditBase - created_at/updated_at are managed manually
+    and stored in both MongoDB (for queries) and KV-Storage (for full data).
     """
 
     # Core indexed fields
@@ -50,6 +50,14 @@ class MemCellLite(DocumentBase):
     )
     type: Optional[DataTypeEnum] = Field(default=None, description="Scenario type")
     keywords: Optional[List[str]] = Field(default=None, description="Keywords")
+
+    # Audit fields (indexed, managed manually)
+    created_at: Indexed(datetime) = Field(
+        default=None, description="Creation time"
+    )
+    updated_at: Indexed(datetime) = Field(
+        default=None, description="Last update time"
+    )
 
     model_config = ConfigDict(
         # Collection name (same as full MemCell)
@@ -96,6 +104,9 @@ class MemCellLite(DocumentBase):
                 ],
                 name="idx_group_type_timestamp",
             ),
+            # Index on audit fields
+            IndexModel([("created_at", DESCENDING)], name="idx_created_at"),
+            IndexModel([("updated_at", DESCENDING)], name="idx_updated_at"),
         ]
 
         validate_on_save = True
