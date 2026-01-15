@@ -68,10 +68,16 @@ class EventLogCollection(TenantAwareMilvusCollectionWithSuffix):
                 description="List of related participants",
             ),
             FieldSchema(
-                name="parent_episode_id",
+                name="parent_type",
                 dtype=DataType.VARCHAR,
                 max_length=100,
-                description="Parent episodic memory ID",
+                description="Parent memory type (memcell/episode)",
+            ),
+            FieldSchema(
+                name="parent_id",
+                dtype=DataType.VARCHAR,
+                max_length=100,
+                description="Parent memory ID",
             ),
             FieldSchema(
                 name="event_type",
@@ -131,7 +137,7 @@ class EventLogCollection(TenantAwareMilvusCollectionWithSuffix):
             index_type="AUTOINDEX",  # Automatically select the best index type
         ),
         IndexConfig(field_name="group_id", index_type="AUTOINDEX"),
-        IndexConfig(field_name="parent_episode_id", index_type="AUTOINDEX"),
+        IndexConfig(field_name="parent_id", index_type="AUTOINDEX"),
         IndexConfig(field_name="event_type", index_type="AUTOINDEX"),
         IndexConfig(field_name="timestamp", index_type="AUTOINDEX"),
     ]

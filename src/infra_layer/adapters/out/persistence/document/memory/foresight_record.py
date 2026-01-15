@@ -12,6 +12,7 @@ from pydantic import Field, ConfigDict
 from pymongo import IndexModel, ASCENDING, DESCENDING
 from core.oxm.mongo.audit_base import AuditBase
 from beanie import PydanticObjectId
+from api_specs.memory_types import ParentType
 
 
 class ForesightRecord(DocumentBase, AuditBase):
@@ -31,7 +32,8 @@ class ForesightRecord(DocumentBase, AuditBase):
     group_id: Optional[str] = Field(default=None, description="Group ID")
     group_name: Optional[str] = Field(default=None, description="Group name")
     content: str = Field(..., min_length=1, description="Foresight content")
-    parent_episode_id: str = Field(..., description="Parent episodic memory's event_id")
+    parent_type: str = Field(..., description="Parent memory type (memcell/episode)")
+    parent_id: str = Field(..., description="Parent memory ID")
 
     # Time range fields
     start_time: Optional[str] = Field(
@@ -73,7 +75,8 @@ class ForesightRecord(DocumentBase, AuditBase):
                 "user_id": "user_12345",
                 "user_name": "Alice",
                 "content": "User likes Sichuan cuisine, especially spicy hotpot",
-                "parent_episode_id": "episode_001",
+                "parent_type": ParentType.MEMCELL.value,
+                "parent_id": "memcell_001",
                 "start_time": "2024-01-01",
                 "end_time": "2024-12-31",
                 "duration_days": 365,
@@ -103,13 +106,8 @@ class ForesightRecord(DocumentBase, AuditBase):
             # Single field indexes
             IndexModel([("user_id", ASCENDING)], name="idx_user_id"),
             IndexModel([("group_id", ASCENDING)], name="idx_group_id", sparse=True),
-            # Parent episodic memory index
-            IndexModel([("parent_episode_id", ASCENDING)], name="idx_parent_episode"),
-            # Composite index of user ID and parent episodic memory
-            IndexModel(
-                [("user_id", ASCENDING), ("parent_episode_id", ASCENDING)],
-                name="idx_user_parent",
-            ),
+            # Parent memory index
+            IndexModel([("parent_id", ASCENDING)], name="idx_parent_id"),
             # Composite index for time range queries (start_time, end_time)
             IndexModel(
                 [("start_time", ASCENDING), ("end_time", ASCENDING)],
@@ -175,7 +173,8 @@ class ForesightRecordProjection(DocumentBase, AuditBase):
     group_id: Optional[str] = Field(default=None, description="Group ID")
     group_name: Optional[str] = Field(default=None, description="Group name")
     content: str = Field(..., min_length=1, description="Foresight content")
-    parent_episode_id: str = Field(..., description="Parent episodic memory's event_id")
+    parent_type: str = Field(..., description="Parent memory type (memcell/episode)")
+    parent_id: str = Field(..., description="Parent memory ID")
 
     # Time range fields
     start_time: Optional[str] = Field(

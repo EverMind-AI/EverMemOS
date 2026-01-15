@@ -67,10 +67,16 @@ class ForesightCollection(TenantAwareMilvusCollectionWithSuffix):
                 description="List of related participants",
             ),
             FieldSchema(
-                name="parent_episode_id",
+                name="parent_type",
                 dtype=DataType.VARCHAR,
                 max_length=100,
-                description="Parent episodic memory ID",
+                description="Parent memory type (memcell/episode)",
+            ),
+            FieldSchema(
+                name="parent_id",
+                dtype=DataType.VARCHAR,
+                max_length=100,
+                description="Parent memory ID",
             ),
             FieldSchema(
                 name="start_time",
@@ -142,7 +148,7 @@ class ForesightCollection(TenantAwareMilvusCollectionWithSuffix):
             index_type="AUTOINDEX",  # Automatically select the most suitable index type
         ),
         IndexConfig(field_name="group_id", index_type="AUTOINDEX"),
-        IndexConfig(field_name="parent_episode_id", index_type="AUTOINDEX"),
+        IndexConfig(field_name="parent_id", index_type="AUTOINDEX"),
         IndexConfig(field_name="start_time", index_type="AUTOINDEX"),
         IndexConfig(field_name="end_time", index_type="AUTOINDEX"),
     ]

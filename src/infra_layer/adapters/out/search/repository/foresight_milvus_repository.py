@@ -50,7 +50,8 @@ class ForesightMilvusRepository(BaseMilvusRepository[ForesightCollection]):
         id: str,
         user_id: Optional[str],
         content: str,
-        parent_episode_id: str,
+        parent_id: str,
+        parent_type: str,
         vector: List[float],
         group_id: Optional[str] = None,
         event_type: Optional[str] = None,
@@ -72,7 +73,8 @@ class ForesightMilvusRepository(BaseMilvusRepository[ForesightCollection]):
             id: Unique identifier for foresight
             user_id: User ID (required)
             content: Foresight content (required)
-            parent_episode_id: Parent episodic memory ID (required)
+            parent_id: Parent memory ID (required)
+            parent_type: Parent memory type (memcell/episode)
             vector: Text vector (required)
             group_id: Group ID
             participants: List of related participants
@@ -113,7 +115,8 @@ class ForesightMilvusRepository(BaseMilvusRepository[ForesightCollection]):
                 "user_id": user_id or "",
                 "group_id": group_id or "",
                 "participants": participants or [],
-                "parent_episode_id": parent_episode_id,
+                "parent_type": parent_type,
+                "parent_id": parent_id,
                 "start_time": int(start_time.timestamp()) if start_time else 0,
                 "end_time": int(end_time.timestamp()) if end_time else 0,
                 "duration_days": duration_days or 0,
@@ -139,7 +142,8 @@ class ForesightMilvusRepository(BaseMilvusRepository[ForesightCollection]):
                 "id": id,
                 "user_id": user_id,
                 "content": content,
-                "parent_episode_id": parent_episode_id,
+                "parent_type": parent_type,
+                "parent_id": parent_id,
                 "search_content": search_content,
                 "metadata": metadata,
             }
@@ -159,7 +163,8 @@ class ForesightMilvusRepository(BaseMilvusRepository[ForesightCollection]):
         query_vector: List[float],
         user_id: Optional[str] = None,
         group_id: Optional[str] = None,
-        parent_episode_id: Optional[str] = None,
+        parent_type: Optional[str] = None,
+        parent_id: Optional[str] = None,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
         current_time: Optional[datetime] = None,
@@ -175,7 +180,8 @@ class ForesightMilvusRepository(BaseMilvusRepository[ForesightCollection]):
             query_vector: Query vector
             user_id: User ID filter
             group_id: Group ID filter
-            parent_episode_id: Parent episodic memory ID filter
+            parent_type: Parent type filter (e.g., "memcell", "episode")
+            parent_id: Parent memory ID filter
             start_time: Foresight start time filter
             end_time: Foresight end time filter
             current_time: Current time, used to filter foresights within validity period
@@ -211,8 +217,10 @@ class ForesightMilvusRepository(BaseMilvusRepository[ForesightCollection]):
                 filter_expr.append(
                     f'array_contains(participants, "{participant_user_id}")'
                 )
-            if parent_episode_id:
-                filter_expr.append(f'parent_episode_id == "{parent_episode_id}"')
+            if parent_type:
+                filter_expr.append(f'parent_type == "{parent_type}"')
+            if parent_id:
+                filter_expr.append(f'parent_id == "{parent_id}"')
             if start_time:
                 filter_expr.append(f"start_time >= {int(start_time.timestamp())}")
             if end_time:
@@ -279,7 +287,8 @@ class ForesightMilvusRepository(BaseMilvusRepository[ForesightCollection]):
                             "score": float(hit.score),
                             "user_id": hit.entity.get("user_id"),
                             "group_id": hit.entity.get("group_id"),
-                            "parent_episode_id": hit.entity.get("parent_episode_id"),
+                            "parent_type": hit.entity.get("parent_type"),
+                            "parent_id": hit.entity.get("parent_id"),
                             "start_time": datetime.fromtimestamp(
                                 hit.entity.get("start_time", 0)
                             ),
@@ -331,18 +340,23 @@ class ForesightMilvusRepository(BaseMilvusRepository[ForesightCollection]):
             )
             return False
 
-    async def delete_by_parent_episode_id(self, parent_episode_id: str) -> int:
+    async def delete_by_parent_id(
+        self, parent_id: str, parent_type: Optional[str] = None
+    ) -> int:
         """
-        Delete all associated foresights by parent episodic memory ID
+        Delete all associated foresights by parent memory ID and optionally parent type
 
         Args:
-            parent_episode_id: Parent episodic memory ID
+            parent_id: Parent memory ID
+            parent_type: Optional parent type filter (e.g., "memcell", "episode")
 
         Returns:
             Number of deleted documents
         """
         try:
-            expr = f'parent_episode_id == "{parent_episode_id}"'
+            expr = f'parent_id == "{parent_id}"'
+            if parent_type is not None:
+                expr += f' and parent_type == "{parent_type}"'
 
             # First query the number of documents to delete
             results = await self.collection.query(expr=expr, output_fields=["id"])
@@ -353,13 +367,15 @@ class ForesightMilvusRepository(BaseMilvusRepository[ForesightCollection]):
                 await self.collection.delete(expr)
 
             logger.debug(
-                "✅ Deleted foresight by parent_episode_id successfully: deleted %d records",
+                "✅ Deleted foresight by parent_id successfully: %s (type=%s), deleted %d records",
+                parent_id,
+                parent_type,
                 delete_count,
             )
             return delete_count
 
         except Exception as e:
-            logger.error("❌ Failed to delete foresight by parent_episode_id: %s", e)
+            logger.error("❌ Failed to delete foresight by parent_id: %s", e)
             raise
 
     async def delete_by_filters(

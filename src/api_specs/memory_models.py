@@ -327,7 +327,8 @@ class EventLogModel:
     id: str
     user_id: str
     atomic_fact: str  # Content of the atomic fact
-    parent_episode_id: str  # Parent episodic memory ID
+    parent_type: str  # Parent memory type (memcell/episode)
+    parent_id: str  # Parent memory ID
     timestamp: datetime  # Event occurrence time
 
     # Optional fields
@@ -355,7 +356,8 @@ class ForesightRecordModel:
 
     id: str
     content: str  # Prospective content
-    parent_episode_id: str  # Parent episodic memory ID
+    parent_type: str  # Parent memory type (memcell/episode)
+    parent_id: str  # Parent memory ID
 
     # Optional fields
     user_id: Optional[str] = None

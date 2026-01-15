@@ -6,6 +6,7 @@ Provides ProfileStorage compatible interface (duck typing).
 """
 
 from typing import Optional, Dict, Any, List
+from beanie.operators import Or, Eq
 from core.observation.logger import get_logger
 from core.di.decorators import repository
 from core.oxm.mongo.base_repository import BaseRepository
@@ -152,7 +153,7 @@ class UserProfileRawRepository(BaseRepository[UserProfile]):
                 if user_id == "" or user_id is None:
                     # Explicitly filter for null or empty string
                     conditions.append(
-                        (UserProfile.user_id == None) | (UserProfile.user_id == "")
+                        Or(Eq(UserProfile.user_id, None), Eq(UserProfile.user_id, ""))
                     )
                 else:
                     conditions.append(UserProfile.user_id == user_id)
@@ -162,7 +163,7 @@ class UserProfileRawRepository(BaseRepository[UserProfile]):
                 if group_id == "" or group_id is None:
                     # Explicitly filter for null or empty string
                     conditions.append(
-                        (UserProfile.group_id == None) | (UserProfile.group_id == "")
+                        Or(Eq(UserProfile.group_id, None), Eq(UserProfile.group_id, ""))
                     )
                 else:
                     conditions.append(UserProfile.group_id == group_id)

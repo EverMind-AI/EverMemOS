@@ -91,6 +91,18 @@ class EpisodicMemoryCollection(TenantAwareMilvusCollectionWithSuffix):
                 description="Detailed non-retrieval information in JSON (metadata)",
             ),
             FieldSchema(
+                name="parent_type",
+                dtype=DataType.VARCHAR,
+                max_length=100,
+                description="Parent memory type (e.g., memcell)",
+            ),
+            FieldSchema(
+                name="parent_id",
+                dtype=DataType.VARCHAR,
+                max_length=100,
+                description="Parent memory ID",
+            ),
+            FieldSchema(
                 name="created_at",
                 dtype=DataType.INT64,
                 description="Creation timestamp",
@@ -122,5 +134,6 @@ class EpisodicMemoryCollection(TenantAwareMilvusCollectionWithSuffix):
         ),
         IndexConfig(field_name="group_id", index_type="AUTOINDEX"),
         IndexConfig(field_name="event_type", index_type="AUTOINDEX"),
+        IndexConfig(field_name="parent_id", index_type="AUTOINDEX"),
         IndexConfig(field_name="timestamp", index_type="AUTOINDEX"),
     ]

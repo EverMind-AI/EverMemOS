@@ -85,7 +85,7 @@ class ForesightExtractor(MemoryExtractor):
             conversation_text: Raw conversation transcript text
             timestamp: Conversation timestamp (used as base time)
             user_id: Target user id
-            user_ids: Optional user id list in the conversation (for prompt context)
+            user_name: Optional user display name
             group_id: Optional group id
             ori_event_id_list: Optional original event id list
 
@@ -275,7 +275,6 @@ class ForesightExtractor(MemoryExtractor):
                             'start_time': item_start_time,
                             'end_time': item_end_time,
                             'duration_days': item_duration_days,
-                            'parent_episode_id': item.get('parent_episode_id'),
                         }
                     )
 
@@ -306,7 +305,6 @@ class ForesightExtractor(MemoryExtractor):
                         start_time=item_data['start_time'],
                         end_time=item_data['end_time'],
                         duration_days=item_data['duration_days'],
-                        parent_episode_id=item_data['parent_episode_id'],
                         vector=vector,
                         vector_model=vs.get_model_name(),
                     )

@@ -52,36 +52,21 @@ class EventLogConverter(BaseEsConverter[EventLogDoc]):
                 meta={'id': str(source_doc.id)},
                 user_id=source_doc.user_id,
                 user_name=source_doc.user_name or "",
-                # Timestamp fields
+                # Timestamp field
                 timestamp=source_doc.timestamp,
-                # Core content fields - use atomic_fact as episode
-                title=(
-                    source_doc.atomic_fact[:50] if source_doc.atomic_fact else ""
-                ),  # Take first 50 characters as title
-                episode=source_doc.atomic_fact,
+                # Core content field
+                search_content=search_content,
                 atomic_fact=source_doc.atomic_fact,
-                search_content=search_content,  # Core field for BM25 search
-                summary=None,
                 # Classification and tag fields
                 group_id=source_doc.group_id,
                 group_name=source_doc.group_name or "",
                 participants=source_doc.participants,
-                type=source_doc.event_type
-                or RawDataType.CONVERSATION.value,  # Event type
-                keywords=None,
-                linked_entities=None,
-                # MongoDB specific fields
-                subject=source_doc.atomic_fact[:50] if source_doc.atomic_fact else "",
-                memcell_event_id_list=(
-                    [source_doc.parent_episode_id]
-                    if source_doc.parent_episode_id
-                    else None
-                ),
+                type=source_doc.event_type or RawDataType.CONVERSATION.value,
+                # Parent info
+                parent_type=source_doc.parent_type,
+                parent_id=source_doc.parent_id,
                 # Extension fields
                 extend={
-                    "parent_episode_id": source_doc.parent_episode_id,
-                    "event_type": source_doc.event_type
-                    or RawDataType.CONVERSATION.value,
                     "vector_model": source_doc.vector_model,
                     **(source_doc.extend or {}),
                 },

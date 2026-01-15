@@ -41,6 +41,11 @@ class EpisodicMemory(DocumentBase, AuditBase):
         default=None, description="Memory unit event ID"
     )
 
+    parent_type: Optional[str] = Field(
+        default=None, description="Parent memory type (e.g., memcell)"
+    )
+    parent_id: Optional[str] = Field(default=None, description="Parent memory ID")
+
     extend: Optional[Dict[str, Any]] = Field(
         default=None, description="Reserved extension field"
     )
@@ -83,16 +88,16 @@ class EpisodicMemory(DocumentBase, AuditBase):
         indexes = [
             # Single field indexes
             IndexModel([("user_id", ASCENDING)], name="idx_user_id"),
-            IndexModel([("group_id", ASCENDING)], name="idx_group_id", sparse=True),
             # Composite index on user ID and timestamp
+            IndexModel([("parent_id", ASCENDING)], name="idx_parent_id"),
             IndexModel(
                 [("user_id", ASCENDING), ("timestamp", DESCENDING)],
                 name="idx_user_timestamp",
             ),
-            # Composite index on group ID and timestamp
             IndexModel(
                 [("group_id", ASCENDING), ("timestamp", DESCENDING)],
                 name="idx_group_timestamp",
+                sparse=True,
             ),
             # Composite index on group ID, user ID and timestamp
             # Note: This also covers (group_id, user_id) queries by left-prefix rule

@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 from core.oxm.mongo.document_base import DocumentBase
 from pydantic import Field, ConfigDict, BaseModel
-from pymongo import IndexModel, ASCENDING
+from pymongo import DESCENDING, IndexModel, ASCENDING
 from core.oxm.mongo.audit_base import AuditBase
 from common_utils.datetime_utils import get_timezone
 
@@ -136,10 +136,17 @@ class ConversationMeta(DocumentBase, AuditBase):
 
         name = "conversation_metas"
         indexes = [
-            # Unique index on group_id (includes null - only one default config allowed)
+            IndexModel(
+                [("conversation_created_at", ASCENDING)],
+                name="idx_conversation_created_at",
+            ),
+            # Creation time index
+            IndexModel([("created_at", DESCENDING)], name="idx_created_at"),
+            # Update time index
+            IndexModel([("updated_at", DESCENDING)], name="idx_updated_at"),
             IndexModel(
                 [("group_id", ASCENDING)], name="idx_group_id_unique", unique=True
-            )
+            ),
         ]
         validate_on_save = True
         use_state_management = True

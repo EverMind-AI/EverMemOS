@@ -87,8 +87,9 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
         timestamp: datetime,
         content: str,
         search_content: List[str],
+        parent_id: str,
+        parent_type: str,
         event_type: Optional[str] = None,
-        parent_episode_id: Optional[str] = None,
         group_id: Optional[str] = None,
         participants: Optional[List[str]] = None,
         start_time: Optional[datetime] = None,
@@ -108,7 +109,8 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
             timestamp: Event occurrence time (required)
             content: Foresight content (required)
             search_content: List of search content (supports multiple search terms, required)
-            parent_episode_id: Parent episodic memory ID
+            parent_id: Parent memory ID
+            parent_type: Parent memory type (memcell/episode)
             group_id: Group ID
             participants: List of participants
             start_time: Validity start time
@@ -134,11 +136,9 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
             foresight_extend = extend or {}
             foresight_extend.update(
                 {
-                    "parent_episode_id": parent_episode_id,
                     "start_time": start_time.isoformat() if start_time else None,
                     "end_time": end_time.isoformat() if end_time else None,
                     "duration_days": duration_days,
-                    "evidence": evidence,
                 }
             )
 
@@ -154,9 +154,8 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
                 evidence=evidence or '',
                 group_id=group_id,
                 participants=participants or [],
-                keywords=[],
-                subject='',
-                memcell_event_id_list=[],
+                parent_type=parent_type,
+                parent_id=parent_id,
                 extend=foresight_extend,
                 created_at=created_at,
                 updated_at=updated_at,
@@ -186,6 +185,8 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
         query: List[str],
         user_id: Optional[str] = None,
         group_id: Optional[str] = None,
+        parent_type: Optional[str] = None,
+        parent_id: Optional[str] = None,
         keywords: Optional[List[str]] = None,
         date_range: Optional[Dict[str, Any]] = None,
         size: int = 10,
@@ -204,6 +205,8 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
             query: List of search terms, supports multiple terms
             user_id: User ID filter
             group_id: Group ID filter
+            parent_type: Parent type filter (e.g., "memcell", "episode")
+            parent_id: Parent memory ID filter
             keywords: Keyword filter
             date_range: Time range filter, format: {"gte": "2024-01-01", "lte": "2024-12-31"}
             size: Number of results
@@ -241,6 +244,14 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
                     filter_queries.append(
                         Q("bool", must_not=Q("exists", field="group_id"))
                     )
+
+            # Handle parent_id filter
+            if parent_id:
+                filter_queries.append(Q("term", parent_id=parent_id))
+
+            # Handle parent_type filter
+            if parent_type:
+                filter_queries.append(Q("term", parent_type=parent_type))
 
             if keywords:
                 filter_queries.append(Q("terms", keywords=keywords))

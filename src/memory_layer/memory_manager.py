@@ -20,6 +20,7 @@ from api_specs.memory_types import (
     Foresight,
     BaseMemory,
     EpisodeMemory,
+    ParentType,
 )
 from memory_layer.memory_extractor.episode_memory_extractor import (
     EpisodeMemoryExtractor,
@@ -58,7 +59,7 @@ class MemoryManager:
             provider_type=os.getenv("LLM_PROVIDER", "openai"),
             model=os.getenv("LLM_MODEL", "openai/gpt-4.1-mini"),  # skip-sensitive-check
             base_url=os.getenv("LLM_BASE_URL"),
-            api_key=os.getenv("LLM_API_KEY", "your-api-key"),
+            api_key=os.getenv("LLM_API_KEY", "your-api-key"),  # skip-sensitive-check
             temperature=float(os.getenv("LLM_TEMPERATURE", "0.3")),
             max_tokens=int(os.getenv("LLM_MAX_TOKENS", "16384")),
         )
@@ -257,7 +258,7 @@ class MemoryManager:
                     break
 
         extractor = ForesightExtractor(llm_provider=self.llm_provider)
-        return await extractor.generate_foresights_for_conversation(
+        foresights = await extractor.generate_foresights_for_conversation(
             conversation_text=conversation_text,
             timestamp=memcell.timestamp,
             user_id=uid,
@@ -265,6 +266,11 @@ class MemoryManager:
             group_id=gid,
             ori_event_id_list=[memcell.event_id] if memcell.event_id else [],
         )
+        # Set parent info after extraction
+        for f in foresights:
+            f.parent_type = ParentType.MEMCELL.value
+            f.parent_id = memcell.event_id
+        return foresights
 
     async def _extract_event_log(
         self,

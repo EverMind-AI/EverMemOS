@@ -11,6 +11,7 @@ from pydantic import Field, ConfigDict
 from pymongo import IndexModel, ASCENDING, DESCENDING
 from core.oxm.mongo.audit_base import AuditBase
 from beanie import PydanticObjectId
+from api_specs.memory_types import ParentType
 
 
 class EventLogRecord(DocumentBase, AuditBase):
@@ -28,7 +29,8 @@ class EventLogRecord(DocumentBase, AuditBase):
     group_id: Optional[str] = Field(default=None, description="Group ID")
     group_name: Optional[str] = Field(default=None, description="Group name")
     atomic_fact: str = Field(..., description="Atomic fact content (single sentence)")
-    parent_episode_id: str = Field(..., description="Parent episodic memory event_id")
+    parent_type: str = Field(..., description="Parent memory type (memcell/episode)")
+    parent_id: str = Field(..., description="Parent memory ID")
 
     # Time information
     timestamp: datetime = Field(..., description="Event occurrence time")
@@ -64,7 +66,8 @@ class EventLogRecord(DocumentBase, AuditBase):
                 "user_id": "user_12345",
                 "user_name": "Alice",
                 "atomic_fact": "The user went to Chengdu on January 1, 2024, and enjoyed the local Sichuan cuisine.",
-                "parent_episode_id": "episode_001",
+                "parent_type": ParentType.MEMCELL.value,
+                "parent_id": "memcell_001",
                 "timestamp": "2024-01-01T10:00:00+00:00",
                 "group_id": "group_travel",
                 "group_name": "Travel Group",
@@ -92,13 +95,8 @@ class EventLogRecord(DocumentBase, AuditBase):
             IndexModel([("user_id", ASCENDING)], name="idx_user_id"),
             IndexModel([("group_id", ASCENDING)], name="idx_group_id", sparse=True),
             IndexModel([("timestamp", DESCENDING)], name="idx_timestamp"),
-            # Parent episodic memory index
-            IndexModel([("parent_episode_id", ASCENDING)], name="idx_parent_episode"),
-            # Composite index of user ID and parent episodic memory
-            IndexModel(
-                [("user_id", ASCENDING), ("parent_episode_id", ASCENDING)],
-                name="idx_user_parent",
-            ),
+            # Parent memory index
+            IndexModel([("parent_id", ASCENDING)], name="idx_parent_id"),
             # Composite index of user ID and timestamp
             IndexModel(
                 [("user_id", ASCENDING), ("timestamp", DESCENDING)],
@@ -147,7 +145,8 @@ class EventLogRecordProjection(DocumentBase, AuditBase):
     group_id: Optional[str] = Field(default=None, description="Group ID")
     group_name: Optional[str] = Field(default=None, description="Group name")
     atomic_fact: str = Field(..., description="Atomic fact content (single sentence)")
-    parent_episode_id: str = Field(..., description="Parent episodic memory event_id")
+    parent_type: str = Field(..., description="Parent memory type (memcell/episode)")
+    parent_id: str = Field(..., description="Parent memory ID")
 
     # Time information
     timestamp: datetime = Field(..., description="Event occurrence time")

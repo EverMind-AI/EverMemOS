@@ -328,7 +328,8 @@ def _convert_foresight_to_doc(
             foresight, "user_name", getattr(parent_doc, "user_name", None)
         ),
         content=foresight.foresight,  # Foresight class uses 'foresight' field, but DB uses 'content'
-        parent_episode_id=str(parent_doc.event_id),
+        parent_type=foresight.parent_type,
+        parent_id=foresight.parent_id,
         start_time=foresight.start_time,
         end_time=foresight.end_time,
         duration_days=foresight.duration_days,
@@ -375,7 +376,8 @@ def _convert_event_log_to_docs(
             user_id=event_log.user_id,
             user_name=event_log.user_name or '',
             atomic_fact=fact,
-            parent_episode_id=str(parent_doc.event_id),
+            parent_type=event_log.parent_type,
+            parent_id=event_log.parent_id,
             timestamp=parent_doc.timestamp or current_time,
             group_id=event_log.group_id,
             group_name=event_log.group_name,

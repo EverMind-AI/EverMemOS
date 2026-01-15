@@ -52,6 +52,13 @@ class RawDataType(Enum):
             return None
 
 
+class ParentType(str, Enum):
+    """Parent memory type for Foresight/EventLog."""
+
+    MEMCELL = "memcell"
+    EPISODE = "episode"
+
+
 @dataclass
 class MemCell:
     # TODO: Name conflict - should add BO suffix (such as MemCellBO) to distinguish between business objects and document objects
@@ -209,12 +216,13 @@ class EpisodeMemory(BaseMemory):
 
 @dataclass
 class EventLog(BaseMemory):
-    """Event log - atomic facts extracted from episodes."""
+    """Event log - atomic facts extracted from MemCell/conversation."""
 
     time: Optional[str] = None
     atomic_fact: Optional[Union[str, List[str]]] = None
     fact_embeddings: Optional[List[List[float]]] = None
-    parent_episode_id: Optional[str] = None
+    parent_type: Optional[str] = None
+    parent_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         d = super().to_dict()
@@ -224,8 +232,9 @@ class EventLog(BaseMemory):
             d["atomic_fact"] = self.atomic_fact
         if self.fact_embeddings:
             d["fact_embeddings"] = self.fact_embeddings
-        if self.parent_episode_id:
-            d["parent_episode_id"] = self.parent_episode_id
+        d["parent_type"] = self.parent_type
+        if self.parent_id:
+            d["parent_id"] = self.parent_id
         return d
 
     @classmethod
@@ -239,20 +248,22 @@ class EventLog(BaseMemory):
             time=data.get("time", ""),
             atomic_fact=data.get("atomic_fact", []),
             fact_embeddings=data.get("fact_embeddings"),
-            parent_episode_id=data.get("parent_episode_id"),
+            parent_type=data.get("parent_type"),
+            parent_id=data.get("parent_id"),
         )
 
 
 @dataclass
 class Foresight(BaseMemory):
-    """Foresight prediction memory."""
+    """Foresight prediction memory extracted from MemCell/conversation."""
 
     foresight: Optional[str] = None
     evidence: Optional[str] = None
     start_time: Optional[str] = None
     end_time: Optional[str] = None
     duration_days: Optional[int] = None
-    parent_episode_id: Optional[str] = None
+    parent_type: Optional[str] = None
+    parent_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         d = super().to_dict()
@@ -261,5 +272,6 @@ class Foresight(BaseMemory):
         d["start_time"] = self.start_time
         d["end_time"] = self.end_time
         d["duration_days"] = self.duration_days
-        d["parent_episode_id"] = self.parent_episode_id
+        d["parent_type"] = self.parent_type
+        d["parent_id"] = self.parent_id
         return d

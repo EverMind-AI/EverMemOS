@@ -46,7 +46,8 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
         id: str,
         user_id: Optional[str],
         atomic_fact: str,
-        parent_episode_id: str,
+        parent_id: str,
+        parent_type: str,
         timestamp: datetime,
         vector: List[float],
         group_id: Optional[str] = None,
@@ -65,7 +66,8 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
             id: Unique identifier for the event log
             user_id: User ID (required)
             atomic_fact: Atomic fact content (required)
-            parent_episode_id: Parent episode memory ID (required)
+            parent_id: Parent memory ID (required)
+            parent_type: Parent memory type (memcell/episode)
             timestamp: Event occurrence time (required)
             vector: Text vector (required, dimension must be VECTORIZE_DIMENSIONS)
             group_id: Group ID
@@ -102,7 +104,8 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
                 "user_id": user_id or "",
                 "group_id": group_id or "",
                 "participants": participants or [],
-                "parent_episode_id": parent_episode_id,
+                "parent_type": parent_type,
+                "parent_id": parent_id,
                 "event_type": event_type,
                 "timestamp": int(timestamp.timestamp()),
                 "atomic_fact": atomic_fact,
@@ -125,7 +128,8 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
                 "id": id,
                 "user_id": user_id,
                 "atomic_fact": atomic_fact,
-                "parent_episode_id": parent_episode_id,
+                "parent_type": parent_type,
+                "parent_id": parent_id,
                 "timestamp": timestamp,
                 "search_content": search_content,
                 "metadata": metadata,
@@ -144,7 +148,8 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
         query_vector: List[float],
         user_id: Optional[str] = None,
         group_id: Optional[str] = None,
-        parent_episode_id: Optional[str] = None,
+        parent_type: Optional[str] = None,
+        parent_id: Optional[str] = None,
         event_type: Optional[str] = None,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
@@ -160,7 +165,8 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
             query_vector: Query vector
             user_id: User ID filter
             group_id: Group ID filter
-            parent_episode_id: Parent episode memory ID filter
+            parent_type: Parent type filter (e.g., "memcell", "episode")
+            parent_id: Parent memory ID filter
             event_type: Event type filter
             start_time: Start timestamp filter
             end_time: End timestamp filter
@@ -195,8 +201,10 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
                 filter_expr.append(
                     f'array_contains(participants, "{participant_user_id}")'
                 )
-            if parent_episode_id:
-                filter_expr.append(f'parent_episode_id == "{parent_episode_id}"')
+            if parent_type:
+                filter_expr.append(f'parent_type == "{parent_type}"')
+            if parent_id:
+                filter_expr.append(f'parent_id == "{parent_id}"')
             if event_type:
                 filter_expr.append(f'event_type == "{event_type}"')
             if start_time:
@@ -270,7 +278,8 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
                             "score": float(hit.score),
                             "user_id": hit.entity.get("user_id"),
                             "group_id": hit.entity.get("group_id"),
-                            "parent_episode_id": hit.entity.get("parent_episode_id"),
+                            "parent_type": hit.entity.get("parent_type"),
+                            "parent_id": hit.entity.get("parent_id"),
                             "event_type": hit.entity.get("event_type"),
                             "timestamp": datetime.fromtimestamp(
                                 hit.entity.get("timestamp", 0)
@@ -317,18 +326,23 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
             )
             return False
 
-    async def delete_by_parent_episode_id(self, parent_episode_id: str) -> int:
+    async def delete_by_parent_id(
+        self, parent_id: str, parent_type: Optional[str] = None
+    ) -> int:
         """
-        Delete all associated event logs by parent episode ID
+        Delete all associated event logs by parent memory ID and optionally parent type
 
         Args:
-            parent_episode_id: Parent episode memory ID
+            parent_id: Parent memory ID
+            parent_type: Optional parent type filter (e.g., "memcell", "episode")
 
         Returns:
             Number of deleted documents
         """
         try:
-            expr = f'parent_episode_id == "{parent_episode_id}"'
+            expr = f'parent_id == "{parent_id}"'
+            if parent_type is not None:
+                expr += f' and parent_type == "{parent_type}"'
 
             # First query the number of documents to delete
             results = await self.collection.query(expr=expr, output_fields=["id"])
@@ -339,13 +353,15 @@ class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
                 await self.collection.delete(expr)
 
             logger.debug(
-                "✅ Successfully deleted event logs by parent_episode_id: deleted %d records",
+                "✅ Successfully deleted event logs by parent_id: %s (type=%s), deleted %d records",
+                parent_id,
+                parent_type,
                 delete_count,
             )
             return delete_count
 
         except Exception as e:
-            logger.error("❌ Failed to delete event logs by parent_episode_id: %s", e)
+            logger.error("❌ Failed to delete event logs by parent_id: %s", e)
             raise
 
     async def delete_by_filters(

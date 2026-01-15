@@ -105,7 +105,8 @@ class ForesightMilvusConverter(BaseMilvusConverter[ForesightCollection]):
                 "participants": (
                     source_doc.participants if source_doc.participants else []
                 ),
-                "parent_episode_id": source_doc.parent_episode_id or "",
+                "parent_type": source_doc.parent_type,
+                "parent_id": source_doc.parent_id,
                 # Time fields
                 "start_time": start_time,
                 "end_time": end_time,

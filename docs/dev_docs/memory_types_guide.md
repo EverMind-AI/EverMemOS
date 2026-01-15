@@ -46,6 +46,7 @@
 **Business Purpose**:
 - Source of all downstream memories
 - Guarantees each unit represents a full topic
+- **One-to-many relationship**: Each MemCell can produce multiple downstream memories (Episode, Foresight, EventLog), but each downstream memory **comes from exactly one MemCell**
 
 ---
 

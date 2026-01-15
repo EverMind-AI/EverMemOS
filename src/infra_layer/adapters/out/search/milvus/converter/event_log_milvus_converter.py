@@ -60,7 +60,8 @@ class EventLogMilvusConverter(BaseMilvusConverter[EventLogCollection]):
                 "participants": (
                     source_doc.participants if source_doc.participants else []
                 ),
-                "parent_episode_id": source_doc.parent_episode_id or "",
+                "parent_type": source_doc.parent_type,
+                "parent_id": source_doc.parent_id,
                 # Event type and time fields
                 "event_type": source_doc.event_type or RawDataType.CONVERSATION.value,
                 "timestamp": timestamp,

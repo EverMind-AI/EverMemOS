@@ -119,7 +119,13 @@ class EpisodicMemoryDoc(
     linked_entities = e_field.Keyword(multi=True)  # List of linked entity IDs
 
     subject = e_field.Text()  # Event title
+
+    # todo: will abandon this field
     memcell_event_id_list = e_field.Keyword(multi=True)  # List of memory cell event IDs
+
+    # Parent info
+    parent_type = e_field.Keyword()  # Parent memory type (e.g., memcell)
+    parent_id = e_field.Keyword()  # Parent memory ID
 
     # Extension field
     extend = e_field.Object(dynamic=True)  # Flexible extension field

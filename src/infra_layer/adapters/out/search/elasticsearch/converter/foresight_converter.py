@@ -71,24 +71,17 @@ class ForesightConverter(BaseEsConverter[ForesightDoc]):
                 # Core content fields
                 foresight=source_doc.content,
                 evidence=source_doc.evidence or "",
-                search_content=search_content,  # Core field for BM25 search
+                search_content=search_content,
                 # Categorization and tagging fields
                 group_id=source_doc.group_id,
                 group_name=source_doc.group_name or "",
                 participants=source_doc.participants,
-                type="Conversation",  # Event type
-                keywords=None,
-                linked_entities=None,
-                # MongoDB specific fields
-                subject=source_doc.content[:100] if source_doc.content else "",
-                memcell_event_id_list=(
-                    [source_doc.parent_episode_id]
-                    if source_doc.parent_episode_id
-                    else None
-                ),
+                type="Conversation",
+                # Parent info
+                parent_type=source_doc.parent_type,
+                parent_id=source_doc.parent_id,
                 # Extension fields
                 extend={
-                    "parent_episode_id": source_doc.parent_episode_id,
                     "start_time": source_doc.start_time,
                     "end_time": source_doc.end_time,
                     "duration_days": source_doc.duration_days,

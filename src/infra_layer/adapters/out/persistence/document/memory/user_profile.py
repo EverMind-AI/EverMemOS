@@ -4,6 +4,7 @@ from beanie import Indexed
 from core.oxm.mongo.document_base import DocumentBase
 from pydantic import Field
 from core.oxm.mongo.audit_base import AuditBase
+from pymongo import IndexModel, ASCENDING, DESCENDING
 
 
 class UserProfile(DocumentBase, AuditBase):
@@ -44,5 +45,14 @@ class UserProfile(DocumentBase, AuditBase):
     )
 
     class Settings:
+        """Beanie settings"""
+
         name = "user_profiles"
-        indexes = [[("user_id", 1), ("group_id", 1)]]  # Composite index
+        indexes = [
+            IndexModel([("user_id", ASCENDING)], name="idx_user_id"),
+            IndexModel([("group_id", ASCENDING)], name="idx_group_id"),
+            IndexModel([("created_at", DESCENDING)], name="idx_created_at"),
+            IndexModel([("updated_at", DESCENDING)], name="idx_updated_at"),
+        ]
+        validate_on_save = True
+        use_state_management = True

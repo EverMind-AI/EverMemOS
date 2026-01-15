@@ -62,7 +62,8 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
         extend: Optional[Dict[str, Any]] = None,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,
-        parent_event_id: Optional[str] = None,
+        parent_type: Optional[str] = None,
+        parent_id: Optional[str] = None,
         metadata: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
@@ -116,8 +117,6 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
                     "extend": extend or {},
                     "created_at": created_at.isoformat(),
                     "updated_at": updated_at.isoformat(),
-                    "parent_event_id": parent_event_id
-                    or "",  # Parent event ID, used to associate split records
                 }
                 metadata_json = json.dumps(metadata_dict, ensure_ascii=False)
             else:
@@ -136,6 +135,8 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
                 or "",  # Milvus VARCHAR does not accept None, convert to empty string
                 "group_id": group_id or "",
                 "participants": participants or [],
+                "parent_type": parent_type or "",
+                "parent_id": parent_id or "",
                 "event_type": event_type or "",
                 "timestamp": int(timestamp.timestamp()),
                 "episode": episode,

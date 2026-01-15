@@ -82,6 +82,9 @@ class EpisodicMemoryMilvusConverter(BaseMilvusConverter[EpisodicMemoryCollection
                 "metadata": json.dumps(
                     cls._build_detail(source_doc), ensure_ascii=False
                 ),
+                # Parent info
+                "parent_type": getattr(source_doc, 'parent_type', None) or "",
+                "parent_id": getattr(source_doc, 'parent_id', None) or "",
                 # Audit fields
                 "created_at": (
                     int(source_doc.created_at.timestamp())

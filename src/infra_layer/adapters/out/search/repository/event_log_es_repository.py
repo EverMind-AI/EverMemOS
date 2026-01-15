@@ -86,8 +86,9 @@ class EventLogEsRepository(BaseRepository[EventLogDoc]):
         timestamp: datetime,
         atomic_fact: str,
         search_content: List[str],
+        parent_id: str,
+        parent_type: str,
         event_type: Optional[str] = None,
-        parent_episode_id: Optional[str] = None,
         group_id: Optional[str] = None,
         group_name: str = "",
         user_name: str = "",
@@ -105,7 +106,8 @@ class EventLogEsRepository(BaseRepository[EventLogDoc]):
             timestamp: Event occurrence time (required)
             atomic_fact: Atomic fact (required)
             search_content: List of search content (supports multiple search terms, required)
-            parent_episode_id: Parent episode memory ID
+            parent_id: Parent memory ID
+            parent_type: Parent memory type (memcell/episode)
             group_id: Group ID
             participants: List of participants
             extend: Extension fields
@@ -123,11 +125,8 @@ class EventLogEsRepository(BaseRepository[EventLogDoc]):
             if updated_at is None:
                 updated_at = now
 
-            # Build extend field, including event log specific information
+            # Build extend field
             eventlog_extend = extend or {}
-            eventlog_extend.update(
-                {"parent_episode_id": parent_episode_id, "atomic_fact": atomic_fact}
-            )
 
             # Create document instance
             doc = EventLogDoc(
@@ -136,18 +135,13 @@ class EventLogEsRepository(BaseRepository[EventLogDoc]):
                 user_id=user_id,
                 user_name=user_name or "",
                 timestamp=timestamp,
-                title='',
-                episode='',
-                atomic_fact=atomic_fact,
                 search_content=search_content,
-                summary='',
+                atomic_fact=atomic_fact,
                 group_id=group_id,
                 group_name=group_name or "",
                 participants=participants or [],
-                keywords=[],
-                linked_entities=[],
-                subject='',
-                memcell_event_id_list=[],
+                parent_type=parent_type,
+                parent_id=parent_id,
                 extend=eventlog_extend,
                 created_at=created_at,
                 updated_at=updated_at,
@@ -177,6 +171,8 @@ class EventLogEsRepository(BaseRepository[EventLogDoc]):
         query: List[str],
         user_id: Optional[str] = None,
         group_id: Optional[str] = None,
+        parent_type: Optional[str] = None,
+        parent_id: Optional[str] = None,
         keywords: Optional[List[str]] = None,
         date_range: Optional[Dict[str, Any]] = None,
         size: int = 10,
@@ -194,6 +190,8 @@ class EventLogEsRepository(BaseRepository[EventLogDoc]):
             query: List of search terms, supports multiple search terms
             user_id: User ID filter
             group_id: Group ID filter
+            parent_type: Parent type filter (e.g., "memcell", "episode")
+            parent_id: Parent memory ID filter
             keywords: Keyword filter
             date_range: Time range filter, format: {"gte": "2024-01-01", "lte": "2024-12-31"}
             size: Number of results
@@ -230,6 +228,14 @@ class EventLogEsRepository(BaseRepository[EventLogDoc]):
                     filter_queries.append(
                         Q("bool", must_not=Q("exists", field="group_id"))
                     )
+
+            # Handle parent_id filter
+            if parent_id:
+                filter_queries.append(Q("term", parent_id=parent_id))
+
+            # Handle parent_type filter
+            if parent_type:
+                filter_queries.append(Q("term", parent_type=parent_type))
 
             if keywords:
                 filter_queries.append(Q("terms", keywords=keywords))

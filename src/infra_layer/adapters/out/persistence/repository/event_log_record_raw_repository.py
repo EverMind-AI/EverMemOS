@@ -53,10 +53,11 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecord]):
         try:
             await event_log.insert(session=session)
             logger.info(
-                "✅ Saved personal event log successfully: id=%s, user_id=%s, parent_episode=%s",
+                "✅ Saved personal event log successfully: id=%s, user_id=%s, parent_type=%s, parent_id=%s",
                 event_log.id,
                 event_log.user_id,
-                event_log.parent_episode_id,
+                event_log.parent_type,
+                event_log.parent_id,
             )
             return event_log
         except Exception as e:
@@ -107,17 +108,19 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecord]):
             logger.error("❌ Failed to retrieve personal event log by ID: %s", e)
             return None
 
-    async def get_by_parent_episode_id(
+    async def get_by_parent_id(
         self,
-        parent_episode_id: str,
+        parent_id: str,
+        parent_type: Optional[str] = None,
         session: Optional[AsyncClientSession] = None,
         model: Optional[Type[T]] = None,
     ) -> List[Union[EventLogRecord, EventLogRecordProjection]]:
         """
-        Get all event logs by parent episodic memory ID
+        Get all event logs by parent memory ID and optionally parent type
 
         Args:
-            parent_episode_id: Parent episodic memory ID
+            parent_id: Parent memory ID
+            parent_type: Optional parent type filter (e.g., "memcell", "episode")
             session: Optional MongoDB session, for transaction support
             model: Returned model type, default is EventLogRecord (full version), can pass EventLogRecordShort
 
@@ -128,22 +131,24 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecord]):
             # If model is not specified, use full version
             target_model = model if model is not None else self.model
 
+            # Build query filter
+            query_filter = {"parent_id": parent_id}
+            if parent_type:
+                query_filter["parent_type"] = parent_type
+
             # Determine whether to use projection based on model type
             if target_model == self.model:
-                query = self.model.find(
-                    {"parent_episode_id": parent_episode_id}, session=session
-                )
+                query = self.model.find(query_filter, session=session)
             else:
                 query = self.model.find(
-                    {"parent_episode_id": parent_episode_id},
-                    projection_model=target_model,
-                    session=session,
+                    query_filter, projection_model=target_model, session=session
                 )
 
             results = await query.to_list()
             logger.debug(
-                "✅ Retrieved event logs by parent episodic memory ID successfully: %s, found %d records (model=%s)",
-                parent_episode_id,
+                "✅ Retrieved event logs by parent memory ID successfully: %s (type=%s), found %d records (model=%s)",
+                parent_id,
+                parent_type,
                 len(results),
                 target_model.__name__,
             )
@@ -281,27 +286,34 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecord]):
             logger.error("❌ Failed to delete personal event log: %s", e)
             return False
 
-    async def delete_by_parent_episode_id(
-        self, parent_episode_id: str, session: Optional[AsyncClientSession] = None
+    async def delete_by_parent_id(
+        self,
+        parent_id: str,
+        parent_type: Optional[str] = None,
+        session: Optional[AsyncClientSession] = None,
     ) -> int:
         """
-        Delete all event logs by parent episodic memory ID
+        Delete all event logs by parent memory ID and optionally parent type
 
         Args:
-            parent_episode_id: Parent episodic memory ID
+            parent_id: Parent memory ID
+            parent_type: Optional parent type filter (e.g., "memcell", "episode")
             session: Optional MongoDB session, for transaction support
 
         Returns:
             Number of deleted records
         """
         try:
-            result = await self.model.find(
-                {"parent_episode_id": parent_episode_id}, session=session
-            ).delete()
+            query_filter = {"parent_id": parent_id}
+            if parent_type is not None:
+                query_filter["parent_type"] = parent_type
+
+            result = await self.model.find(query_filter, session=session).delete()
             count = result.deleted_count if result else 0
             logger.info(
-                "✅ Deleted event logs by parent episodic memory ID successfully: %s, deleted %d records",
-                parent_episode_id,
+                "✅ Deleted event logs by parent memory ID successfully: %s (type=%s), deleted %d records",
+                parent_id,
+                parent_type,
                 count,
             )
             return count

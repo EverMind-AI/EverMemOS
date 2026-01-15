@@ -16,6 +16,7 @@ from api_specs.memory_types import (
     Foresight,
 )
 from api_specs.memory_types import EventLog
+from biz_layer.memorize_config import DEFAULT_MEMORIZE_CONFIG
 from memory_layer.memory_extractor.profile_memory_extractor import ProfileMemory
 from core.di import get_bean_by_type
 from infra_layer.adapters.out.persistence.repository.episodic_memory_raw_repository import (
@@ -255,11 +256,15 @@ async def _trigger_profile_extraction(
         # Create LLM Provider
         llm_provider = LLMProvider(
             provider_type=os.getenv("LLM_PROVIDER", "openai"),
-            model=os.getenv("LLM_MODEL", "gpt-4"),
-            base_url=os.getenv("LLM_BASE_URL"),
-            api_key=os.getenv("LLM_API_KEY"),
-            temperature=float(os.getenv("LLM_TEMPERATURE", "0.3")),
-            max_tokens=int(os.getenv("LLM_MAX_TOKENS", "16384")),
+            model=os.getenv("LLM_MODEL", "gpt-4.1-mini"),  # skip-sensitive-check
+            base_url=os.getenv("LLM_BASE_URL"),  # skip-sensitive-check
+            api_key=os.getenv("LLM_API_KEY"),  # skip-sensitive-check
+            temperature=float(
+                os.getenv("LLM_TEMPERATURE", "0.3")
+            ),  # skip-sensitive-check
+            max_tokens=int(
+                os.getenv("LLM_MAX_TOKENS", "16384")
+            ),  # skip-sensitive-check
         )
 
         # Determine scenario
@@ -428,6 +433,8 @@ class ExtractionState:
     scene: str
     is_assistant_scene: bool
     participants: List[str]
+    parent_type: str = None
+    parent_id: str = None
     group_episode: Optional[EpisodeMemory] = None
     group_episode_memories: List[EpisodeMemory] = None
     episode_memories: List[EpisodeMemory] = None
@@ -437,6 +444,11 @@ class ExtractionState:
         self.group_episode_memories = []
         self.episode_memories = []
         self.parent_docs_map = {}
+        # Set default parent info from memcell
+        if self.parent_type is None:
+            self.parent_type = DEFAULT_MEMORIZE_CONFIG.default_parent_type
+        if self.parent_id is None:
+            self.parent_id = self.memcell.event_id
 
 
 async def process_memory_extraction(
@@ -668,6 +680,8 @@ async def _extract_foresights(
     for mem in result:
         mem.group_id = state.request.group_id
         mem.group_name = state.request.group_name
+        mem.parent_type = state.parent_type
+        mem.parent_id = state.parent_id
     return result
 
 
@@ -682,6 +696,8 @@ async def _extract_event_logs(
         return []
     result.group_id = state.request.group_id
     result.group_name = state.request.group_name
+    result.parent_type = state.parent_type
+    result.parent_id = state.parent_id
     return [result]
 
 

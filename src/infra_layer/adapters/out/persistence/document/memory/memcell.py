@@ -224,6 +224,10 @@ class MemCell(DocumentBaseWithSoftDelete, AuditBase):
                 ],
                 name="idx_group_type_deleted_timestamp",
             ),
+            # Creation time index
+            IndexModel([("created_at", DESCENDING)], name="idx_created_at"),
+            # Update time index
+            IndexModel([("updated_at", DESCENDING)], name="idx_updated_at"),
         ]
 
         # Validation settings

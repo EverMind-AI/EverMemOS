@@ -87,6 +87,9 @@ class EpisodicMemoryConverter(BaseEsConverter[EpisodicMemoryDoc]):
                 memcell_event_id_list=getattr(
                     source_doc, 'memcell_event_id_list', None
                 ),
+                # Parent info
+                parent_type=getattr(source_doc, 'parent_type', None),
+                parent_id=getattr(source_doc, 'parent_id', None),
                 # Extension fields
                 extend=getattr(source_doc, 'extend', None),
                 # Audit fields

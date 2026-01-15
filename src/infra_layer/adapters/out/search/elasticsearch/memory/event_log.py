@@ -32,28 +32,6 @@ class EventLogDoc(
     # Timestamp field
     timestamp = e_field.Date(required=True)
 
-    # Core content fields - primary target for BM25 retrieval
-    title = e_field.Text(
-        required=False,
-        analyzer=whitespace_lowercase_trim_stop_analyzer,
-        search_analyzer=whitespace_lowercase_trim_stop_analyzer,
-        fields={"keyword": e_field.Keyword()},  # Exact match
-    )
-
-    episode = e_field.Text(
-        required=True,
-        analyzer=whitespace_lowercase_trim_stop_analyzer,
-        search_analyzer=whitespace_lowercase_trim_stop_analyzer,
-        fields={"keyword": e_field.Keyword()},  # Exact match
-    )
-
-    atomic_fact = e_field.Text(
-        required=True,
-        analyzer=whitespace_lowercase_trim_stop_analyzer,
-        search_analyzer=whitespace_lowercase_trim_stop_analyzer,
-        fields={"keyword": e_field.Keyword()},
-    )
-
     # BM25 retrieval core field - supports multi-value storage for search content
     # Application layer can store multiple related search terms or phrases
     search_content = e_field.Text(
@@ -69,23 +47,22 @@ class EventLogDoc(
         },
     )
 
-    # Summary field
-    summary = e_field.Text(
-        analyzer=whitespace_lowercase_trim_stop_analyzer,
-        search_analyzer=whitespace_lowercase_trim_stop_analyzer,
-    )
-
     # Categorization and tagging fields
     group_id = e_field.Keyword()  # Group ID
     group_name = e_field.Keyword()  # Group name
     participants = e_field.Keyword(multi=True)
 
     type = e_field.Keyword()  # Conversation/Email/Notion, etc.
-    keywords = e_field.Keyword(multi=True)  # List of keywords
-    linked_entities = e_field.Keyword(multi=True)  # List of linked entity IDs
 
-    subject = e_field.Text()  # Event title
-    memcell_event_id_list = e_field.Keyword(multi=True)  # List of memory cell event IDs
+    # Core content field
+    atomic_fact = e_field.Text(
+        analyzer=whitespace_lowercase_trim_stop_analyzer,
+        search_analyzer=whitespace_lowercase_trim_stop_analyzer,
+    )
+
+    # Parent info
+    parent_type = e_field.Keyword()  # Parent memory type (e.g., memcell)
+    parent_id = e_field.Keyword()  # Parent memory ID
 
     # Extension field
     extend = e_field.Object(dynamic=True)  # Flexible extension field

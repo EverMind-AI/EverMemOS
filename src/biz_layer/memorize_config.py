@@ -7,6 +7,8 @@ Centralized management of all trigger conditions and thresholds for easy adjustm
 from dataclasses import dataclass
 import os
 
+from api_specs.memory_types import ParentType
+
 
 @dataclass
 class MemorizeConfig:
@@ -28,6 +30,10 @@ class MemorizeConfig:
     # Life Profile maximum items (ASSISTANT scene only)
     profile_life_max_items: int = 25
 
+    # ===== Foresight/EventLog extraction configuration =====
+    # Default parent type for Foresight and EventLog (memcell or episode)
+    default_parent_type: str = ParentType.MEMCELL.value
+
     @classmethod
     def from_env(cls) -> "MemorizeConfig":
         """Load configuration from environment variables, use defaults if not set"""
@@ -42,8 +48,12 @@ class MemorizeConfig:
                 "PROFILE_ENABLE_VERSIONING", "true"
             ).lower()
             == "true",
+            default_parent_type=os.getenv(
+                "DEFAULT_PARENT_TYPE", ParentType.MEMCELL.value
+            ),
         )
 
 
 # Global default configuration (can be overridden via from_env())
+# TODO Move nescessary configurations to ENV. Use default values for now.
 DEFAULT_MEMORIZE_CONFIG = MemorizeConfig()

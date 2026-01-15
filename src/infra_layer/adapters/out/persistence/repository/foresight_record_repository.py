@@ -54,10 +54,11 @@ class ForesightRecordRawRepository(BaseRepository[ForesightRecord]):
         try:
             await foresight.insert(session=session)
             logger.info(
-                "✅ Saved personal foresight successfully: id=%s, user_id=%s, parent_episode=%s",
+                "✅ Saved personal foresight successfully: id=%s, user_id=%s, parent_type=%s, parent_id=%s",
                 foresight.id,
                 foresight.user_id,
-                foresight.parent_episode_id,
+                foresight.parent_type,
+                foresight.parent_id,
             )
             return foresight
         except Exception as e:
@@ -108,17 +109,19 @@ class ForesightRecordRawRepository(BaseRepository[ForesightRecord]):
             logger.error("❌ Failed to retrieve personal foresight by ID: %s", e)
             return None
 
-    async def get_by_parent_episode_id(
+    async def get_by_parent_id(
         self,
-        parent_episode_id: str,
+        parent_id: str,
+        parent_type: Optional[str] = None,
         session: Optional[AsyncClientSession] = None,
         model: Optional[Type[T]] = None,
     ) -> List[Union[ForesightRecord, ForesightRecordProjection]]:
         """
-        Retrieve all foresights by parent episodic memory ID
+        Retrieve all foresights by parent memory ID and optionally parent type
 
         Args:
-            parent_episode_id: Parent episodic memory ID
+            parent_id: Parent memory ID
+            parent_type: Optional parent type filter (e.g., "memcell", "episode")
             session: Optional MongoDB session for transaction support
             model: Type of model to return, defaults to ForesightRecord (full version)
 
@@ -129,22 +132,24 @@ class ForesightRecordRawRepository(BaseRepository[ForesightRecord]):
             # Use full version if model is not specified
             target_model = model if model is not None else self.model
 
+            # Build query filter
+            query_filter = {"parent_id": parent_id}
+            if parent_type:
+                query_filter["parent_type"] = parent_type
+
             # Determine whether to use projection based on model type
             if target_model == self.model:
-                query = self.model.find(
-                    {"parent_episode_id": parent_episode_id}, session=session
-                )
+                query = self.model.find(query_filter, session=session)
             else:
                 query = self.model.find(
-                    {"parent_episode_id": parent_episode_id},
-                    projection_model=target_model,
-                    session=session,
+                    query_filter, projection_model=target_model, session=session
                 )
 
             results = await query.to_list()
             logger.debug(
-                "✅ Retrieved foresights by parent episodic memory ID successfully: %s, found %d records (model=%s)",
-                parent_episode_id,
+                "✅ Retrieved foresights by parent memory ID successfully: %s (type=%s), found %d records (model=%s)",
+                parent_id,
+                parent_type,
                 len(results),
                 target_model.__name__,
             )
@@ -291,27 +296,34 @@ class ForesightRecordRawRepository(BaseRepository[ForesightRecord]):
             logger.error("❌ Failed to delete personal foresight: %s", e)
             return False
 
-    async def delete_by_parent_episode_id(
-        self, parent_episode_id: str, session: Optional[AsyncClientSession] = None
+    async def delete_by_parent_id(
+        self,
+        parent_id: str,
+        parent_type: Optional[str] = None,
+        session: Optional[AsyncClientSession] = None,
     ) -> int:
         """
-        Delete all foresights by parent episodic memory ID
+        Delete all foresights by parent memory ID and optionally parent type
 
         Args:
-            parent_episode_id: Parent episodic memory ID
+            parent_id: Parent memory ID
+            parent_type: Optional parent type filter (e.g., "memcell", "episode")
             session: Optional MongoDB session for transaction support
 
         Returns:
             Number of deleted records
         """
         try:
-            result = await self.model.find(
-                {"parent_episode_id": parent_episode_id}, session=session
-            ).delete()
+            query_filter = {"parent_id": parent_id}
+            if parent_type is not None:
+                query_filter["parent_type"] = parent_type
+
+            result = await self.model.find(query_filter, session=session).delete()
             count = result.deleted_count if result else 0
             logger.info(
-                "✅ Deleted foresights by parent episodic memory ID successfully: %s, deleted %d records",
-                parent_episode_id,
+                "✅ Deleted foresights by parent memory ID successfully: %s (type=%s), deleted %d records",
+                parent_id,
+                parent_type,
                 count,
             )
             return count

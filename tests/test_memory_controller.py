@@ -808,8 +808,9 @@ class MemoryControllerTester:
                 assert isinstance(memory, dict), f"Memory {idx} should be a dictionary"
                 assert "content" in memory, f"Memory {idx} should contain content"
                 assert (
-                    "parent_episode_id" in memory
-                ), f"Memory {idx} should contain parent_episode_id"
+                    "parent_type" in memory
+                ), f"Memory {idx} should contain parent_type"
+                assert "parent_id" in memory, f"Memory {idx} should contain parent_id"
                 # Foresight user_id may be None (group scenario), so not enforced
 
             print(
