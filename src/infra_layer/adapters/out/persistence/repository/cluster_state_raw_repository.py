@@ -127,29 +127,10 @@ class ClusterStateRawRepository(BaseRepository[ClusterStateLite]):
     # ==================== ClusterStorage interface implementation ====================
 
     async def save_cluster_state(self, group_id: str, state: Dict[str, Any]) -> bool:
-        """
-        Save cluster state (ClusterStorage interface)
-
-        Args:
-            group_id: Group ID
-            state: State dictionary
-
-        Returns:
-            True if successful, False otherwise
-        """
         result = await self.upsert_by_group_id(group_id, state)
         return result is not None
 
     async def load_cluster_state(self, group_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Load cluster state (ClusterStorage interface)
-
-        Args:
-            group_id: Group ID
-
-        Returns:
-            State dictionary or None
-        """
         cluster_state = await self.get_by_group_id(group_id)
         if cluster_state is None:
             return None
@@ -165,15 +146,6 @@ class ClusterStateRawRepository(BaseRepository[ClusterStateLite]):
     # ==================== Native CRUD methods ====================
 
     async def get_by_group_id(self, group_id: str) -> Optional[ClusterState]:
-        """
-        Get cluster state by group_id
-
-        Args:
-            group_id: Group ID
-
-        Returns:
-            ClusterState object or None
-        """
         try:
             # Query MongoDB Lite model first
             lite_result = await self.model.find_one({"group_id": group_id})
@@ -197,16 +169,6 @@ class ClusterStateRawRepository(BaseRepository[ClusterStateLite]):
     async def upsert_by_group_id(
         self, group_id: str, state: Dict[str, Any]
     ) -> Optional[ClusterState]:
-        """
-        Upsert cluster state by group_id
-
-        Args:
-            group_id: Group ID
-            state: State dictionary
-
-        Returns:
-            ClusterState object or None
-        """
         try:
             # Check if already exists
             existing_lite = await self.model.find_one({"group_id": group_id})
@@ -271,15 +233,6 @@ class ClusterStateRawRepository(BaseRepository[ClusterStateLite]):
             return None
 
     async def get_cluster_assignments(self, group_id: str) -> Dict[str, str]:
-        """
-        Get cluster assignments mapping
-
-        Args:
-            group_id: Group ID
-
-        Returns:
-            Dictionary mapping event_id to cluster_id
-        """
         try:
             cluster_state = await self.get_by_group_id(group_id)
             if cluster_state is None:
@@ -292,15 +245,6 @@ class ClusterStateRawRepository(BaseRepository[ClusterStateLite]):
             return {}
 
     async def delete_by_group_id(self, group_id: str) -> bool:
-        """
-        Delete cluster state by group_id
-
-        Args:
-            group_id: Group ID
-
-        Returns:
-            True if successful, False otherwise
-        """
         try:
             # Find existing Lite
             cluster_state_lite = await self.model.find_one({"group_id": group_id})
@@ -329,12 +273,6 @@ class ClusterStateRawRepository(BaseRepository[ClusterStateLite]):
             return False
 
     async def delete_all(self) -> int:
-        """
-        Delete all cluster states
-
-        Returns:
-            Number of deleted records
-        """
         try:
             # Get all IDs first for KV-Storage deletion
             all_lites = await self.model.find_all().to_list()
