@@ -37,6 +37,8 @@ async def init_database():
     from infra_layer.adapters.out.persistence.document.memory.user_profile_lite import UserProfileLite
     from infra_layer.adapters.out.persistence.document.memory.conversation_meta import ConversationMeta
     from infra_layer.adapters.out.persistence.document.memory.conversation_meta_lite import ConversationMetaLite
+    from infra_layer.adapters.out.persistence.document.memory.conversation_status import ConversationStatus
+    from infra_layer.adapters.out.persistence.document.memory.conversation_status_lite import ConversationStatusLite
     from core.di import get_container
 
     # Load environment variables from .env file
@@ -60,7 +62,7 @@ async def init_database():
     database = client[db_name]
 
     # Initialize Beanie with all document models
-    await init_beanie(database=database, document_models=[MemCell, MemCellLite, EpisodicMemory, EpisodicMemoryLite, EventLogRecord, EventLogRecordLite, ForesightRecord, ForesightRecordLite, ClusterState, ClusterStateLite, UserProfile, UserProfileLite, ConversationMeta, ConversationMetaLite])
+    await init_beanie(database=database, document_models=[MemCell, MemCellLite, EpisodicMemory, EpisodicMemoryLite, EventLogRecord, EventLogRecordLite, ForesightRecord, ForesightRecordLite, ClusterState, ClusterStateLite, UserProfile, UserProfileLite, ConversationMeta, ConversationMetaLite, ConversationStatus, ConversationStatusLite])
 
     # Initialize DI container and manually register repositories
     # (Avoid full scan which loads unnecessary components)
@@ -72,6 +74,7 @@ async def init_database():
     from infra_layer.adapters.out.persistence.repository.cluster_state_raw_repository import ClusterStateRawRepository
     from infra_layer.adapters.out.persistence.repository.user_profile_raw_repository import UserProfileRawRepository
     from infra_layer.adapters.out.persistence.repository.conversation_meta_raw_repository import ConversationMetaRawRepository
+    from infra_layer.adapters.out.persistence.repository.conversation_status_raw_repository import ConversationStatusRawRepository
     from infra_layer.adapters.out.persistence.kv_storage.in_memory_kv_storage import InMemoryKVStorage
     from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import KVStorageInterface
 
@@ -164,6 +167,16 @@ async def init_database():
             bean_type=ConversationMetaRawRepository,
             bean_name="ConversationMetaRawRepository",
             instance=ConversationMetaRawRepository()
+        )
+
+    # Register ConversationStatus repository manually (only if not already registered)
+    try:
+        container.get_bean("ConversationStatusRawRepository")
+    except:
+        container.register_bean(
+            bean_type=ConversationStatusRawRepository,
+            bean_name="ConversationStatusRawRepository",
+            instance=ConversationStatusRawRepository()
         )
 
     yield
