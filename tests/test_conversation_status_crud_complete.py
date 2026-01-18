@@ -120,7 +120,7 @@ async def verify_kv_storage(repository, conversation_status_id: str) -> bool:
 
     logger = get_logger(__name__)
 
-    kv_storage = repository._get_kv_storage()
+    kv_storage = repository._dual_storage.get_kv_storage()
     if not kv_storage:
         logger.warning("KV-Storage not available")
         return False
