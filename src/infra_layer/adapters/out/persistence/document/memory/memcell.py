@@ -8,7 +8,6 @@ from datetime import datetime
 from typing import List, Optional, Dict
 from enum import Enum
 
-from beanie import Indexed
 from core.oxm.mongo.document_base_with_soft_delete import DocumentBaseWithSoftDelete
 from pydantic import BaseModel, Field, ConfigDict
 from pymongo import IndexModel, ASCENDING, DESCENDING
@@ -83,18 +82,18 @@ class MemCell(DocumentBaseWithSoftDelete, AuditBase):
     """
 
     # Core fields (required)
-    user_id: Optional[Indexed(str)] = Field(
+    user_id: Optional[str] = Field(
         None,
         description="User ID, core query field. None for group memory, user ID for personal memory",
     )
-    timestamp: Indexed(datetime) = Field(..., description="Occurrence time, shard key")
+    timestamp: datetime = Field(..., description="Occurrence time, shard key")
     summary: Optional[str] = Field(
         default=None,
         description="Memory unit summary, can be empty for force-split memcells",
     )
 
     # Optional fields
-    group_id: Optional[Indexed(str)] = Field(
+    group_id: Optional[str] = Field(
         default=None, description="Group ID, empty means private chat"
     )
     original_data: Optional[List] = Field(

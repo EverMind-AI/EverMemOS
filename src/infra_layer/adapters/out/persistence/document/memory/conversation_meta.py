@@ -132,7 +132,6 @@ class ConversationMeta(DocumentBase, AuditBase):
     )
 
     class Settings:
-<<<<<<< b9ca76542f92f614fde0279a7ac332744e5ede4e
         name = "conversation_metas"
         indexes = [
             IndexModel(
@@ -149,8 +148,3 @@ class ConversationMeta(DocumentBase, AuditBase):
         ]
         validate_on_save = True
         use_state_management = True
-=======
-        """Beanie settings"""
-
-        name = "conversation_metas"
->>>>>>> refactor

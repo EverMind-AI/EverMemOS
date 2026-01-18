@@ -6,7 +6,6 @@ Unified storage of foresights extracted from episodic memories (personal or grou
 
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from beanie import Indexed
 from core.oxm.mongo.document_base import DocumentBase
 from pydantic import Field, ConfigDict
 from pymongo import IndexModel, ASCENDING, DESCENDING

@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from beanie import Indexed
 from core.oxm.mongo.document_base import DocumentBase
 from pydantic import Field
 from core.oxm.mongo.audit_base import AuditBase
@@ -14,7 +13,7 @@ class ClusterState(DocumentBase, AuditBase):
     """
 
     # Primary key
-    group_id: Indexed(str) = Field(..., description="Group ID, primary key")
+    group_id: str = Field(..., description="Group ID, primary key")
 
     # Basic clustering information
     event_ids: List[str] = Field(
