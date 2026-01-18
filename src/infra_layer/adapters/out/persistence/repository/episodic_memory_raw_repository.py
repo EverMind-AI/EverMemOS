@@ -4,7 +4,6 @@ from pymongo.asynchronous.client_session import AsyncClientSession
 from bson import ObjectId
 from core.observation.logger import get_logger
 from core.di.decorators import repository
-from core.di import get_bean_by_type
 from core.oxm.mongo.base_repository import BaseRepository
 from core.oxm.constants import MAGIC_ALL
 from infra_layer.adapters.out.persistence.document.memory.episodic_memory import (
@@ -13,8 +12,8 @@ from infra_layer.adapters.out.persistence.document.memory.episodic_memory import
 from infra_layer.adapters.out.persistence.document.memory.episodic_memory_lite import (
     EpisodicMemoryLite,
 )
-from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import (
-    KVStorageInterface,
+from infra_layer.adapters.out.persistence.repository.dual_storage_helper import (
+    DualStorageHelper,
 )
 from agentic_layer.vectorize_service import get_vectorize_service
 from common_utils.datetime_utils import get_now_with_timezone
@@ -32,35 +31,12 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemoryLite]):
 
     def __init__(self):
         super().__init__(EpisodicMemoryLite)
-
-        # Inject KV-Storage with graceful degradation
-        self._kv_storage: Optional[KVStorageInterface] = None
-        try:
-            self._kv_storage = get_bean_by_type(KVStorageInterface)
-            logger.info("✅ EpisodicMemory KV-Storage initialized successfully")
-        except Exception as e:
-            logger.error(f"⚠️ EpisodicMemory KV-Storage not available: {e}")
-            raise e
-
-        # Keep existing vectorize_service
+        self._dual_storage = DualStorageHelper[EpisodicMemory, EpisodicMemoryLite](
+            model_name="EpisodicMemory", full_model=EpisodicMemory
+        )
         self.vectorize_service = get_vectorize_service()
 
     # ==================== Helper Methods ====================
-
-    def _get_kv_storage(self) -> Optional[KVStorageInterface]:
-        """
-        Get KV-Storage instance with availability check.
-
-        Returns:
-            KV-Storage instance if available
-
-        Raises:
-            Exception: If KV-Storage is not available
-        """
-        if self._kv_storage is None:
-            logger.debug("KV-Storage not available, skipping KV operations")
-            raise Exception("KV-Storage not available")
-        return self._kv_storage
 
     def _episodic_to_lite(self, episodic: EpisodicMemory) -> EpisodicMemoryLite:
         """
@@ -90,7 +66,6 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemoryLite]):
     ) -> List[EpisodicMemory]:
         """
         Reconstruct full EpisodicMemory objects from KV-Storage.
-        MongoDB is ONLY used for querying and getting _id list.
 
         Args:
             results: List of EpisodicMemoryLite from MongoDB query
@@ -98,40 +73,7 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemoryLite]):
         Returns:
             List of full EpisodicMemory objects from KV-Storage
         """
-        if not results:
-            return []
-
-        kv_storage = self._get_kv_storage()
-        if not kv_storage:
-            logger.error("❌ KV-Storage unavailable, cannot reconstruct EpisodicMemories")
-            return []
-
-        # Extract event IDs from MongoDB results
-        kv_keys = [str(r.id) for r in results]
-
-        # Batch get from KV-Storage (source of truth)
-        kv_data_dict = await kv_storage.batch_get(keys=kv_keys)
-
-        # Reconstruct full EpisodicMemories
-        full_episodics = []
-        for result in results:
-            event_id = str(result.id)
-            kv_json = kv_data_dict.get(event_id)
-            if kv_json:
-                try:
-                    full_episodic = EpisodicMemory.model_validate_json(kv_json)
-                    full_episodics.append(full_episodic)
-                except Exception as e:
-                    logger.error(
-                        f"❌ Failed to deserialize EpisodicMemory: {event_id}, error: {e}"
-                    )
-            else:
-                logger.warning(f"⚠️ EpisodicMemory not found in KV-Storage: {event_id}")
-
-        logger.debug(
-            f"✅ Reconstructed {len(full_episodics)}/{len(results)} EpisodicMemories"
-        )
-        return full_episodics
+        return await self._dual_storage.reconstruct_batch(results)
 
     # ==================== Basic CRUD Methods ====================
 
@@ -151,10 +93,7 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemoryLite]):
         """
         try:
             # Read directly from KV-Storage (no need to check MongoDB)
-            kv_storage = self._get_kv_storage()
-            if not kv_storage:
-                logger.error("❌ KV-Storage unavailable: %s", event_id)
-                return None
+            kv_storage = self._dual_storage.get_kv_storage()
 
             kv_json = await kv_storage.get(key=event_id)
             if not kv_json:
@@ -208,9 +147,7 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemoryLite]):
             return {}
 
         try:
-            kv_storage = self._get_kv_storage()
-            if not kv_storage:
-                return {}
+            kv_storage = self._dual_storage.get_kv_storage()
 
             # Batch get from KV-Storage
             kv_data_dict = await kv_storage.batch_get(keys=event_ids)
@@ -377,31 +314,8 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemoryLite]):
             )
 
             # 2. Write to KV-Storage (always full EpisodicMemory)
-            kv_storage = self._get_kv_storage()
-            if kv_storage:
-                try:
-                    json_value = episodic_memory.model_dump_json(
-                        by_alias=True, exclude_none=False
-                    )
-                    success = await kv_storage.put(
-                        key=str(episodic_memory.id), value=json_value
-                    )
-                    if success:
-                        logger.debug(
-                            f"✅ KV-Storage write success: {episodic_memory.event_id}"
-                        )
-                    else:
-                        logger.error(
-                            f"⚠️  KV-Storage write failed: {episodic_memory.event_id}"
-                        )
-                        return None
-                except Exception as kv_error:
-                    logger.error(
-                        f"⚠️  KV-Storage write error: {episodic_memory.event_id}: {kv_error}"
-                    )
-                    return None
-
-            return episodic_memory
+            success = await self._dual_storage.write_to_kv(episodic_memory)
+            return episodic_memory if success else None
         except Exception as e:
             logger.error("❌ Failed to append episodic memory: %s", e)
             return None
@@ -422,17 +336,7 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemoryLite]):
         """
         try:
             # 1. First delete from KV-Storage (data source)
-            kv_deleted = False
-            kv_storage = self._get_kv_storage()
-            if kv_storage:
-                try:
-                    kv_deleted = await kv_storage.delete(key=event_id)
-                    if kv_deleted:
-                        logger.debug(f"✅ KV-Storage delete success: {event_id}")
-                    else:
-                        logger.debug(f"⚠️  KV-Storage key not found: {event_id}")
-                except Exception as kv_error:
-                    logger.warning(f"⚠️  KV-Storage delete failed: {kv_error}")
+            kv_deleted = await self._dual_storage.delete_from_kv(event_id)
 
             # 2. Then delete from MongoDB (index)
             mongo_deleted = False
@@ -487,15 +391,14 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemoryLite]):
             # 2. First batch delete from KV-Storage
             kv_deleted_count = 0
             if event_ids:
-                kv_storage = self._get_kv_storage()
-                if kv_storage:
-                    try:
-                        kv_deleted_count = await kv_storage.batch_delete(keys=event_ids)
-                        logger.debug(
-                            f"✅ KV-Storage batch delete: {kv_deleted_count} records"
-                        )
-                    except Exception as kv_error:
-                        logger.warning(f"⚠️  KV-Storage batch delete failed: {kv_error}")
+                kv_storage = self._dual_storage.get_kv_storage()
+                try:
+                    kv_deleted_count = await kv_storage.batch_delete(keys=event_ids)
+                    logger.debug(
+                        f"✅ KV-Storage batch delete: {kv_deleted_count} records"
+                    )
+                except Exception as kv_error:
+                    logger.warning(f"⚠️  KV-Storage batch delete failed: {kv_error}")
 
             # 3. Then delete from MongoDB
             result = await self.model.find({"user_id": user_id}).delete(session=session)

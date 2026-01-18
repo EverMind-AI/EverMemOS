@@ -1,15 +1,14 @@
 from typing import Optional, Dict, Any
 from pymongo.asynchronous.client_session import AsyncClientSession
 from core.oxm.mongo.base_repository import BaseRepository
-from core.di import get_bean_by_type
 from infra_layer.adapters.out.persistence.document.memory.conversation_status import (
     ConversationStatus,
 )
 from infra_layer.adapters.out.persistence.document.memory.conversation_status_lite import (
     ConversationStatusLite,
 )
-from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import (
-    KVStorageInterface,
+from infra_layer.adapters.out.persistence.repository.dual_storage_helper import (
+    DualStorageHelper,
 )
 from core.observation.logger import get_logger
 from core.di.decorators import repository
@@ -27,30 +26,9 @@ class ConversationStatusRawRepository(BaseRepository[ConversationStatusLite]):
 
     def __init__(self):
         super().__init__(ConversationStatusLite)
-
-        # Inject KV-Storage with graceful degradation
-        self._kv_storage: Optional[KVStorageInterface] = None
-        try:
-            self._kv_storage = get_bean_by_type(KVStorageInterface)
-            logger.info("✅ ConversationStatus KV-Storage initialized successfully")
-        except Exception as e:
-            logger.error(f"⚠️ ConversationStatus KV-Storage not available: {e}")
-            raise e
-
-    def _get_kv_storage(self) -> Optional[KVStorageInterface]:
-        """
-        Get KV-Storage instance with availability check.
-
-        Returns:
-            KV-Storage instance if available
-
-        Raises:
-            Exception: If KV-Storage is not available
-        """
-        if self._kv_storage is None:
-            logger.debug("KV-Storage not available, skipping KV operations")
-            raise Exception("KV-Storage not available")
-        return self._kv_storage
+        self._dual_storage = DualStorageHelper[
+            ConversationStatus, ConversationStatusLite
+        ](model_name="ConversationStatus", full_model=ConversationStatus)
 
     def _conversation_status_to_lite(
         self, conversation_status: ConversationStatus
@@ -78,7 +56,6 @@ class ConversationStatusRawRepository(BaseRepository[ConversationStatusLite]):
     ) -> Optional[ConversationStatus]:
         """
         Reconstruct full ConversationStatus object from KV-Storage.
-        MongoDB is ONLY used for querying and getting _id.
 
         Args:
             lite: ConversationStatusLite from MongoDB query
@@ -86,32 +63,7 @@ class ConversationStatusRawRepository(BaseRepository[ConversationStatusLite]):
         Returns:
             Full ConversationStatus object from KV-Storage or None
         """
-        if not lite:
-            return None
-
-        kv_storage = self._get_kv_storage()
-        if not kv_storage:
-            logger.error("❌ KV-Storage unavailable, cannot reconstruct ConversationStatus")
-            return None
-
-        # Get from KV-Storage (source of truth)
-        conversation_status_id = str(lite.id)
-        kv_json = await kv_storage.get(conversation_status_id)
-
-        if kv_json:
-            try:
-                full_conversation_status = ConversationStatus.model_validate_json(kv_json)
-                return full_conversation_status
-            except Exception as e:
-                logger.error(
-                    f"❌ Failed to deserialize ConversationStatus: {conversation_status_id}, error: {e}"
-                )
-                return None
-        else:
-            logger.warning(
-                f"⚠️ ConversationStatus not found in KV-Storage: {conversation_status_id}"
-            )
-            return None
+        return await self._dual_storage.reconstruct_single(lite)
 
     # ==================== Basic CRUD Operations ====================
 
@@ -159,12 +111,7 @@ class ConversationStatusRawRepository(BaseRepository[ConversationStatusLite]):
             await lite.delete(session=session)
 
             # Delete from KV-Storage
-            kv_storage = self._get_kv_storage()
-            if kv_storage:
-                try:
-                    await kv_storage.delete(conversation_status_id)
-                except Exception as kv_error:
-                    logger.error(f"⚠️  KV-Storage delete error: {kv_error}")
+            await self._dual_storage.delete_from_kv(conversation_status_id)
 
             logger.info(
                 "✅ Successfully deleted conversation status by group ID: %s", group_id
@@ -304,27 +251,8 @@ class ConversationStatusRawRepository(BaseRepository[ConversationStatusLite]):
                         raise create_error
 
             # Write to KV-Storage (always full ConversationStatus)
-            kv_storage = self._get_kv_storage()
-            if kv_storage:
-                try:
-                    json_value = conversation_status.model_dump_json(
-                        by_alias=True, exclude_none=False
-                    )
-                    success = await kv_storage.put(
-                        key=str(conversation_status.id), value=json_value
-                    )
-                    if success:
-                        logger.debug(f"✅ KV-Storage write success: {conversation_status.id}")
-                    else:
-                        logger.error(f"⚠️  KV-Storage write failed: {conversation_status.id}")
-                        return None
-                except Exception as kv_error:
-                    logger.error(
-                        f"⚠️  KV-Storage write error: {conversation_status.id}: {kv_error}"
-                    )
-                    return None
-
-            return conversation_status
+            success = await self._dual_storage.write_to_kv(conversation_status)
+            return conversation_status if success else None
         except Exception as e:
             logger.error("❌ Failed to update or create conversation status: %s", e)
             return None

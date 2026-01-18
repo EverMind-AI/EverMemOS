@@ -9,7 +9,6 @@ from typing import Optional, Dict, Any, List
 from beanie.operators import Or, Eq
 from core.observation.logger import get_logger
 from core.di.decorators import repository
-from core.di import get_bean_by_type
 from core.oxm.mongo.base_repository import BaseRepository
 from core.oxm.constants import MAGIC_ALL
 
@@ -19,8 +18,8 @@ from infra_layer.adapters.out.persistence.document.memory.user_profile import (
 from infra_layer.adapters.out.persistence.document.memory.user_profile_lite import (
     UserProfileLite,
 )
-from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import (
-    KVStorageInterface,
+from infra_layer.adapters.out.persistence.repository.dual_storage_helper import (
+    DualStorageHelper,
 )
 
 logger = get_logger(__name__)
@@ -37,38 +36,13 @@ class UserProfileRawRepository(BaseRepository[UserProfileLite]):
     - get_all_profiles() -> Dict[str, Any]
     - get_profile_history(user_id, limit) -> List[Dict]
     - clear() -> bool
-
-    Uses Dual Storage architecture:
-    - MongoDB: Stores UserProfileLite (indexed fields only)
-    - KV-Storage: Stores complete UserProfile (full data)
     """
 
     def __init__(self):
         super().__init__(UserProfileLite)
-
-        # Inject KV-Storage with graceful degradation
-        self._kv_storage: Optional[KVStorageInterface] = None
-        try:
-            self._kv_storage = get_bean_by_type(KVStorageInterface)
-            logger.info("✅ UserProfile KV-Storage initialized successfully")
-        except Exception as e:
-            logger.error(f"⚠️ UserProfile KV-Storage not available: {e}")
-            raise e
-
-    def _get_kv_storage(self) -> Optional[KVStorageInterface]:
-        """
-        Get KV-Storage instance with availability check.
-
-        Returns:
-            KV-Storage instance if available
-
-        Raises:
-            Exception: If KV-Storage is not available
-        """
-        if self._kv_storage is None:
-            logger.debug("KV-Storage not available, skipping KV operations")
-            raise Exception("KV-Storage not available")
-        return self._kv_storage
+        self._dual_storage = DualStorageHelper[UserProfile, UserProfileLite](
+            model_name="UserProfile", full_model=UserProfile
+        )
 
     def _user_profile_to_lite(self, user_profile: UserProfile) -> UserProfileLite:
         """
@@ -95,7 +69,6 @@ class UserProfileRawRepository(BaseRepository[UserProfileLite]):
     ) -> Optional[UserProfile]:
         """
         Reconstruct full UserProfile object from KV-Storage.
-        MongoDB is ONLY used for querying and getting _id.
 
         Args:
             lite: UserProfileLite from MongoDB query
@@ -103,30 +76,7 @@ class UserProfileRawRepository(BaseRepository[UserProfileLite]):
         Returns:
             Full UserProfile object from KV-Storage or None
         """
-        if not lite:
-            return None
-
-        kv_storage = self._get_kv_storage()
-        if not kv_storage:
-            logger.error("❌ KV-Storage unavailable, cannot reconstruct UserProfile")
-            return None
-
-        # Get from KV-Storage (source of truth)
-        user_profile_id = str(lite.id)
-        kv_json = await kv_storage.get(user_profile_id)
-
-        if kv_json:
-            try:
-                full_user_profile = UserProfile.model_validate_json(kv_json)
-                return full_user_profile
-            except Exception as e:
-                logger.error(
-                    f"❌ Failed to deserialize UserProfile: {user_profile_id}, error: {e}"
-                )
-                return None
-        else:
-            logger.warning(f"⚠️ UserProfile not found in KV-Storage: {user_profile_id}")
-            return None
+        return await self._dual_storage.reconstruct_single(lite)
 
     # ==================== ProfileStorage interface implementation ====================
 
@@ -399,27 +349,8 @@ class UserProfileRawRepository(BaseRepository[UserProfileLite]):
                 )
 
             # Write to KV-Storage (always full UserProfile)
-            kv_storage = self._get_kv_storage()
-            if kv_storage:
-                try:
-                    json_value = user_profile.model_dump_json(
-                        by_alias=True, exclude_none=False
-                    )
-                    success = await kv_storage.put(
-                        key=str(user_profile.id), value=json_value
-                    )
-                    if success:
-                        logger.debug(f"✅ KV-Storage write success: {user_profile.id}")
-                    else:
-                        logger.error(f"⚠️  KV-Storage write failed: {user_profile.id}")
-                        return None
-                except Exception as kv_error:
-                    logger.error(
-                        f"⚠️  KV-Storage write error: {user_profile.id}: {kv_error}"
-                    )
-                    return None
-
-            return user_profile
+            success = await self._dual_storage.write_to_kv(user_profile)
+            return user_profile if success else None
         except Exception as e:
             logger.error(
                 f"Failed to save user profile: user_id={user_id}, group_id={group_id}, error={e}"
@@ -438,14 +369,11 @@ class UserProfileRawRepository(BaseRepository[UserProfileLite]):
 
             # Delete from KV-Storage
             if count > 0 and user_profile_ids:
-                kv_storage = self._get_kv_storage()
-                if kv_storage:
-                    try:
-                        await kv_storage.batch_delete(user_profile_ids)
-                    except Exception as kv_error:
-                        logger.error(
-                            f"⚠️  KV-Storage batch delete error: {kv_error}"
-                        )
+                kv_storage = self._dual_storage.get_kv_storage()
+                try:
+                    await kv_storage.batch_delete(user_profile_ids)
+                except Exception as kv_error:
+                    logger.error(f"⚠️  KV-Storage batch delete error: {kv_error}")
 
             logger.info(
                 f"Deleted group user profiles: group_id={group_id}, count={count}"
@@ -469,14 +397,11 @@ class UserProfileRawRepository(BaseRepository[UserProfileLite]):
 
             # Delete from KV-Storage
             if count > 0 and user_profile_ids:
-                kv_storage = self._get_kv_storage()
-                if kv_storage:
-                    try:
-                        await kv_storage.batch_delete(user_profile_ids)
-                    except Exception as kv_error:
-                        logger.error(
-                            f"⚠️  KV-Storage batch delete error: {kv_error}"
-                        )
+                kv_storage = self._dual_storage.get_kv_storage()
+                try:
+                    await kv_storage.batch_delete(user_profile_ids)
+                except Exception as kv_error:
+                    logger.error(f"⚠️  KV-Storage batch delete error: {kv_error}")
 
             logger.info(f"Deleted all user profiles: {count} items")
             return count

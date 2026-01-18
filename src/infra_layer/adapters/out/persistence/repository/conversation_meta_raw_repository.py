@@ -10,15 +10,14 @@ from pymongo.asynchronous.client_session import AsyncClientSession
 
 from core.oxm.mongo.base_repository import BaseRepository
 from core.di.decorators import repository
-from core.di import get_bean_by_type
 from infra_layer.adapters.out.persistence.document.memory.conversation_meta import (
     ConversationMeta,
 )
 from infra_layer.adapters.out.persistence.document.memory.conversation_meta_lite import (
     ConversationMetaLite,
 )
-from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import (
-    KVStorageInterface,
+from infra_layer.adapters.out.persistence.repository.dual_storage_helper import (
+    DualStorageHelper,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,30 +37,9 @@ class ConversationMetaRawRepository(BaseRepository[ConversationMetaLite]):
     def __init__(self):
         """Initialize repository"""
         super().__init__(ConversationMetaLite)
-
-        # Inject KV-Storage with graceful degradation
-        self._kv_storage: Optional[KVStorageInterface] = None
-        try:
-            self._kv_storage = get_bean_by_type(KVStorageInterface)
-            logger.info("✅ ConversationMeta KV-Storage initialized successfully")
-        except Exception as e:
-            logger.error(f"⚠️ ConversationMeta KV-Storage not available: {e}")
-            raise e
-
-    def _get_kv_storage(self) -> Optional[KVStorageInterface]:
-        """
-        Get KV-Storage instance with availability check.
-
-        Returns:
-            KV-Storage instance if available
-
-        Raises:
-            Exception: If KV-Storage is not available
-        """
-        if self._kv_storage is None:
-            logger.debug("KV-Storage not available, skipping KV operations")
-            raise Exception("KV-Storage not available")
-        return self._kv_storage
+        self._dual_storage = DualStorageHelper[
+            ConversationMeta, ConversationMetaLite
+        ](model_name="ConversationMeta", full_model=ConversationMeta)
 
     def _conversation_meta_to_lite(
         self, conversation_meta: ConversationMeta
@@ -90,7 +68,6 @@ class ConversationMetaRawRepository(BaseRepository[ConversationMetaLite]):
     ) -> Optional[ConversationMeta]:
         """
         Reconstruct full ConversationMeta object from KV-Storage.
-        MongoDB is ONLY used for querying and getting _id.
 
         Args:
             lite: ConversationMetaLite from MongoDB query
@@ -98,32 +75,7 @@ class ConversationMetaRawRepository(BaseRepository[ConversationMetaLite]):
         Returns:
             Full ConversationMeta object from KV-Storage or None
         """
-        if not lite:
-            return None
-
-        kv_storage = self._get_kv_storage()
-        if not kv_storage:
-            logger.error("❌ KV-Storage unavailable, cannot reconstruct ConversationMeta")
-            return None
-
-        # Get from KV-Storage (source of truth)
-        conversation_meta_id = str(lite.id)
-        kv_json = await kv_storage.get(conversation_meta_id)
-
-        if kv_json:
-            try:
-                full_conversation_meta = ConversationMeta.model_validate_json(kv_json)
-                return full_conversation_meta
-            except Exception as e:
-                logger.error(
-                    f"❌ Failed to deserialize ConversationMeta: {conversation_meta_id}, error: {e}"
-                )
-                return None
-        else:
-            logger.warning(
-                f"⚠️ ConversationMeta not found in KV-Storage: {conversation_meta_id}"
-            )
-            return None
+        return await self._dual_storage.reconstruct_single(lite)
 
     def _validate_scene(self, scene: str) -> None:
         """
@@ -273,29 +225,9 @@ class ConversationMetaRawRepository(BaseRepository[ConversationMetaLite]):
             conversation_meta.updated_at = conversation_meta_lite.updated_at
 
             # Write to KV-Storage (always full ConversationMeta)
-            kv_storage = self._get_kv_storage()
-            if kv_storage:
-                try:
-                    json_value = conversation_meta.model_dump_json(
-                        by_alias=True, exclude_none=False
-                    )
-                    success = await kv_storage.put(
-                        key=str(conversation_meta.id), value=json_value
-                    )
-                    if success:
-                        logger.debug(
-                            f"✅ KV-Storage write success: {conversation_meta.id}"
-                        )
-                    else:
-                        logger.error(
-                            f"⚠️  KV-Storage write failed: {conversation_meta.id}"
-                        )
-                        return None
-                except Exception as kv_error:
-                    logger.error(
-                        f"⚠️  KV-Storage write error: {conversation_meta.id}: {kv_error}"
-                    )
-                    return None
+            success = await self._dual_storage.write_to_kv(conversation_meta)
+            if not success:
+                return None
 
             logger.info(
                 "✅ Successfully created conversation metadata: group_id=%s, scene=%s",
@@ -369,25 +301,9 @@ class ConversationMetaRawRepository(BaseRepository[ConversationMetaLite]):
             existing.updated_at = existing_lite.updated_at
 
             # Write to KV-Storage
-            kv_storage = self._get_kv_storage()
-            if kv_storage:
-                try:
-                    json_value = existing.model_dump_json(
-                        by_alias=True, exclude_none=False
-                    )
-                    success = await kv_storage.put(
-                        key=str(existing.id), value=json_value
-                    )
-                    if success:
-                        logger.debug(f"✅ KV-Storage write success: {existing.id}")
-                    else:
-                        logger.error(f"⚠️  KV-Storage write failed: {existing.id}")
-                        return None
-                except Exception as kv_error:
-                    logger.error(
-                        f"⚠️  KV-Storage write error: {existing.id}: {kv_error}"
-                    )
-                    return None
+            success = await self._dual_storage.write_to_kv(existing)
+            if not success:
+                return None
 
             logger.debug(
                 "✅ Successfully updated conversation metadata by group_id: %s",
@@ -486,27 +402,8 @@ class ConversationMetaRawRepository(BaseRepository[ConversationMetaLite]):
                 )
 
             # Write to KV-Storage (always full ConversationMeta)
-            kv_storage = self._get_kv_storage()
-            if kv_storage:
-                try:
-                    json_value = conversation_meta.model_dump_json(
-                        by_alias=True, exclude_none=False
-                    )
-                    success = await kv_storage.put(
-                        key=str(conversation_meta.id), value=json_value
-                    )
-                    if success:
-                        logger.debug(f"✅ KV-Storage write success: {conversation_meta.id}")
-                    else:
-                        logger.error(f"⚠️  KV-Storage write failed: {conversation_meta.id}")
-                        return None
-                except Exception as kv_error:
-                    logger.error(
-                        f"⚠️  KV-Storage write error: {conversation_meta.id}: {kv_error}"
-                    )
-                    return None
-
-            return conversation_meta
+            success = await self._dual_storage.write_to_kv(conversation_meta)
+            return conversation_meta if success else None
         except Exception as e:
             logger.error(
                 "❌ Failed to upsert conversation metadata: %s", e, exc_info=True
@@ -538,12 +435,7 @@ class ConversationMetaRawRepository(BaseRepository[ConversationMetaLite]):
             result = await lite.delete(session=session)
             if result:
                 # Delete from KV-Storage
-                kv_storage = self._get_kv_storage()
-                if kv_storage:
-                    try:
-                        await kv_storage.delete(conversation_meta_id)
-                    except Exception as kv_error:
-                        logger.error(f"⚠️  KV-Storage delete error: {kv_error}")
+                await self._dual_storage.delete_from_kv(conversation_meta_id)
 
                 logger.info(
                     "✅ Successfully deleted conversation metadata: group_id=%s",

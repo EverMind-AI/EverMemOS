@@ -10,7 +10,6 @@ from pymongo.asynchronous.client_session import AsyncClientSession
 from bson import ObjectId
 from core.observation.logger import get_logger
 from core.di.decorators import repository
-from core.di import get_bean_by_type
 from core.oxm.mongo.base_repository import BaseRepository
 from core.oxm.constants import MAGIC_ALL
 from common_utils.datetime_utils import get_now_with_timezone
@@ -21,8 +20,8 @@ from infra_layer.adapters.out.persistence.document.memory.event_log_record impor
 from infra_layer.adapters.out.persistence.document.memory.event_log_record_lite import (
     EventLogRecordLite,
 )
-from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import (
-    KVStorageInterface,
+from infra_layer.adapters.out.persistence.repository.dual_storage_helper import (
+    DualStorageHelper,
 )
 
 # Define generic type variable
@@ -38,38 +37,13 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecordLite]):
 
     Provides CRUD operations and basic query functions for personal event logs.
     Note: Vectors should be generated during extraction; this Repository is not responsible for vector generation.
-
-    Uses Dual Storage architecture:
-    - MongoDB: Stores EventLogRecordLite (indexed fields only)
-    - KV-Storage: Stores complete EventLogRecord (full data)
     """
 
     def __init__(self):
         super().__init__(EventLogRecordLite)
-
-        # Inject KV-Storage with graceful degradation
-        self._kv_storage: Optional[KVStorageInterface] = None
-        try:
-            self._kv_storage = get_bean_by_type(KVStorageInterface)
-            logger.info("✅ EventLogRecord KV-Storage initialized successfully")
-        except Exception as e:
-            logger.error(f"⚠️ EventLogRecord KV-Storage not available: {e}")
-            raise e
-
-    def _get_kv_storage(self) -> Optional[KVStorageInterface]:
-        """
-        Get KV-Storage instance with availability check.
-
-        Returns:
-            KV-Storage instance if available
-
-        Raises:
-            Exception: If KV-Storage is not available
-        """
-        if self._kv_storage is None:
-            logger.debug("KV-Storage not available, skipping KV operations")
-            raise Exception("KV-Storage not available")
-        return self._kv_storage
+        self._dual_storage = DualStorageHelper[EventLogRecord, EventLogRecordLite](
+            model_name="EventLogRecord", full_model=EventLogRecord
+        )
 
     def _event_log_to_lite(self, event_log: EventLogRecord) -> EventLogRecordLite:
         """
@@ -98,7 +72,6 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecordLite]):
     ) -> List[EventLogRecord]:
         """
         Reconstruct full EventLogRecord objects from KV-Storage.
-        MongoDB is ONLY used for querying and getting _id list.
 
         Args:
             results: List of EventLogRecordLite from MongoDB query
@@ -106,40 +79,7 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecordLite]):
         Returns:
             List of complete EventLogRecord objects
         """
-        if not results:
-            return []
-
-        kv_storage = self._get_kv_storage()
-        if not kv_storage:
-            logger.error("❌ KV-Storage unavailable, cannot reconstruct EventLogRecords")
-            return []
-
-        # Extract event IDs from MongoDB results
-        kv_keys = [str(r.id) for r in results]
-
-        # Batch get from KV-Storage (source of truth)
-        kv_data_dict = await kv_storage.batch_get(keys=kv_keys)
-
-        # Reconstruct full EventLogRecords
-        full_event_logs = []
-        for result in results:
-            event_log_id = str(result.id)
-            kv_json = kv_data_dict.get(event_log_id)
-            if kv_json:
-                try:
-                    event_log = EventLogRecord.model_validate_json(kv_json)
-                    full_event_logs.append(event_log)
-                except Exception as e:
-                    logger.error(
-                        f"❌ Failed to deserialize EventLogRecord: {event_log_id}, error: {e}"
-                    )
-            else:
-                logger.warning(f"⚠️ EventLogRecord not found in KV-Storage: {event_log_id}")
-
-        logger.debug(
-            f"✅ Reconstructed {len(full_event_logs)}/{len(results)} EventLogRecords"
-        )
-        return full_event_logs
+        return await self._dual_storage.reconstruct_batch(results)
 
     def _convert_to_projection_if_needed(
         self,
@@ -218,27 +158,8 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecordLite]):
             )
 
             # 2. Write to KV-Storage (always full EventLogRecord)
-            kv_storage = self._get_kv_storage()
-            if kv_storage:
-                try:
-                    json_value = event_log.model_dump_json(
-                        by_alias=True, exclude_none=False
-                    )
-                    success = await kv_storage.put(
-                        key=str(event_log.id), value=json_value
-                    )
-                    if success:
-                        logger.debug(f"✅ KV-Storage write success: {event_log.id}")
-                    else:
-                        logger.error(f"⚠️  KV-Storage write failed: {event_log.id}")
-                        return None
-                except Exception as kv_error:
-                    logger.error(
-                        f"⚠️  KV-Storage write error: {event_log.id}: {kv_error}"
-                    )
-                    return None
-
-            return event_log
+            success = await self._dual_storage.write_to_kv(event_log)
+            return event_log if success else None
         except Exception as e:
             logger.error("❌ Failed to save personal event log: %s", e)
             return None
@@ -476,15 +397,7 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecordLite]):
 
             if success:
                 # Delete from KV-Storage
-                kv_storage = self._get_kv_storage()
-                if kv_storage:
-                    try:
-                        await kv_storage.delete(log_id)
-                    except Exception as kv_error:
-                        logger.error(
-                            f"⚠️  KV-Storage delete error: {log_id}: {kv_error}"
-                        )
-
+                await self._dual_storage.delete_from_kv(log_id)
                 logger.info("✅ Deleted personal event log successfully: %s", log_id)
             else:
                 logger.warning("⚠️  Personal event log to delete not found: %s", log_id)
@@ -526,14 +439,13 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecordLite]):
 
             # Delete from KV-Storage
             if count > 0 and event_log_ids:
-                kv_storage = self._get_kv_storage()
-                if kv_storage:
-                    try:
-                        await kv_storage.batch_delete(event_log_ids)
-                    except Exception as kv_error:
-                        logger.error(
-                            f"⚠️  KV-Storage batch delete error for parent {parent_episode_id}: {kv_error}"
-                        )
+                kv_storage = self._dual_storage.get_kv_storage()
+                try:
+                    await kv_storage.batch_delete(event_log_ids)
+                except Exception as kv_error:
+                    logger.error(
+                        f"⚠️  KV-Storage batch delete error for parent {parent_episode_id}: {kv_error}"
+                    )
 
             logger.info(
                 "✅ Deleted event logs by parent memory ID successfully: %s (type=%s), deleted %d records",
