@@ -376,7 +376,7 @@ You can use your own conversation data with the demos:
 **Problem**: Demos are slow or timeout
 
 **Solutions:**
-- Use "rrf" or "bm25" instead of "agentic" mode
+- Use "rrf" or "keyword" instead of "agentic" mode
 - Reduce `top_k` parameter (fewer results = faster)
 - Check Docker container resource usage
 - Ensure sufficient RAM (4GB minimum)

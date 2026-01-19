@@ -132,7 +132,7 @@ Each user query invokes `api/v1/memories/search` unless you explicitly select th
 1. **Select Language**: Choose a zh or en terminal UI.
 2. **Select Scenario Mode**: Assistant (one-on-one) or Group Chat (multi-speaker analysis).
 3. **Select Conversation Group**: Groups are read live from MongoDB via `query_all_groups_from_mongodb`; run the extraction step first so the list is non-empty.
-4. **Select Retrieval Mode**: `rrf`, `embedding`, `bm25`, or LLM-guided Agentic retrieval.
+4. **Select Retrieval Mode**: `rrf`, `vector`, `keyword`, or LLM-guided Agentic retrieval.
 5. **Start Chatting**: Pose questions, inspect the retrieved memories that are displayed before each response, and use `help`, `clear`, `reload`, or `exit` to manage the session.
 
 ---
@@ -290,14 +290,15 @@ Fast retrieval for latency-sensitive scenarios.
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `query` | Yes* | Natural language query (*optional for profile data source) |
-| `user_id` | No | User ID |
-| `data_source` | Yes | `episode` / `event_log` / `foresight` / `profile` |
-| `memory_scope` | Yes | `personal` (user_id only) / `group` (group_id only) / `all` (both) |
-| `retrieval_mode` | Yes | `embedding` / `bm25` / `rrf` (recommended) |
-| `group_id` | No | Group ID |
-| `current_time` | No | Filter valid foresight (format: YYYY-MM-DD) |
-| `top_k` | No | Number of results (default: 5) |
+| `query` | Yes* | Natural language query (*optional for profile type) |
+| `user_id` | No* | User ID |
+| `group_id` | No* | Group ID |
+| `memory_types` | No | `["episodic_memory"]` / `["event_log"]` / `["foresight"]` (default: `["episodic_memory"]`) |
+| `retrieve_method` | No | `keyword` / `vector` / `hybrid` / `rrf` (recommended) / `agentic` |
+| `current_time` | No | Filter valid foresight (format: ISO 8601) |
+| `top_k` | No | Number of results (default: 40, max: 100) |
+
+*At least one of `user_id` or `group_id` must be provided.
 
 **Example 1: Personal Memory**
 
@@ -307,9 +308,8 @@ curl -X GET http://localhost:8001/api/v1/memories/search \
   -d '{
     "query": "What sports does the user like?",
     "user_id": "user_001",
-    "data_source": "episode",
-    "memory_scope": "personal",
-    "retrieval_mode": "rrf"
+    "memory_types": ["episodic_memory"],
+    "retrieve_method": "rrf"
   }'
 ```
 
@@ -321,9 +321,8 @@ curl -X GET http://localhost:8001/api/v1/memories/search \
   -d '{
     "query": "Discuss project progress",
     "group_id": "project_team_001",
-    "data_source": "episode",
-    "memory_scope": "group",
-    "retrieval_mode": "rrf"
+    "memory_types": ["episodic_memory"],
+    "retrieve_method": "rrf"
   }'
 ```
 
@@ -415,9 +414,8 @@ client.store_memory({
 results = client.search_memories(
     query="What sports does the user like?",
     user_id="user_001",
-    data_source="episode",
-    memory_scope="personal",
-    retrieval_mode="rrf"
+    memory_types=["episodic_memory"],
+    retrieve_method="rrf"
 )
 
 print(results)

@@ -35,9 +35,9 @@ Fast retrieval mode that skips LLM calls for minimum latency.
 
 ### Retrieval Modes
 
-#### 1. BM25 (Keyword Search)
+#### 1. Keyword Search
 
-Pure keyword-based search using Elasticsearch.
+Pure keyword-based search using Elasticsearch BM25.
 
 **Characteristics:**
 - Fastest retrieval mode
@@ -54,11 +54,11 @@ Pure keyword-based search using Elasticsearch.
 ```python
 {
     "query": "soccer weekend",
-    "retrieval_mode": "bm25"
+    "retrieve_method": "keyword"
 }
 ```
 
-#### 2. Embedding (Semantic Search)
+#### 2. Vector (Semantic Search)
 
 Pure vector-based search using Milvus.
 
@@ -77,7 +77,7 @@ Pure vector-based search using Milvus.
 ```python
 {
     "query": "What sports does the user enjoy?",
-    "retrieval_mode": "embedding"
+    "retrieve_method": "vector"
 }
 ```
 
@@ -100,7 +100,7 @@ Reciprocal Rank Fusion of BM25 and Embedding results.
 ```python
 {
     "query": "What are the user's weekend activities?",
-    "retrieval_mode": "rrf"
+    "retrieve_method": "rrf"
 }
 ```
 
@@ -170,11 +170,11 @@ LLM generates response based on retrieved memories
 
 ```
 Is latency critical (< 100ms)?
-├─ Yes → Use BM25
+├─ Yes → Use Keyword
 └─ No → Continue
 
 Do you need semantic understanding?
-├─ No → Use BM25
+├─ No → Use Keyword
 └─ Yes → Continue
 
 Is the query complex or multi-faceted?
@@ -188,20 +188,20 @@ Default choice → Use RRF
 
 | Use Case | Recommended Strategy | Reason |
 |----------|---------------------|--------|
-| Exact phrase search | BM25 | Fast, precise keyword matching |
-| Product search by name | BM25 or RRF | Keywords important |
+| Exact phrase search | Keyword | Fast, precise keyword matching |
+| Product search by name | Keyword or RRF | Keywords important |
 | Conversational queries | RRF or Agentic | Semantic understanding needed |
 | Complex analysis questions | Agentic | Multi-aspect coverage |
 | Real-time chat | RRF | Balance of speed and accuracy |
 | Background indexing | Any | No latency constraints |
-| Autocomplete/suggestions | BM25 | Speed critical |
+| Autocomplete/suggestions | Keyword | Speed critical |
 | Research/analysis | Agentic | Accuracy critical |
 
 ---
 
 ## API Examples
 
-### Lightweight - BM25
+### Lightweight - Keyword
 
 ```bash
 curl -X GET http://localhost:8001/api/v1/memories/search \
@@ -209,14 +209,13 @@ curl -X GET http://localhost:8001/api/v1/memories/search \
   -d '{
     "query": "soccer",
     "user_id": "user_001",
-    "data_source": "episode",
-    "memory_scope": "personal",
-    "retrieval_mode": "bm25",
+    "memory_types": ["episodic_memory"],
+    "retrieve_method": "keyword",
     "top_k": 5
   }'
 ```
 
-### Lightweight - Embedding
+### Lightweight - Vector
 
 ```bash
 curl -X GET http://localhost:8001/api/v1/memories/search \
@@ -224,9 +223,8 @@ curl -X GET http://localhost:8001/api/v1/memories/search \
   -d '{
     "query": "What sports does the user like?",
     "user_id": "user_001",
-    "data_source": "episode",
-    "memory_scope": "personal",
-    "retrieval_mode": "embedding",
+    "memory_types": ["episodic_memory"],
+    "retrieve_method": "vector",
     "top_k": 5
   }'
 ```
@@ -237,30 +235,26 @@ curl -X GET http://localhost:8001/api/v1/memories/search \
 curl -X GET http://localhost:8001/api/v1/memories/search \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "Tell me about the user's hobbies",
+    "query": "Tell me about the user hobbies",
     "user_id": "user_001",
-    "data_source": "episode",
-    "memory_scope": "personal",
-    "retrieval_mode": "rrf",
+    "memory_types": ["episodic_memory"],
+    "retrieve_method": "rrf",
     "top_k": 5
   }'
 ```
 
 ### Agentic Retrieval
 
-```python
-# Agentic retrieval through specialized endpoint or parameter
-# Implementation varies - check API documentation
-
-# Example conceptual usage:
-{
+```bash
+curl -X GET http://localhost:8001/api/v1/memories/search \
+  -H "Content-Type: application/json" \
+  -d '{
     "query": "What is my work-life balance like?",
     "user_id": "user_001",
-    "data_source": "episode",
-    "memory_scope": "all",
-    "retrieval_mode": "agentic",  # or use agentic-specific endpoint
-    "top_k": 10  # May retrieve more for better coverage
-}
+    "memory_types": ["episodic_memory"],
+    "retrieve_method": "agentic",
+    "top_k": 10
+  }'
 ```
 
 ---
@@ -271,9 +265,9 @@ curl -X GET http://localhost:8001/api/v1/memories/search \
 
 | Strategy | Typical Latency | Notes |
 |----------|----------------|-------|
-| BM25 | 50-100ms | Fastest |
-| Embedding | 200-500ms | Depends on Milvus performance |
-| RRF | 200-600ms | Parallel BM25 + Embedding |
+| Keyword | 50-100ms | Fastest |
+| Vector | 200-500ms | Depends on Milvus performance |
+| RRF | 200-600ms | Parallel keyword + vector |
 | Agentic | 2-5 seconds | Includes LLM query expansion |
 
 ### Accuracy
@@ -282,8 +276,8 @@ Measured on LoCoMo benchmark:
 
 | Strategy | Precision | Recall | F1 Score |
 |----------|-----------|--------|----------|
-| BM25 | 0.72 | 0.68 | 0.70 |
-| Embedding | 0.78 | 0.75 | 0.77 |
+| Keyword | 0.72 | 0.68 | 0.70 |
+| Vector | 0.78 | 0.75 | 0.77 |
 | RRF | 0.85 | 0.82 | 0.84 |
 | Agentic | 0.91 | 0.89 | 0.90 |
 
@@ -293,8 +287,8 @@ Measured on LoCoMo benchmark:
 
 | Strategy | CPU | Memory | Network |
 |----------|-----|--------|---------|
-| BM25 | Low | Low | Minimal |
-| Embedding | Medium | Medium | Moderate (embedding API) |
+| Keyword | Low | Low | Minimal |
+| Vector | Medium | Medium | Moderate (embedding API) |
 | RRF | Medium | Medium | Moderate |
 | Agentic | Medium-High | Medium | High (multiple LLM calls) |
 
@@ -309,7 +303,7 @@ For most applications, RRF provides the best balance:
 - Reasonable latency
 - Robust across query types
 
-### 2. Use BM25 for Known Patterns
+### 2. Use Keyword Search for Known Patterns
 
 When users search for specific keywords or phrases:
 - Product names
@@ -325,8 +319,8 @@ Use agentic retrieval when:
 
 ### 4. Tune top_k Parameter
 
-- **BM25**: Lower top_k (3-5) for precise matches
-- **Embedding/RRF**: Medium top_k (5-10) for coverage
+- **Keyword**: Lower top_k (3-5) for precise matches
+- **Vector/RRF**: Medium top_k (5-10) for coverage
 - **Agentic**: Higher top_k (10-20) for comprehensive results
 
 ### 5. Monitor and Optimize
@@ -343,7 +337,7 @@ Use different strategies for different query types:
 def select_strategy(query):
     # Exact phrase (in quotes)
     if query.startswith('"') and query.endswith('"'):
-        return "bm25"
+        return "keyword"
 
     # Complex question
     if any(word in query.lower() for word in ["why", "how", "explain", "analyze"]):
