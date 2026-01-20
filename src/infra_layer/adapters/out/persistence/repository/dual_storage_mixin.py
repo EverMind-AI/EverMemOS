@@ -135,6 +135,19 @@ class DualStorageMixin(Generic[TDocument]):
                 document_class._original_delete, kv_storage
             )
 
+            # Wrap restore() and hard_delete() if they exist (for soft-delete documents)
+            if hasattr(document_class, "restore"):
+                document_class._original_restore = document_class.restore
+                document_class.restore = DocumentInstanceWrapper.wrap_restore(
+                    document_class._original_restore, kv_storage
+                )
+
+            if hasattr(document_class, "hard_delete"):
+                document_class._original_hard_delete = document_class.hard_delete
+                document_class.hard_delete = DocumentInstanceWrapper.wrap_hard_delete(
+                    document_class._original_hard_delete, kv_storage
+                )
+
             logger.debug(
                 f"✅ Patched instance methods for {document_class.__name__}"
             )

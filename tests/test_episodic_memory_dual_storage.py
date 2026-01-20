@@ -264,6 +264,180 @@ class TestDualStorageModelProxy:
         # Note: delete_by_user_id should also clean up KV-Storage
         # (current implementation does batch_delete from KV)
 
+    async def test_07_find_by_filter_paginated(self, repository, test_user_id):
+        """Test: find_by_filter_paginated with pagination"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: find_by_filter_paginated with pagination")
+
+        # Create 10 test records
+        created_ids = []
+        for i in range(10):
+            test_data = create_test_episodic_memory(
+                user_id=test_user_id,
+                summary=f"Paginated test {i+1:02d}",
+            )
+            created = await repository.append_episodic_memory(test_data)
+            created_ids.append(str(created.id))
+        logger.info(f"✅ Created 10 records for pagination test")
+
+        # Test pagination: skip 0, limit 3 (first page)
+        page1_results = await repository.find_by_filter_paginated(
+            query_filter={"user_id": test_user_id},
+            skip=0,
+            limit=3,
+        )
+        assert len(page1_results) == 3, f"Page 1 should have 3 records, got {len(page1_results)}"
+        logger.info(f"✅ Page 1: {len(page1_results)} records")
+
+        # Test pagination: skip 3, limit 3 (second page)
+        page2_results = await repository.find_by_filter_paginated(
+            query_filter={"user_id": test_user_id},
+            skip=3,
+            limit=3,
+        )
+        assert len(page2_results) == 3, f"Page 2 should have 3 records, got {len(page2_results)}"
+        logger.info(f"✅ Page 2: {len(page2_results)} records")
+
+        # Verify no overlap between pages
+        page1_ids = {str(r.id) for r in page1_results}
+        page2_ids = {str(r.id) for r in page2_results}
+        assert len(page1_ids & page2_ids) == 0, "Pages should not overlap"
+        logger.info("✅ No overlap between pages")
+
+        # Cleanup
+        for created_id in created_ids:
+            await repository.delete_by_event_id(created_id, test_user_id)
+        logger.info("✅ Test passed")
+
+    async def test_08_find_by_filters_with_time_range(self, repository, test_user_id):
+        """Test: find_by_filters with time range filtering"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: find_by_filters with time range")
+
+        from common_utils.datetime_utils import get_now_with_timezone
+        from datetime import timedelta
+
+        # Create records with different timestamps
+        now = get_now_with_timezone()
+        past_time = now - timedelta(hours=2)
+        future_time = now + timedelta(hours=2)
+
+        # Create a record with past timestamp
+        from infra_layer.adapters.out.persistence.document.memory.episodic_memory import (
+            EpisodicMemory,
+        )
+        past_record = EpisodicMemory(
+            user_id=test_user_id,
+            timestamp=past_time,
+            summary="Past record",
+            episode="Past content",
+            user_name="TestUser",
+        )
+        created_past = await repository.append_episodic_memory(past_record)
+        logger.info(f"✅ Created past record: {created_past.id}")
+
+        # Create a record with current timestamp
+        current_record = create_test_episodic_memory(
+            user_id=test_user_id,
+            summary="Current record"
+        )
+        created_current = await repository.append_episodic_memory(current_record)
+        logger.info(f"✅ Created current record: {created_current.id}")
+
+        # Query with time range: from past_time - 1h to now + 1h (to ensure we capture "now")
+        start_time = past_time - timedelta(hours=1)
+        end_time = now + timedelta(hours=1)  # Extended to ensure we capture the current record
+        results = await repository.find_by_filters(
+            user_id=test_user_id,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+        # Should include both past and current records
+        result_ids = {str(r.id) for r in results}
+        assert str(created_past.id) in result_ids, "Past record should be in results"
+        assert str(created_current.id) in result_ids, "Current record should be in results"
+        logger.info(f"✅ Time range query returned {len(results)} records")
+
+        # Cleanup
+        await repository.delete_by_event_id(str(created_past.id), test_user_id)
+        await repository.delete_by_event_id(str(created_current.id), test_user_id)
+        logger.info("✅ Test passed")
+
+    async def test_09_update_syncs_to_kv(self, repository, kv_storage, test_user_id):
+        """Test: document.save() (update) syncs to KV-Storage"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: Update syncs to KV-Storage")
+
+        # Create test record
+        test_data = create_test_episodic_memory(
+            user_id=test_user_id,
+            summary="Original summary"
+        )
+        created = await repository.append_episodic_memory(test_data)
+        doc_id = str(created.id)
+        logger.info(f"✅ Created: {doc_id}")
+
+        # Update the document directly (simulating document.save())
+        created.summary = "Updated summary"
+        created.episode = "Updated episode"
+        await created.save()
+        logger.info(f"✅ Updated document via save()")
+
+        # Verify KV-Storage is updated
+        kv_value = await kv_storage.get(doc_id)
+        assert kv_value is not None, "KV-Storage should have the data"
+
+        from infra_layer.adapters.out.persistence.document.memory.episodic_memory import (
+            EpisodicMemory,
+        )
+        kv_doc = EpisodicMemory.model_validate_json(kv_value)
+        assert kv_doc.summary == "Updated summary", "KV summary not updated"
+        assert kv_doc.episode == "Updated episode", "KV episode not updated"
+        logger.info(f"✅ Verified KV-Storage sync after update")
+
+        # Cleanup
+        await repository.delete_by_event_id(doc_id, test_user_id)
+        logger.info("✅ Test passed")
+
+    async def test_10_kv_miss_fallback_to_mongo(self, repository, kv_storage, test_user_id):
+        """Test: KV miss falls back to MongoDB and backfills KV"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: KV miss fallback and backfill")
+
+        # Create test record
+        test_data = create_test_episodic_memory(user_id=test_user_id)
+        created = await repository.append_episodic_memory(test_data)
+        doc_id = str(created.id)
+        logger.info(f"✅ Created: {doc_id}")
+
+        # Manually delete from KV-Storage (simulate KV miss)
+        await kv_storage.delete(doc_id)
+        logger.info(f"✅ Deleted from KV-Storage: {doc_id}")
+
+        # Verify KV is empty
+        kv_value = await kv_storage.get(doc_id)
+        assert kv_value is None, "KV should be empty"
+
+        # Retrieve via repository (should fallback to MongoDB)
+        retrieved = await repository.get_by_event_id(doc_id, test_user_id)
+        assert retrieved is not None, "Should retrieve from MongoDB"
+        assert str(retrieved.id) == doc_id, "IDs should match"
+        logger.info(f"✅ Retrieved from MongoDB fallback")
+
+        # Verify KV is backfilled
+        kv_value = await kv_storage.get(doc_id)
+        assert kv_value is not None, "KV should be backfilled"
+        logger.info(f"✅ Verified KV backfill")
+
+        # Cleanup
+        await repository.delete_by_event_id(doc_id, test_user_id)
+        logger.info("✅ Test passed")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

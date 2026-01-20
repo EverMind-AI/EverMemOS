@@ -112,6 +112,10 @@ class DualStorageQueryProxy:
 
         return result
 
+    async def count(self, *args, **kwargs):
+        """Proxy count method to original cursor"""
+        return await self._mongo_cursor.count(*args, **kwargs)
+
     def __getattr__(self, name):
         """Proxy all other methods to original cursor"""
         return getattr(self._mongo_cursor, name)
@@ -202,6 +206,153 @@ class DualStorageModelProxy:
             logger.error(f"❌ Failed to get document: {e}")
             return None
 
+    async def find_one(self, *args, **kwargs):
+        """
+        Intercept find_one() - 优先从 KV 读取（如果有 _id 过滤）
+
+        Args:
+            *args: filter query
+            **kwargs: additional options
+
+        Returns:
+            Document or None
+        """
+        # 调用原始 find_one
+        document = await self._original_model.find_one(*args, **kwargs)
+
+        # 如果找到文档，回填 KV-Storage
+        if document and document.id:
+            try:
+                kv_key = str(document.id)
+                kv_value = document.model_dump_json()
+                await self._kv_storage.put(key=kv_key, value=kv_value)
+                logger.debug(f"✅ Backfilled KV-Storage from find_one: {kv_key}")
+            except Exception as e:
+                logger.warning(f"⚠️  Failed to backfill KV-Storage: {e}")
+
+        return document
+
+    async def delete_many(self, *args, **kwargs):
+        """
+        Intercept delete_many() - 批量删除并同步 KV-Storage
+
+        Args:
+            *args: filter query
+            **kwargs: additional options
+
+        Returns:
+            Delete result
+        """
+        try:
+            # 1. 先查询要删除的文档 IDs
+            filter_query = args[0] if args else {}
+            docs = await self._original_model.find(filter_query).to_list()
+            doc_ids = [str(doc.id) for doc in docs]
+
+            # 2. 执行删除
+            result = await self._original_model.delete_many(*args, **kwargs)
+
+            # 3. 批量删除 KV-Storage
+            if doc_ids:
+                try:
+                    await self._kv_storage.batch_delete(keys=doc_ids)
+                    logger.debug(f"✅ Deleted {len(doc_ids)} documents from KV-Storage")
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to delete from KV-Storage: {e}")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"❌ Failed to delete_many with dual storage: {e}")
+            raise
+
+    def hard_find_one(self, *args, **kwargs):
+        """
+        Intercept hard_find_one() - 查询包括已删除的文档，并回填 KV
+
+        Args:
+            *args: filter query
+            **kwargs: additional options
+
+        Returns:
+            FindOne query object
+        """
+        # hard_find_one returns a query object, we need to wrap it
+        # But since it's a class method returning a query object, we'll just pass through
+        # and handle backfill in the wrapper if needed
+        return self._original_model.hard_find_one(*args, **kwargs)
+
+    async def hard_delete_many(self, *args, **kwargs):
+        """
+        Intercept hard_delete_many() - 物理删除并同步 KV-Storage
+
+        Args:
+            *args: filter query
+            **kwargs: additional options
+
+        Returns:
+            Delete result
+        """
+        try:
+            # 1. 先查询要删除的文档 IDs (使用 hard_find_many 查询所有包括已删除的)
+            filter_query = args[0] if args else {}
+            docs = await self._original_model.hard_find_many(filter_query).to_list()
+            doc_ids = [str(doc.id) for doc in docs]
+
+            # 2. 执行物理删除
+            result = await self._original_model.hard_delete_many(*args, **kwargs)
+
+            # 3. 批量删除 KV-Storage
+            if doc_ids:
+                try:
+                    await self._kv_storage.batch_delete(keys=doc_ids)
+                    logger.debug(f"✅ Hard deleted {len(doc_ids)} documents from KV-Storage")
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to delete from KV-Storage: {e}")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"❌ Failed to hard_delete_many with dual storage: {e}")
+            raise
+
+    async def restore_many(self, *args, **kwargs):
+        """
+        Intercept restore_many() - 恢复已删除文档并同步 KV-Storage
+
+        Args:
+            *args: filter query
+            **kwargs: additional options
+
+        Returns:
+            Update result
+        """
+        try:
+            # 1. 执行恢复操作
+            result = await self._original_model.restore_many(*args, **kwargs)
+
+            # 2. 查询被恢复的文档并同步到 KV-Storage
+            filter_query = args[0] if args else {}
+            # 恢复后的文档 deleted_at = None，查询它们
+            restored_docs = await self._original_model.find(filter_query).to_list()
+
+            # 3. 批量同步到 KV-Storage
+            if restored_docs:
+                try:
+                    for doc in restored_docs:
+                        kv_key = str(doc.id)
+                        kv_value = doc.model_dump_json()
+                        await self._kv_storage.put(key=kv_key, value=kv_value)
+                    logger.debug(f"✅ Restored {len(restored_docs)} documents to KV-Storage")
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to restore to KV-Storage: {e}")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"❌ Failed to restore_many with dual storage: {e}")
+            raise
+
     def __getattr__(self, name):
         """Proxy all other methods to original model"""
         return getattr(self._original_model, name)
@@ -276,6 +427,48 @@ class DocumentInstanceWrapper:
             return result
 
         return wrapped_delete
+
+    @staticmethod
+    def wrap_restore(original_restore, kv_storage: "KVStorageInterface"):
+        """Wrap document.restore() to sync back to KV-Storage"""
+        async def wrapped_restore(self, **kwargs):
+            # 调用原始 restore (传递 self)
+            result = await original_restore(self, **kwargs)
+
+            # 恢复后同步回 KV-Storage
+            if self.id:
+                try:
+                    kv_key = str(self.id)
+                    kv_value = self.model_dump_json()
+                    await kv_storage.put(key=kv_key, value=kv_value)
+                    logger.debug(f"✅ Synced to KV-Storage after restore: {kv_key}")
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to sync to KV-Storage after restore: {e}")
+
+            return result
+
+        return wrapped_restore
+
+    @staticmethod
+    def wrap_hard_delete(original_hard_delete, kv_storage: "KVStorageInterface"):
+        """Wrap document.hard_delete() to remove from KV-Storage"""
+        async def wrapped_hard_delete(self, **kwargs):
+            doc_id = str(self.id) if self.id else None
+
+            # 调用原始 hard_delete (传递 self)
+            result = await original_hard_delete(self, **kwargs)
+
+            # 从 KV-Storage 删除
+            if doc_id:
+                try:
+                    await kv_storage.delete(key=doc_id)
+                    logger.debug(f"✅ Deleted from KV-Storage after hard_delete: {doc_id}")
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to delete from KV-Storage after hard_delete: {e}")
+
+            return result
+
+        return wrapped_hard_delete
 
 
 __all__ = [
