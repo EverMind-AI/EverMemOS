@@ -37,6 +37,11 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
+class LiteStorageQueryError(Exception):
+    """Exception raised when query uses fields not available in Lite storage"""
+    pass
+
+
 # Minimal projection model for queries - only returns _id
 class IdOnlyProjection(BaseModel):
     """Minimal projection to only retrieve document IDs from MongoDB"""
@@ -221,6 +226,90 @@ class DualStorageModelProxy:
             f"🔍 Auto-extracted {len(self._indexed_fields)} indexed fields for {full_model_class.__name__}"
         )
 
+    def _extract_query_fields(self, filter_dict: Any) -> Set[str]:
+        """
+        递归提取查询条件中使用的所有字段名
+
+        支持：
+        - 简单查询：{"user_id": "123"}
+        - 操作符查询：{"timestamp": {"$gt": date}}
+        - 逻辑操作符：{"$and": [...], "$or": [...]}
+        - 数组操作符：{"keywords": {"$in": [...]}}
+
+        Args:
+            filter_dict: MongoDB filter query
+
+        Returns:
+            Set[str]: 查询中使用的所有字段名
+        """
+        fields = set()
+
+        if not isinstance(filter_dict, dict):
+            return fields
+
+        for key, value in filter_dict.items():
+            # 跳过 MongoDB 操作符（以 $ 开头）
+            if key.startswith("$"):
+                # 对于 $and, $or 等逻辑操作符，递归提取子条件
+                if isinstance(value, list):
+                    for sub_condition in value:
+                        fields.update(self._extract_query_fields(sub_condition))
+                elif isinstance(value, dict):
+                    fields.update(self._extract_query_fields(value))
+            else:
+                # 这是一个实际的字段名
+                fields.add(key)
+
+        return fields
+
+    def _validate_query_fields(self, filter_dict: Any) -> None:
+        """
+        验证查询字段是否在 Lite 数据中
+
+        如果查询使用了非 Lite 字段，抛出清晰的错误提示
+
+        Args:
+            filter_dict: MongoDB filter query
+
+        Raises:
+            LiteStorageQueryError: 如果查询字段不在 Lite 存储中
+        """
+        if not filter_dict:
+            return
+
+        # 提取所有查询字段
+        queried_fields = self._extract_query_fields(filter_dict)
+
+        if not queried_fields:
+            return
+
+        # MongoDB 字段别名映射：_id -> id
+        # MongoDB 内部使用 _id，但 Beanie 映射为 id
+        normalized_queried_fields = set()
+        for field in queried_fields:
+            if field == "_id":
+                # _id 是 id 的别名，总是可用
+                normalized_queried_fields.add("id")
+            else:
+                normalized_queried_fields.add(field)
+
+        # 检查是否有字段不在 indexed_fields 中
+        missing_fields = normalized_queried_fields - self._indexed_fields
+
+        if missing_fields:
+            # 构建清晰的错误消息
+            error_msg = (
+                f"❌ Query uses fields not available in Lite storage: {sorted(missing_fields)}\n\n"
+                f"These fields are not indexed and not in query_fields.\n"
+                f"In Lite storage mode, MongoDB only stores indexed fields and query_fields.\n\n"
+                f"To fix this issue, add these fields to Settings.query_fields in {self._full_model_class.__name__}:\n\n"
+                f"  class Settings:\n"
+                f"      query_fields = {sorted(list(missing_fields))}\n\n"
+                f"Current indexed fields: {sorted(self._indexed_fields)}\n"
+                f"Queried fields: {sorted(normalized_queried_fields)}\n"
+            )
+            raise LiteStorageQueryError(error_msg)
+
     def find(self, *args, **kwargs):
         """
         Intercept find() - 返回 QueryProxy 自动处理双存储
@@ -228,6 +317,10 @@ class DualStorageModelProxy:
         Returns:
             DualStorageQueryProxy
         """
+        # 验证查询字段
+        filter_query = args[0] if args else {}
+        self._validate_query_fields(filter_query)
+
         # 调用原始 model 的 find 方法
         mongo_cursor = self._original_model.find(*args, **kwargs)
 
@@ -290,11 +383,19 @@ class DualStorageModelProxy:
 
         Returns:
             Document or None
+
+        Raises:
+            LiteStorageQueryError: 如果查询字段不在 Lite 存储中
         """
+        # 提取查询条件
+        filter_query = args[0] if args else {}
+
+        # 验证查询字段（如果失败会抛出 LiteStorageQueryError）
+        self._validate_query_fields(filter_query)
+
         try:
             # 使用 PyMongo 直接查询（避免 Beanie 验证 Lite 数据）
             mongo_collection = self._original_model.get_pymongo_collection()
-            filter_query = args[0] if args else {}
             session = kwargs.get("session", None)
 
             lite_doc = await mongo_collection.find_one(filter_query, session=session)
@@ -315,6 +416,9 @@ class DualStorageModelProxy:
                 logger.warning(f"⚠️  KV miss in find_one for {doc_id}")
                 return None
 
+        except LiteStorageQueryError:
+            # 重新抛出查询字段验证错误
+            raise
         except Exception as e:
             logger.error(f"❌ Failed in find_one: {e}")
             return None
@@ -337,6 +441,10 @@ class DualStorageModelProxy:
             Delete result
         """
         try:
+            # 验证查询字段
+            filter_query = args[0] if args else {}
+            self._validate_query_fields(filter_query)
+
             # 执行批量软删除（只在MongoDB标记deleted_at）
             result = await self._original_model.delete_many(*args, **kwargs)
 
@@ -379,8 +487,11 @@ class DualStorageModelProxy:
             Delete result
         """
         try:
-            # 1. 使用 PyMongo 直接查询要删除的文档 IDs（避免 Beanie 验证）
+            # 1. 验证查询字段
             filter_query = args[0] if args else {}
+            self._validate_query_fields(filter_query)
+
+            # 2. 使用 PyMongo 直接查询要删除的文档 IDs（避免 Beanie 验证）
             mongo_collection = self._original_model.get_pymongo_collection()
             session = kwargs.get("session", None)
 
@@ -420,6 +531,10 @@ class DualStorageModelProxy:
             Update result
         """
         try:
+            # 验证查询字段
+            filter_query = args[0] if args else {}
+            self._validate_query_fields(filter_query)
+
             # 执行恢复操作（只更新 MongoDB 的 deleted_at 字段）
             result = await self._original_model.restore_many(*args, **kwargs)
 
@@ -638,4 +753,5 @@ __all__ = [
     "DualStorageModelProxy",
     "DualStorageQueryProxy",
     "DocumentInstanceWrapper",
+    "LiteStorageQueryError",
 ]

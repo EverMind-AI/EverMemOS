@@ -20,13 +20,16 @@ class LiteModelExtractor:
     """
     Lite Model Field Extractor
 
-    运行时动态提取 Document 的索引字段，构建 Lite 版本数据。
+    运行时动态提取 Document 的索引字段和查询字段，构建 Lite 版本数据。
 
     提取规则：
     1. 所有 Indexed 标记的字段
     2. Settings.indexes 中定义的索引字段
-    3. 审计字段：id, created_at, updated_at
-    4. 软删除字段：deleted_at, deleted_by, deleted_id（如果存在）
+    3. Settings.query_fields 中配置的查询字段（无索引但用于查询）
+    4. 审计字段：id, created_at, updated_at
+    5. 软删除字段：deleted_at, deleted_by, deleted_id（如果存在）
+
+    注意：query_fields 用于那些没有建索引但在查询中使用的字段
     """
 
     # 始终包含的系统字段
@@ -38,13 +41,13 @@ class LiteModelExtractor:
     @classmethod
     def extract_indexed_fields(cls, document_class: Type[BaseModel]) -> Set[str]:
         """
-        提取 Document 类的所有索引字段
+        提取 Document 类的所有索引字段和查询字段
 
         Args:
             document_class: Beanie Document 类
 
         Returns:
-            Set[str]: 索引字段名称集合
+            Set[str]: 索引字段 + 查询字段名称集合
         """
         indexed_fields = set()
 
@@ -73,7 +76,14 @@ class LiteModelExtractor:
                         for field_name in index_spec["key"].keys():
                             indexed_fields.add(field_name)
 
-        logger.debug(f"📋 Extracted {len(indexed_fields)} indexed fields for {document_class.__name__}: {sorted(indexed_fields)}")
+        # 5. 从 Settings.query_fields 中提取查询字段（无索引但用于查询）
+        if hasattr(document_class, "Settings") and hasattr(document_class.Settings, "query_fields"):
+            query_fields = document_class.Settings.query_fields
+            if query_fields:
+                indexed_fields.update(query_fields)
+                logger.debug(f"📋 Added {len(query_fields)} query fields (no index): {sorted(query_fields)}")
+
+        logger.debug(f"📋 Extracted {len(indexed_fields)} total fields for {document_class.__name__}: {sorted(indexed_fields)}")
         return indexed_fields
 
     @classmethod
