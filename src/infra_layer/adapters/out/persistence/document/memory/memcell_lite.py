@@ -11,7 +11,7 @@ from typing import List, Optional
 from enum import Enum
 
 from beanie import Indexed
-from core.oxm.mongo.document_base import DocumentBase
+from core.oxm.mongo.document_base_with_soft_delete import DocumentBaseWithSoftDelete
 from core.oxm.mongo.audit_base import AuditBase
 from pydantic import Field, ConfigDict
 from pymongo import IndexModel, ASCENDING, DESCENDING
@@ -24,12 +24,18 @@ class DataTypeEnum(str, Enum):
     CONVERSATION = "Conversation"
 
 
-class MemCellLite(DocumentBase, AuditBase):
+class MemCellLite(DocumentBaseWithSoftDelete, AuditBase):
     """
     MemCell Lite Model - Minimal storage version
 
     Contains only indexed and query fields for MongoDB.
     Full MemCell data is stored in KV-Storage as backup.
+
+    Supports soft delete functionality:
+    - Use delete() method for soft deletion
+    - Use find_one(), find_many() to automatically filter out deleted records
+    - Use hard_find_one(), hard_find_many() to query including deleted records
+    - Use hard_delete() for physical deletion
 
     Note: Inherits from AuditBase to automatically manage created_at/updated_at timestamps.
     These audit fields are stored in both MongoDB (for queries) and KV-Storage (for full data).
@@ -68,36 +74,66 @@ class MemCellLite(DocumentBase, AuditBase):
 
         name = "memcells"
 
-        # Indexes for query fields
-        # Note: No indexes on audit fields (created_at/updated_at) as all queries use timestamp field
+        # Index definitions (matching main branch MemCell)
+        # MemCellLite is stored in MongoDB with all the same indexes as main branch
         indexes = [
+            # 1. Soft delete support - soft delete status index
             IndexModel(
-                [("user_id", ASCENDING), ("timestamp", DESCENDING)],
-                name="idx_user_timestamp",
+                [("deleted_at", ASCENDING)],
+                name="idx_deleted_at",
+                sparse=True,  # Only index documents that are deleted
             ),
+            # 2. Composite index for user queries - core query pattern
+            # Includes deleted_at to optimize soft delete filtering
             IndexModel(
-                [("group_id", ASCENDING), ("timestamp", DESCENDING)],
-                name="idx_group_timestamp",
+                [
+                    ("user_id", ASCENDING),
+                    ("deleted_at", ASCENDING),
+                    ("timestamp", DESCENDING),
+                ],
+                name="idx_user_deleted_timestamp",
             ),
+            # 3. Composite index for group queries - optimized for group chat scenarios
+            # Includes deleted_at to optimize soft delete filtering
+            IndexModel(
+                [
+                    ("group_id", ASCENDING),
+                    ("deleted_at", ASCENDING),
+                    ("timestamp", DESCENDING),
+                ],
+                name="idx_group_deleted_timestamp",
+            ),
+            # 4. Index for time range queries (shard key, automatically created by MongoDB)
+            # Note: Shard key index is automatically created, no need to define manually
+            # IndexModel([("timestamp", ASCENDING)], name="idx_timestamp"),
+            # 5. Index for participant queries - indexing multi-value field
             IndexModel(
                 [("participants", ASCENDING)], name="idx_participants", sparse=True
             ),
+            # 6. Composite index for user-type queries - optimized for user data type filtering
             IndexModel(
                 [
                     ("user_id", ASCENDING),
                     ("type", ASCENDING),
+                    ("deleted_at", ASCENDING),
                     ("timestamp", DESCENDING),
                 ],
-                name="idx_user_type_timestamp",
+                name="idx_user_type_deleted_timestamp",
             ),
+            # 7. Composite index for group-type queries - optimized for group data type filtering
             IndexModel(
                 [
                     ('group_id', ASCENDING),
                     ("type", ASCENDING),
+                    ("deleted_at", ASCENDING),
                     ("timestamp", DESCENDING),
                 ],
-                name="idx_group_type_timestamp",
+                name="idx_group_type_deleted_timestamp",
             ),
+            # Creation time index
+            IndexModel([("created_at", DESCENDING)], name="idx_created_at"),
+            # Update time index
+            IndexModel([("updated_at", DESCENDING)], name="idx_updated_at"),
         ]
 
         validate_on_save = True

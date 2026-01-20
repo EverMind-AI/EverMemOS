@@ -163,71 +163,20 @@ class MemCell(DocumentBaseWithSoftDelete, AuditBase):
         return self.id
 
     class Settings:
-        """Beanie settings"""
+        """
+        Beanie settings
 
-        # Collection name
+        Note: MemCell is stored in KV-Storage only, not in MongoDB.
+        No indexes are needed since this model is used for type definitions only.
+        All indexes are defined in MemCellLite which is stored in MongoDB.
+        """
+
+        # Collection name (for compatibility, but not actually used in MongoDB)
         name = "memcells"
 
-        # Index definitions
-        indexes = [
-            # 1. Soft delete support - soft delete status index
-            IndexModel(
-                [("deleted_at", ASCENDING)],
-                name="idx_deleted_at",
-                sparse=True,  # Only index documents that are deleted
-            ),
-            # 2. Composite index for user queries - core query pattern
-            # Includes deleted_at to optimize soft delete filtering
-            IndexModel(
-                [
-                    ("user_id", ASCENDING),
-                    ("deleted_at", ASCENDING),
-                    ("timestamp", DESCENDING),
-                ],
-                name="idx_user_deleted_timestamp",
-            ),
-            # 3. Composite index for group queries - optimized for group chat scenarios
-            # Includes deleted_at to optimize soft delete filtering
-            IndexModel(
-                [
-                    ("group_id", ASCENDING),
-                    ("deleted_at", ASCENDING),
-                    ("timestamp", DESCENDING),
-                ],
-                name="idx_group_deleted_timestamp",
-            ),
-            # 4. Index for time range queries (shard key, automatically created by MongoDB)
-            # Note: Shard key index is automatically created, no need to define manually
-            # IndexModel([("timestamp", ASCENDING)], name="idx_timestamp"),
-            # 5. Index for participant queries - indexing multi-value field
-            IndexModel(
-                [("participants", ASCENDING)], name="idx_participants", sparse=True
-            ),
-            # 6. Composite index for user-type queries - optimized for user data type filtering
-            IndexModel(
-                [
-                    ("user_id", ASCENDING),
-                    ("type", ASCENDING),
-                    ("deleted_at", ASCENDING),
-                    ("timestamp", DESCENDING),
-                ],
-                name="idx_user_type_deleted_timestamp",
-            ),
-            # 7. Composite index for group-type queries - optimized for group data type filtering
-            IndexModel(
-                [
-                    ('group_id', ASCENDING),
-                    ("type", ASCENDING),
-                    ("deleted_at", ASCENDING),
-                    ("timestamp", DESCENDING),
-                ],
-                name="idx_group_type_deleted_timestamp",
-            ),
-            # Creation time index
-            IndexModel([("created_at", DESCENDING)], name="idx_created_at"),
-            # Update time index
-            IndexModel([("updated_at", DESCENDING)], name="idx_updated_at"),
-        ]
+        # No indexes - MemCell is not stored in MongoDB, only in KV-Storage
+        # All indexes are defined in MemCellLite
+        indexes = []
 
         # Validation settings
         validate_on_save = True
