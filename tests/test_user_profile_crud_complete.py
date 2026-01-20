@@ -18,6 +18,7 @@ Modified methods tested:
 - get_by_user_and_group (native)
 - get_all_by_group (native)
 - get_all_by_user (native)
+- find_by_filters (native) - NEW
 - upsert (native)
 - delete_by_group (native)
 - delete_all (native)
@@ -431,6 +432,68 @@ class TestNativeCRUD:
         # 4. Verify all group IDs present
         retrieved_group_ids = {p.group_id for p in profiles}
         assert retrieved_group_ids == set(group_ids), "Should have all group IDs"
+
+        # Cleanup
+        for group_id in group_ids:
+            await repository.delete_by_group(group_id)
+
+    @pytest.mark.asyncio
+    async def test_find_by_filters(self, repository):
+        """Test find_by_filters method with various filter combinations"""
+        from core.oxm.constants import MAGIC_ALL
+
+        # 1. Generate fixed user_ids and group_ids first
+        user_ids = [f"user_{i}_{uuid.uuid4().hex[:8]}" for i in range(2)]
+        group_ids = [f"group_{j}_{uuid.uuid4().hex[:8]}" for j in range(2)]
+
+        # 2. Create test data: each user in each group (2x2 = 4 profiles)
+        test_data = []
+        for user_id in user_ids:
+            for group_id in group_ids:
+                profile_data = create_test_profile_data()
+                profile_data["user_goal"] = f"Goal for {user_id} in {group_id}"
+                saved = await repository.upsert(user_id, group_id, profile_data)
+                test_data.append((user_id, group_id, saved))
+
+        # 3. Test filter by user_id only (should find 2 profiles - same user in 2 groups)
+        user_0_id = user_ids[0]
+        results = await repository.find_by_filters(user_id=user_0_id, group_id=MAGIC_ALL)
+        assert len(results) == 2, f"Should find 2 profiles for {user_0_id}, got {len(results)}"
+        assert all(p.user_id == user_0_id for p in results), "All should have same user_id"
+
+        # Verify returned objects are full UserProfile (not Lite)
+        assert all(hasattr(p, 'profile_data') for p in results), "Should have profile_data field"
+        assert all(p.profile_data is not None for p in results), "profile_data should not be None"
+
+        # 4. Test filter by group_id only (should find 2 profiles - 2 users in same group)
+        group_0_id = group_ids[0]
+        results = await repository.find_by_filters(user_id=MAGIC_ALL, group_id=group_0_id)
+        assert len(results) == 2, f"Should find 2 profiles for {group_0_id}, got {len(results)}"
+        assert all(p.group_id == group_0_id for p in results), "All should have same group_id"
+
+        # 5. Test filter by both user_id and group_id (should find exactly 1)
+        specific_user_id = user_ids[0]
+        specific_group_id = group_ids[0]
+        results = await repository.find_by_filters(
+            user_id=specific_user_id, group_id=specific_group_id
+        )
+        assert len(results) == 1, "Should find exactly 1 profile"
+        assert results[0].user_id == specific_user_id
+        assert results[0].group_id == specific_group_id
+
+        # 6. Test no filters (find all) - MAGIC_ALL is default
+        results = await repository.find_by_filters()
+        assert len(results) >= 4, "Should find at least 4 profiles (all test data)"
+
+        # 7. Test with limit
+        results = await repository.find_by_filters(limit=2)
+        assert len(results) == 2, "Should respect limit parameter"
+
+        # 8. Test non-existent filters
+        results = await repository.find_by_filters(
+            user_id="nonexistent_user", group_id=MAGIC_ALL
+        )
+        assert len(results) == 0, "Should return empty list for non-existent user"
 
         # Cleanup
         for group_id in group_ids:

@@ -41,7 +41,7 @@ class UserProfileLite(DocumentBase, AuditBase):
 
         name = "user_profiles"
 
-        # Indexes for query fields
+        # Indexes for query fields (matching main branch)
         indexes = [
             # Composite index (primary query field)
             IndexModel(
@@ -49,8 +49,13 @@ class UserProfileLite(DocumentBase, AuditBase):
                 name="idx_user_group",
                 unique=True,
             ),
-            # Index on user_id (used by get_all_by_user queries)
+            # Single field index on user_id (used by get_all_by_user queries)
             IndexModel([("user_id", ASCENDING)], name="idx_user_id"),
+            # Single field index on group_id (used by get_all_by_group queries)
+            IndexModel([("group_id", ASCENDING)], name="idx_group_id"),
+            # Indexes on audit fields (for pagination and time-based queries)
+            IndexModel([("created_at", DESCENDING)], name="idx_created_at"),
+            IndexModel([("updated_at", DESCENDING)], name="idx_updated_at"),
         ]
 
         validate_on_save = True

@@ -179,7 +179,12 @@ class UserProfileRawRepository(BaseRepository[UserProfileLite]):
     async def get_all_by_user(self, user_id: str, limit: int = 40) -> List[UserProfile]:
         try:
             # Query MongoDB Lite models
-            lite_results = await self.model.find(UserProfile.user_id == user_id).sort([("version", -1)]).limit(limit).to_list()
+            lite_results = (
+                await self.model.find({"user_id": user_id})
+                .sort([("version", -1)])
+                .limit(limit)
+                .to_list()
+            )
 
             # Reconstruct full objects from KV-Storage
             full_profiles = []
@@ -225,20 +230,20 @@ class UserProfileRawRepository(BaseRepository[UserProfileLite]):
                 if user_id == "" or user_id is None:
                     # Explicitly filter for null or empty string
                     conditions.append(
-                        Or(Eq(UserProfile.user_id, None), Eq(UserProfile.user_id, ""))
+                        Or(Eq(UserProfileLite.user_id, None), Eq(UserProfileLite.user_id, ""))
                     )
                 else:
-                    conditions.append(UserProfile.user_id == user_id)
+                    conditions.append(UserProfileLite.user_id == user_id)
 
             # Handle group_id filter
             if group_id != MAGIC_ALL:
                 if group_id == "" or group_id is None:
                     # Explicitly filter for null or empty string
                     conditions.append(
-                        Or(Eq(UserProfile.group_id, None), Eq(UserProfile.group_id, ""))
+                        Or(Eq(UserProfileLite.group_id, None), Eq(UserProfileLite.group_id, ""))
                     )
                 else:
-                    conditions.append(UserProfile.group_id == group_id)
+                    conditions.append(UserProfileLite.group_id == group_id)
 
             # Build query
             if conditions:
@@ -255,14 +260,22 @@ class UserProfileRawRepository(BaseRepository[UserProfileLite]):
             if limit:
                 query = query.limit(limit)
 
-            results = await query.to_list()
+            lite_results = await query.to_list()
+
+            # Reconstruct full objects from KV-Storage
+            full_profiles = []
+            for lite in lite_results:
+                full_profile = await self._user_profile_lite_to_full(lite)
+                if full_profile:
+                    full_profiles.append(full_profile)
+
             logger.debug(
                 "✅ Retrieved user profiles successfully: user_id=%s, group_id=%s, found %d records",
                 user_id,
                 group_id,
-                len(results),
+                len(full_profiles),
             )
-            return results
+            return full_profiles
         except Exception as e:
             logger.error("❌ Failed to retrieve user profiles: %s", e)
             return []

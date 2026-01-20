@@ -1,17 +1,30 @@
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from core.oxm.mongo.document_base import DocumentBase
-from pydantic import Field
-from core.oxm.mongo.audit_base import AuditBase
-from pymongo import IndexModel, ASCENDING, DESCENDING
+from typing import Optional as OptionalType
+from pydantic import BaseModel, Field, ConfigDict
+from beanie import PydanticObjectId
 
 
-class UserProfile(DocumentBase, AuditBase):
+class UserProfile(BaseModel):
     """
     User profile document model
 
-    Stores user profile information automatically extracted from clustering conversations
+    Stores user profile information automatically extracted from clustering conversations.
+    Note: This model is stored in KV-Storage only (not MongoDB).
     """
+
+    # ID field (managed by MongoDB through UserProfileLite)
+    id: OptionalType[PydanticObjectId] = Field(
+        default=None, description="Document ID (set after MongoDB insert)"
+    )
+
+    # Audit fields (managed by MongoDB through UserProfileLite)
+    created_at: OptionalType[datetime] = Field(
+        default=None, description="Creation timestamp"
+    )
+    updated_at: OptionalType[datetime] = Field(
+        default=None, description="Last update timestamp"
+    )
 
     # Composite primary key
     user_id: str = Field(..., description="User ID")
@@ -43,15 +56,8 @@ class UserProfile(DocumentBase, AuditBase):
         default=None, description="Cluster ID used in the last update"
     )
 
-    class Settings:
-        """Beanie settings"""
-
-        name = "user_profiles"
-        indexes = [
-            IndexModel([("user_id", ASCENDING)], name="idx_user_id"),
-            IndexModel([("group_id", ASCENDING)], name="idx_group_id"),
-            IndexModel([("created_at", DESCENDING)], name="idx_created_at"),
-            IndexModel([("updated_at", DESCENDING)], name="idx_updated_at"),
-        ]
-        validate_on_save = True
-        use_state_management = True
+    model_config = ConfigDict(
+        validate_assignment=True,
+        json_encoders={datetime: lambda dt: dt.isoformat(), PydanticObjectId: str},
+        extra="allow",
+    )
