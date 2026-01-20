@@ -32,7 +32,18 @@ class ForesightRecordLite(DocumentBase, AuditBase):
         description="User ID, required for personal memory, None for group memory",
     )
     group_id: Optional[str] = Field(default=None, description="Group ID")
-    parent_episode_id: str = Field(..., description="Parent episodic memory's event_id")
+    parent_id: str = Field(..., description="Parent memory ID")
+    parent_type: Optional[str] = Field(
+        default=None, description="Parent memory type (memcell/episode)"
+    )
+
+    # Time range fields (for time overlap queries)
+    start_time: Optional[str] = Field(
+        default=None, description="Foresight start time (date string, e.g., 2024-01-01)"
+    )
+    end_time: Optional[str] = Field(
+        default=None, description="Foresight end time (date string, e.g., 2024-12-31)"
+    )
 
     model_config = ConfigDict(
         # Collection name (same as full ForesightRecord)
@@ -50,21 +61,54 @@ class ForesightRecordLite(DocumentBase, AuditBase):
 
         name = "foresight_records"
 
-        # Indexes for query fields
+        # Indexes for query fields (matching main branch)
         indexes = [
-            # User ID index
+            # Single field indexes
             IndexModel([("user_id", ASCENDING)], name="idx_user_id"),
-            # Parent episodic memory index
-            IndexModel([("parent_episode_id", ASCENDING)], name="idx_parent_episode"),
-            # Composite index of user ID and parent episodic memory
-            IndexModel(
-                [("user_id", ASCENDING), ("parent_episode_id", ASCENDING)],
-                name="idx_user_parent",
-            ),
-            # Group ID index
             IndexModel([("group_id", ASCENDING)], name="idx_group_id", sparse=True),
-            # Index on created_at (used by devops scripts for data sync)
+            # Parent memory index
+            IndexModel([("parent_id", ASCENDING)], name="idx_parent_id"),
+            # Composite index for time range queries (start_time, end_time)
+            IndexModel(
+                [("start_time", ASCENDING), ("end_time", ASCENDING)],
+                name="idx_time_range",
+                sparse=True,
+            ),
+            # Composite index of user ID and time range
+            IndexModel(
+                [
+                    ("user_id", ASCENDING),
+                    ("start_time", ASCENDING),
+                    ("end_time", ASCENDING),
+                ],
+                name="idx_user_time_range",
+                sparse=True,
+            ),
+            # Composite index of group ID and time range
+            IndexModel(
+                [
+                    ("group_id", ASCENDING),
+                    ("start_time", ASCENDING),
+                    ("end_time", ASCENDING),
+                ],
+                name="idx_group_time_range",
+                sparse=True,
+            ),
+            # Composite index of group ID, user ID and time range
+            # Note: This also covers (group_id, user_id) queries by left-prefix rule
+            IndexModel(
+                [
+                    ("group_id", ASCENDING),
+                    ("user_id", ASCENDING),
+                    ("start_time", ASCENDING),
+                    ("end_time", ASCENDING),
+                ],
+                name="idx_group_user_time_range",
+                sparse=True,
+            ),
+            # Indexes on audit fields (for pagination and time-based queries)
             IndexModel([("created_at", DESCENDING)], name="idx_created_at"),
+            IndexModel([("updated_at", DESCENDING)], name="idx_updated_at"),
         ]
 
         validate_on_save = True

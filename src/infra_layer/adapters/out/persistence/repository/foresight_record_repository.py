@@ -63,7 +63,10 @@ class ForesightRecordRawRepository(BaseRepository[ForesightRecordLite]):
             id=foresight.id,
             user_id=foresight.user_id,
             group_id=foresight.group_id,
-            parent_episode_id=foresight.parent_episode_id,
+            parent_id=foresight.parent_id,
+            parent_type=foresight.parent_type,
+            start_time=foresight.start_time,
+            end_time=foresight.end_time,
         )
 
     async def _foresight_lite_to_full(
@@ -107,7 +110,8 @@ class ForesightRecordRawRepository(BaseRepository[ForesightRecordLite]):
                     group_id=f.group_id,
                     group_name=f.group_name,
                     content=f.content,
-                    parent_episode_id=f.parent_episode_id,
+                    parent_type=f.parent_type,
+                    parent_id=f.parent_id,
                     start_time=f.start_time,
                     end_time=f.end_time,
                     duration_days=f.duration_days,
@@ -237,14 +241,8 @@ class ForesightRecordRawRepository(BaseRepository[ForesightRecordLite]):
             if parent_type:
                 query_filter["parent_type"] = parent_type
 
-            # Determine whether to use projection based on model type
-            if target_model == self.model:
-                query = self.model.find(query_filter, session=session)
-            else:
-                query = self.model.find(
-                    query_filter, projection_model=target_model, session=session
-                )
-            lite_results = await query.to_list()
+            # Query MongoDB for Lite results
+            lite_results = await self.model.find(query_filter, session=session).to_list()
 
             # Reconstruct from KV-Storage
             full_foresights = await self._foresight_lite_to_full(lite_results)
@@ -342,16 +340,8 @@ class ForesightRecordRawRepository(BaseRepository[ForesightRecordLite]):
                 else:
                     filter_dict["group_id"] = group_id
 
-            # Use full version if model is not specified
-            target_model = model if model is not None else self.model
-
-            # Determine whether to use projection based on model type
-            if target_model == self.model:
-                query = self.model.find(filter_dict, session=session)
-            else:
-                query = self.model.find(
-                    filter_dict, projection_model=target_model, session=session
-                )
+            # Query MongoDB Lite
+            query = self.model.find(filter_dict, session=session)
 
             if skip:
                 query = query.skip(skip)
@@ -452,7 +442,7 @@ class ForesightRecordRawRepository(BaseRepository[ForesightRecordLite]):
                     await kv_storage.batch_delete(memory_ids)
                 except Exception as kv_error:
                     logger.error(
-                        f"⚠️  KV-Storage batch delete error for parent {parent_episode_id}: {kv_error}"
+                        f"⚠️  KV-Storage batch delete error for parent {parent_id}: {kv_error}"
                     )
 
             logger.info(
