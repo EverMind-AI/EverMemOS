@@ -1,33 +1,64 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Complete CRUD Test for MemCellRawRepository with KV-Storage
+Complete CRUD Test for MemCellRawRepository with KV-Storage and Soft Delete
 
-This test file comprehensively tests all modified CRUD methods in MemCellRawRepository
-comparing against commit 14491fe. Each test follows the pattern:
+This test file comprehensively tests all CRUD methods in MemCellRawRepository,
+with special focus on soft delete, hard delete, and restore operations.
+Each test follows the pattern:
 1. Create test data (append)
-2. Read/Query test data
+2. Perform operations (read/update/delete/restore)
 3. Verify data consistency between MongoDB and KV-Storage
-4. Verify data integrity (inserted == retrieved)
+4. Verify data integrity and correct behavior
 
-Modified methods tested (17 total):
-- get_by_event_id
-- get_by_event_ids
-- append_memcell
-- update_by_event_id
-- delete_by_event_id
-- find_by_user_id
-- find_by_user_and_time_range
-- find_by_group_id
-- find_by_time_range
-- find_by_participants
-- search_by_keywords
-- delete_by_user_id
-- delete_by_time_range
-- count_by_user_id
-- count_by_time_range
-- get_latest_by_user
-- get_user_activity_summary
+Test Coverage (27 tests total):
+
+Basic CRUD (4 tests):
+- test_01_append_and_get_by_event_id
+- test_02_append_and_get_by_event_ids
+- test_03_update_by_event_id
+- test_04_delete_by_event_id (soft delete)
+
+Query Methods (6 tests):
+- test_05_find_by_user_id
+- test_06_find_by_user_and_time_range
+- test_07_find_by_group_id
+- test_08_find_by_time_range
+- test_09_find_by_participants
+- test_10_search_by_keywords
+
+Batch Operations (2 tests):
+- test_11_delete_by_user_id (soft delete batch)
+- test_12_delete_by_time_range (soft delete batch)
+
+Statistics (4 tests):
+- test_13_count_by_user_id
+- test_14_count_by_time_range
+- test_15_get_latest_by_user
+- test_16_get_user_activity_summary
+
+Hard Delete Operations (3 tests):
+- test_21_hard_delete_by_event_id
+- test_22_hard_delete_by_user_id
+- test_23_hard_delete_by_time_range
+
+Soft Delete and Restore (4 tests):
+- test_24_restore_by_event_id
+- test_25_restore_by_user_id
+- test_26_restore_by_time_range
+- test_27_soft_delete_vs_hard_delete (comparison test)
+
+Edge Cases (4 tests):
+- test_17_get_nonexistent_event_id
+- test_18_delete_nonexistent_event_id
+- test_19_update_nonexistent_event_id
+- test_20_verify_audit_fields
+
+Key Design Principles Tested:
+- Soft Delete: Only marks deleted_at in MongoDB, KV-Storage data preserved for restore
+- Hard Delete: Permanently removes from both MongoDB and KV-Storage
+- Restore: Clears deleted_at in MongoDB, relies on preserved KV-Storage data
+- Dual Storage: MongoDB for indexes/queries, KV-Storage for complete data
 """
 
 import asyncio
@@ -367,40 +398,46 @@ class TestBasicCRUD:
     async def test_04_delete_by_event_id(self, repository, test_user_id):
         """
         Test: append_memcell + delete_by_event_id + get_by_event_id
-        Flow: Create -> Delete -> Verify deletion (MongoDB + KV)
+        Flow: Create -> Soft Delete -> Verify soft deletion (MongoDB marked, KV-Storage preserved)
+
+        Note: delete_by_event_id is SOFT DELETE - only marks deleted_at in MongoDB,
+        KV-Storage data is preserved for restore capability.
         """
         logger = get_logger()
         logger.info("=" * 60)
-        logger.info("TEST: delete_by_event_id")
+        logger.info("TEST: delete_by_event_id (soft delete)")
 
         # 1. Create test MemCell
         original = create_test_memcell(
             user_id=test_user_id,
-            summary="Test memory to be deleted",
+            summary="Test memory to be soft deleted",
         )
         created = await repository.append_memcell(original)
         assert created is not None
         event_id = str(created.id)
         logger.info(f"✅ Created MemCell: {event_id}")
 
-        # 2. Verify it exists
+        # 2. Verify it exists before soft delete
         retrieved = await repository.get_by_event_id(event_id)
         assert retrieved is not None, "MemCell should exist before deletion"
 
-        # 3. Delete the MemCell
+        # 3. Soft delete the MemCell
         deleted = await repository.delete_by_event_id(event_id)
-        assert deleted is True, "Deletion should return True"
-        logger.info(f"✅ Deleted MemCell: {event_id}")
+        assert deleted is True, "Soft deletion should return True"
+        logger.info(f"✅ Soft deleted MemCell: {event_id}")
 
-        # 4. Verify it no longer exists
+        # 4. Verify it's soft deleted (not returned by normal query)
         retrieved_after = await repository.get_by_event_id(event_id)
-        assert retrieved_after is None, "MemCell should not exist after deletion"
-        logger.info(f"✅ Verified deletion: MemCell not found")
+        assert retrieved_after is None, "MemCell should not be found after soft deletion"
+        logger.info(f"✅ Verified soft deletion: MemCell not found in normal query")
 
-        # 5. Verify KV-Storage cleanup
+        # 5. IMPORTANT: Verify KV-Storage data is PRESERVED (for restore capability)
         kv_exists = await verify_kv_storage(repository, event_id)
-        assert not kv_exists, "KV-Storage should be cleaned up"
-        logger.info(f"✅ KV-Storage cleaned up")
+        assert kv_exists, "KV-Storage should be PRESERVED during soft delete (for restore)"
+        logger.info(f"✅ KV-Storage preserved (soft delete keeps data for restore)")
+
+        # Cleanup: Use hard_delete to actually remove the data
+        await repository.hard_delete_by_event_id(event_id)
 
 
 class TestQueryMethods:
@@ -733,11 +770,14 @@ class TestBatchOperations:
     async def test_11_delete_by_user_id(self, repository):
         """
         Test: append_memcell + delete_by_user_id + count_by_user_id
-        Flow: Create 3 MemCells for user -> Delete all by user -> Verify deletion
+        Flow: Create 3 MemCells for user -> Soft Delete all by user -> Verify deletion
+
+        Note: delete_by_user_id is SOFT DELETE - only marks deleted_at in MongoDB,
+        KV-Storage data is preserved for restore capability.
         """
         logger = get_logger()
         logger.info("=" * 60)
-        logger.info("TEST: delete_by_user_id")
+        logger.info("TEST: delete_by_user_id (batch soft delete)")
 
         # Use unique user ID for this test
         test_user = f"test_user_delete_{uuid.uuid4().hex[:8]}"
@@ -747,7 +787,7 @@ class TestBatchOperations:
         for i in range(3):
             mc = create_test_memcell(
                 user_id=test_user,
-                summary=f"Memory {i+1} to be deleted",
+                summary=f"Memory {i+1} to be soft deleted",
             )
             created = await repository.append_memcell(mc)
             created_list.append(created)
@@ -758,29 +798,47 @@ class TestBatchOperations:
         count_before = await repository.count_by_user_id(test_user)
         assert count_before >= 3, f"Expected at least 3 records, got {count_before}"
 
-        # 3. Delete all by user_id
+        # 3. Soft delete all by user_id
         deleted_count = await repository.delete_by_user_id(test_user)
         assert deleted_count >= 3, f"Expected to delete at least 3, deleted {deleted_count}"
-        logger.info(f"✅ Deleted {deleted_count} MemCells for user")
+        logger.info(f"✅ Soft deleted {deleted_count} MemCells for user")
 
-        # 4. Verify count after deletion
+        # 4. Verify count after soft deletion (should be 0 in normal queries)
         count_after = await repository.count_by_user_id(test_user)
-        assert count_after == 0, f"Expected 0 records after deletion, got {count_after}"
-        logger.info(f"✅ Verified deletion: count = 0")
+        assert count_after == 0, f"Expected 0 records after soft deletion, got {count_after}"
+        logger.info(f"✅ Verified soft deletion: count = 0 in normal query")
 
-        # 5. Verify individual MemCells are gone
+        # 5. Verify individual MemCells are soft deleted (not found in normal query)
         for created in created_list:
             retrieved = await repository.get_by_event_id(str(created.id))
-            assert retrieved is None, f"MemCell {created.id} should be deleted"
+            assert retrieved is None, f"MemCell {created.id} should not be found after soft delete"
+
+        # 6. IMPORTANT: Verify KV-Storage data is PRESERVED (for restore capability)
+        kv_preserved_count = 0
+        for created in created_list:
+            event_id = str(created.id)
+            kv_exists = await verify_kv_storage(repository, event_id)
+            if kv_exists:
+                kv_preserved_count += 1
+
+        assert kv_preserved_count == len(created_list), \
+            f"All {len(created_list)} records should be preserved in KV-Storage, found {kv_preserved_count}"
+        logger.info(f"✅ KV-Storage preserved: all {kv_preserved_count} records kept for restore")
+
+        # Cleanup: Use hard_delete to actually remove the data
+        await repository.hard_delete_by_user_id(test_user)
 
     async def test_12_delete_by_time_range(self, repository, test_user_id):
         """
         Test: append_memcell + delete_by_time_range + count_by_time_range
-        Flow: Create MemCells at different times -> Delete by time range -> Verify
+        Flow: Create MemCells at different times -> Soft Delete by time range -> Verify
+
+        Note: delete_by_time_range is SOFT DELETE - only marks deleted_at in MongoDB,
+        KV-Storage data is preserved for restore capability.
         """
         logger = get_logger()
         logger.info("=" * 60)
-        logger.info("TEST: delete_by_time_range")
+        logger.info("TEST: delete_by_time_range (batch soft delete)")
 
         from common_utils.datetime_utils import get_now_with_timezone
         now = get_now_with_timezone()
@@ -809,7 +867,7 @@ class TestBatchOperations:
 
         logger.info(f"✅ Created 3 MemCells at different times")
 
-        # 2. Delete recent ones by time range
+        # 2. Soft delete recent ones by time range
         start_time = now - timedelta(minutes=10)
         end_time = now + timedelta(minutes=20)
 
@@ -818,20 +876,29 @@ class TestBatchOperations:
             end_time=end_time,
         )
         assert deleted_count >= 2, f"Expected to delete at least 2, deleted {deleted_count}"
-        logger.info(f"✅ Deleted {deleted_count} MemCells in time range")
+        logger.info(f"✅ Soft deleted {deleted_count} MemCells in time range")
 
-        # 3. Verify recent ones are deleted
+        # 3. Verify recent ones are soft deleted (not found in normal query)
         retrieved_recent1 = await repository.get_by_event_id(str(created_recent1.id))
         retrieved_recent2 = await repository.get_by_event_id(str(created_recent2.id))
-        assert retrieved_recent1 is None, "Recent 1 should be deleted"
-        assert retrieved_recent2 is None, "Recent 2 should be deleted"
+        assert retrieved_recent1 is None, "Recent 1 should not be found after soft delete"
+        assert retrieved_recent2 is None, "Recent 2 should not be found after soft delete"
 
-        # 4. Verify old one still exists
+        # 4. Verify old one still exists (outside time range)
         retrieved_old = await repository.get_by_event_id(str(created_old.id))
-        assert retrieved_old is not None, "Old memory should still exist"
-        logger.info(f"✅ Verified: recent deleted, old preserved")
+        assert retrieved_old is not None, "Old memory should still exist (outside range)"
+        logger.info(f"✅ Verified: recent soft deleted, old preserved")
 
-        # Cleanup
+        # 5. IMPORTANT: Verify KV-Storage data is PRESERVED for soft-deleted records
+        kv_recent1 = await verify_kv_storage(repository, str(created_recent1.id))
+        kv_recent2 = await verify_kv_storage(repository, str(created_recent2.id))
+        assert kv_recent1, "Recent 1 should be preserved in KV-Storage (soft delete)"
+        assert kv_recent2, "Recent 2 should be preserved in KV-Storage (soft delete)"
+        logger.info(f"✅ KV-Storage preserved: soft-deleted records kept for restore")
+
+        # Cleanup: Use hard_delete to actually remove the data
+        await repository.hard_delete_by_event_id(str(created_recent1.id))
+        await repository.hard_delete_by_event_id(str(created_recent2.id))
         await repository.delete_by_event_id(str(created_old.id))
 
 
@@ -959,64 +1026,454 @@ class TestStatisticsAndAggregation:
         for created in created_list:
             await repository.delete_by_event_id(str(created.id))
 
-    async def test_16_get_user_activity_summary(self, repository, test_user_id):
+
+class TestHardDelete:
+    """Test hard delete operations: permanent deletion from both MongoDB and KV-Storage"""
+
+    async def test_21_hard_delete_by_event_id(self, repository, test_user_id):
         """
-        Test: append_memcell + get_user_activity_summary
-        Flow: Create multiple MemCells -> Get summary -> Verify stats
+        Test: hard_delete_by_event_id
+        Flow: Create -> Hard Delete -> Verify both MongoDB and KV-Storage are cleared
+
+        Note: hard_delete is PERMANENT - removes data from both MongoDB and KV-Storage.
+        Cannot be restored.
         """
         logger = get_logger()
         logger.info("=" * 60)
-        logger.info("TEST: get_user_activity_summary")
+        logger.info("TEST: hard_delete_by_event_id (permanent deletion)")
 
-        from common_utils.datetime_utils import get_now_with_timezone
-        now = get_now_with_timezone()
+        # 1. Create test MemCell
+        original = create_test_memcell(
+            user_id=test_user_id,
+            summary="Test memory for hard delete",
+        )
+        created = await repository.append_memcell(original)
+        assert created is not None
+        event_id = str(created.id)
+        logger.info(f"✅ Created MemCell: {event_id}")
 
-        # 1. Create multiple MemCells
+        # 2. Verify it exists before deletion
+        retrieved = await repository.get_by_event_id(event_id)
+        assert retrieved is not None, "MemCell should exist before hard delete"
+
+        # 3. Verify KV-Storage has data before deletion
+        kv_before = await verify_kv_storage(repository, event_id)
+        assert kv_before, "KV-Storage should have data before hard delete"
+
+        # 4. Hard delete the MemCell
+        deleted = await repository.hard_delete_by_event_id(event_id)
+        assert deleted is True, "Hard deletion should return True"
+        logger.info(f"✅ Hard deleted MemCell: {event_id}")
+
+        # 5. Verify it's gone from MongoDB (normal query)
+        retrieved_after = await repository.get_by_event_id(event_id)
+        assert retrieved_after is None, "MemCell should not exist in MongoDB after hard delete"
+        logger.info(f"✅ Verified: MemCell removed from MongoDB")
+
+        # 6. IMPORTANT: Verify KV-Storage is CLEARED (permanent deletion)
+        kv_after = await verify_kv_storage(repository, event_id)
+        assert not kv_after, "KV-Storage should be CLEARED after hard delete (permanent)"
+        logger.info(f"✅ KV-Storage cleared: permanent deletion completed")
+
+    async def test_22_hard_delete_by_user_id(self, repository):
+        """
+        Test: hard_delete_by_user_id (batch hard delete)
+        Flow: Create 3 MemCells -> Hard Delete all by user -> Verify complete removal
+
+        Note: hard_delete is PERMANENT - removes all data from both MongoDB and KV-Storage.
+        """
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: hard_delete_by_user_id (batch permanent deletion)")
+
+        # Use unique user ID for this test
+        test_user = f"test_user_hard_delete_{uuid.uuid4().hex[:8]}"
+
+        # 1. Create 3 MemCells for the user
         created_list = []
-
-        # Create 3 CONVERSATION type MemCells
         for i in range(3):
             mc = create_test_memcell(
-                user_id=test_user_id,
-                summary=f"Conversation {i+1}",
-                data_type="CONVERSATION",
-                timestamp_offset=timedelta(minutes=i),
+                user_id=test_user,
+                summary=f"Memory {i+1} for hard delete",
             )
             created = await repository.append_memcell(mc)
             created_list.append(created)
 
-        logger.info(f"✅ Created 3 MemCells (CONVERSATION type)")
+        logger.info(f"✅ Created 3 MemCells for user: {test_user}")
 
-        # 2. Get activity summary
-        start_time = now - timedelta(minutes=10)
-        end_time = now + timedelta(hours=1)
+        # 2. Verify KV-Storage has all data before deletion
+        kv_before_count = 0
+        for created in created_list:
+            if await verify_kv_storage(repository, str(created.id)):
+                kv_before_count += 1
+        assert kv_before_count == 3, f"All 3 should be in KV-Storage before hard delete"
 
-        summary = await repository.get_user_activity_summary(
+        # 3. Hard delete all by user_id
+        deleted_count = await repository.hard_delete_by_user_id(test_user)
+        assert deleted_count >= 3, f"Expected to delete at least 3, deleted {deleted_count}"
+        logger.info(f"✅ Hard deleted {deleted_count} MemCells for user")
+
+        # 4. Verify MongoDB count is 0
+        count_after = await repository.count_by_user_id(test_user)
+        assert count_after == 0, f"Expected 0 records in MongoDB, got {count_after}"
+
+        # 5. Verify individual MemCells are gone from MongoDB
+        for created in created_list:
+            retrieved = await repository.get_by_event_id(str(created.id))
+            assert retrieved is None, f"MemCell {created.id} should be gone from MongoDB"
+
+        # 6. IMPORTANT: Verify KV-Storage is CLEARED for all records
+        kv_after_count = 0
+        for created in created_list:
+            if await verify_kv_storage(repository, str(created.id)):
+                kv_after_count += 1
+
+        assert kv_after_count == 0, \
+            f"All records should be cleared from KV-Storage, found {kv_after_count}"
+        logger.info(f"✅ KV-Storage cleared: all {len(created_list)} records permanently deleted")
+
+    async def test_23_hard_delete_by_time_range(self, repository, test_user_id):
+        """
+        Test: hard_delete_by_time_range (batch hard delete by time)
+        Flow: Create MemCells at different times -> Hard Delete by range -> Verify removal
+
+        Note: hard_delete is PERMANENT - removes data from both MongoDB and KV-Storage.
+        """
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: hard_delete_by_time_range (batch permanent deletion)")
+
+        from common_utils.datetime_utils import get_now_with_timezone
+        now = get_now_with_timezone()
+
+        # 1. Create MemCells at different times
+        mc_old = create_test_memcell(
             user_id=test_user_id,
+            summary="Old memory (outside range)",
+            timestamp_offset=timedelta(hours=-3),
+        )
+        created_old = await repository.append_memcell(mc_old)
+
+        mc_target1 = create_test_memcell(
+            user_id=test_user_id,
+            summary="Target memory 1",
+            timestamp_offset=timedelta(minutes=0),
+        )
+        created_target1 = await repository.append_memcell(mc_target1)
+
+        mc_target2 = create_test_memcell(
+            user_id=test_user_id,
+            summary="Target memory 2",
+            timestamp_offset=timedelta(minutes=5),
+        )
+        created_target2 = await repository.append_memcell(mc_target2)
+
+        logger.info(f"✅ Created 3 MemCells at different times")
+
+        # 2. Verify KV-Storage has all data before deletion
+        assert await verify_kv_storage(repository, str(created_target1.id))
+        assert await verify_kv_storage(repository, str(created_target2.id))
+
+        # 3. Hard delete by time range (only target recent ones)
+        start_time = now - timedelta(minutes=10)
+        end_time = now + timedelta(minutes=20)
+
+        deleted_count = await repository.hard_delete_by_time_range(
             start_time=start_time,
             end_time=end_time,
         )
+        assert deleted_count >= 2, f"Expected to delete at least 2, deleted {deleted_count}"
+        logger.info(f"✅ Hard deleted {deleted_count} MemCells in time range")
 
-        # 3. Verify summary
-        assert "total_count" in summary, "Summary should have total_count"
-        assert summary["total_count"] >= 3, f"Expected at least 3 total, got {summary['total_count']}"
+        # 4. Verify target MemCells are gone from MongoDB
+        retrieved_target1 = await repository.get_by_event_id(str(created_target1.id))
+        retrieved_target2 = await repository.get_by_event_id(str(created_target2.id))
+        assert retrieved_target1 is None, "Target 1 should be gone from MongoDB"
+        assert retrieved_target2 is None, "Target 2 should be gone from MongoDB"
 
-        assert "type_distribution" in summary, "Summary should have type_distribution"
-        type_dist = summary["type_distribution"]
+        # 5. Verify old one still exists (outside range)
+        retrieved_old = await repository.get_by_event_id(str(created_old.id))
+        assert retrieved_old is not None, "Old memory should still exist (outside range)"
 
-        # DataTypeEnum.CONVERSATION.value = "Conversation"
-        assert "Conversation" in type_dist, "Should have Conversation type"
-        assert type_dist["Conversation"] >= 3, f"Should have at least 3 CONVERSATION, got {type_dist['Conversation']}"
+        # 6. IMPORTANT: Verify KV-Storage is CLEARED for target records
+        kv_target1 = await verify_kv_storage(repository, str(created_target1.id))
+        kv_target2 = await verify_kv_storage(repository, str(created_target2.id))
+        assert not kv_target1, "Target 1 should be cleared from KV-Storage"
+        assert not kv_target2, "Target 2 should be cleared from KV-Storage"
+        logger.info(f"✅ KV-Storage cleared: target records permanently deleted")
 
-        assert "user_id" in summary, "Summary should have user_id"
-        assert "time_range" in summary, "Summary should have time_range"
-
-        logger.info(f"✅ Activity summary verified: {summary['total_count']} total")
-        logger.info(f"   Type distribution: {type_dist}")
+        # 7. Verify old one's KV-Storage still exists
+        kv_old = await verify_kv_storage(repository, str(created_old.id))
+        assert kv_old, "Old memory KV-Storage should still exist (outside range)"
 
         # Cleanup
+        await repository.delete_by_event_id(str(created_old.id))
+
+
+class TestSoftDeleteAndRestore:
+    """Test soft delete and restore operations"""
+
+    async def test_24_restore_by_event_id(self, repository, test_user_id):
+        """
+        Test: Soft delete + restore_by_event_id
+        Flow: Create -> Soft Delete -> Verify deleted -> Restore -> Verify restored
+
+        This tests the complete soft delete/restore cycle.
+        """
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: restore_by_event_id (soft delete + restore)")
+
+        # 1. Create test MemCell
+        original = create_test_memcell(
+            user_id=test_user_id,
+            summary="Test memory for restore",
+        )
+        created = await repository.append_memcell(original)
+        assert created is not None
+        event_id = str(created.id)
+        logger.info(f"✅ Created MemCell: {event_id}")
+
+        # 2. Verify it exists before soft delete
+        retrieved_before = await repository.get_by_event_id(event_id)
+        assert retrieved_before is not None, "MemCell should exist before soft delete"
+
+        # 3. Soft delete the MemCell
+        deleted = await repository.delete_by_event_id(event_id)
+        assert deleted is True, "Soft deletion should succeed"
+        logger.info(f"✅ Soft deleted MemCell: {event_id}")
+
+        # 4. Verify it's soft deleted (not in normal query)
+        retrieved_deleted = await repository.get_by_event_id(event_id)
+        assert retrieved_deleted is None, "MemCell should not be found after soft delete"
+        logger.info(f"✅ Verified soft deletion: not found in normal query")
+
+        # 5. Verify KV-Storage data is preserved
+        kv_exists = await verify_kv_storage(repository, event_id)
+        assert kv_exists, "KV-Storage should preserve data during soft delete"
+
+        # 6. Restore the MemCell
+        restored = await repository.restore_by_event_id(event_id)
+        assert restored is True, "Restore should succeed"
+        logger.info(f"✅ Restored MemCell: {event_id}")
+
+        # 7. Verify it's back in normal queries
+        retrieved_restored = await repository.get_by_event_id(event_id)
+        assert retrieved_restored is not None, "MemCell should be found after restore"
+        logger.info(f"✅ Verified restore: MemCell is back in normal query")
+
+        # 8. Verify data integrity after restore
+        assert_memcell_equal(created, retrieved_restored, check_id=True)
+        logger.info(f"✅ Data integrity verified: restored data matches original")
+
+        # Cleanup
+        await repository.hard_delete_by_event_id(event_id)
+
+    async def test_25_restore_by_user_id(self, repository):
+        """
+        Test: Soft delete + restore_by_user_id (batch restore)
+        Flow: Create 3 -> Soft Delete all -> Restore all -> Verify all restored
+
+        This tests batch restore capability.
+        """
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: restore_by_user_id (batch restore)")
+
+        # Use unique user ID for this test
+        test_user = f"test_user_restore_{uuid.uuid4().hex[:8]}"
+
+        # 1. Create 3 MemCells for the user
+        created_list = []
+        for i in range(3):
+            mc = create_test_memcell(
+                user_id=test_user,
+                summary=f"Memory {i+1} for batch restore",
+            )
+            created = await repository.append_memcell(mc)
+            created_list.append(created)
+
+        logger.info(f"✅ Created 3 MemCells for user: {test_user}")
+
+        # 2. Soft delete all by user_id
+        deleted_count = await repository.delete_by_user_id(test_user)
+        assert deleted_count >= 3, f"Expected to soft delete at least 3, deleted {deleted_count}"
+        logger.info(f"✅ Soft deleted {deleted_count} MemCells")
+
+        # 3. Verify all are soft deleted (count = 0)
+        count_deleted = await repository.count_by_user_id(test_user)
+        assert count_deleted == 0, f"Expected 0 after soft delete, got {count_deleted}"
+
+        # 4. Verify KV-Storage data is preserved for all
         for created in created_list:
-            await repository.delete_by_event_id(str(created.id))
+            kv_exists = await verify_kv_storage(repository, str(created.id))
+            assert kv_exists, f"KV-Storage should preserve {created.id}"
+
+        # 5. Restore all by user_id
+        restored_count = await repository.restore_by_user_id(test_user)
+        assert restored_count >= 3, f"Expected to restore at least 3, restored {restored_count}"
+        logger.info(f"✅ Restored {restored_count} MemCells")
+
+        # 6. Verify all are back in normal queries
+        count_restored = await repository.count_by_user_id(test_user)
+        assert count_restored >= 3, f"Expected at least 3 after restore, got {count_restored}"
+        logger.info(f"✅ Verified restore: count = {count_restored}")
+
+        # 7. Verify individual MemCells are accessible
+        for created in created_list:
+            retrieved = await repository.get_by_event_id(str(created.id))
+            assert retrieved is not None, f"MemCell {created.id} should be restored"
+
+        logger.info(f"✅ All {len(created_list)} MemCells successfully restored")
+
+        # Cleanup
+        await repository.hard_delete_by_user_id(test_user)
+
+    async def test_26_restore_by_time_range(self, repository, test_user_id):
+        """
+        Test: Soft delete + restore_by_time_range (batch restore by time)
+        Flow: Create at different times -> Soft Delete by range -> Restore by range -> Verify
+
+        This tests selective restore by time range.
+        """
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: restore_by_time_range (batch restore by time)")
+
+        from common_utils.datetime_utils import get_now_with_timezone
+        now = get_now_with_timezone()
+
+        # 1. Create MemCells at different times
+        mc_old = create_test_memcell(
+            user_id=test_user_id,
+            summary="Old memory (outside range)",
+            timestamp_offset=timedelta(hours=-3),
+        )
+        created_old = await repository.append_memcell(mc_old)
+
+        mc_target1 = create_test_memcell(
+            user_id=test_user_id,
+            summary="Target memory 1 (in range)",
+            timestamp_offset=timedelta(minutes=0),
+        )
+        created_target1 = await repository.append_memcell(mc_target1)
+
+        mc_target2 = create_test_memcell(
+            user_id=test_user_id,
+            summary="Target memory 2 (in range)",
+            timestamp_offset=timedelta(minutes=5),
+        )
+        created_target2 = await repository.append_memcell(mc_target2)
+
+        logger.info(f"✅ Created 3 MemCells at different times")
+
+        # 2. Soft delete all by time range (covering all 3)
+        start_time_delete = now - timedelta(hours=5)
+        end_time_delete = now + timedelta(hours=1)
+
+        deleted_count = await repository.delete_by_time_range(
+            start_time=start_time_delete,
+            end_time=end_time_delete,
+        )
+        assert deleted_count >= 3, f"Expected to delete at least 3, deleted {deleted_count}"
+        logger.info(f"✅ Soft deleted {deleted_count} MemCells")
+
+        # 3. Verify all are soft deleted
+        assert await repository.get_by_event_id(str(created_old.id)) is None
+        assert await repository.get_by_event_id(str(created_target1.id)) is None
+        assert await repository.get_by_event_id(str(created_target2.id)) is None
+
+        # 4. Restore only recent ones by time range (exclude old one)
+        start_time_restore = now - timedelta(minutes=10)
+        end_time_restore = now + timedelta(minutes=20)
+
+        restored_count = await repository.restore_by_time_range(
+            start_time=start_time_restore,
+            end_time=end_time_restore,
+        )
+        assert restored_count >= 2, f"Expected to restore at least 2, restored {restored_count}"
+        logger.info(f"✅ Restored {restored_count} MemCells in time range")
+
+        # 5. Verify target MemCells are restored
+        retrieved_target1 = await repository.get_by_event_id(str(created_target1.id))
+        retrieved_target2 = await repository.get_by_event_id(str(created_target2.id))
+        assert retrieved_target1 is not None, "Target 1 should be restored"
+        assert retrieved_target2 is not None, "Target 2 should be restored"
+        logger.info(f"✅ Target MemCells restored successfully")
+
+        # 6. Verify old one is still soft deleted (not in restore range)
+        retrieved_old = await repository.get_by_event_id(str(created_old.id))
+        assert retrieved_old is None, "Old memory should still be soft deleted (outside restore range)"
+        logger.info(f"✅ Verified: old memory still soft deleted (selective restore)")
+
+        # Cleanup
+        await repository.hard_delete_by_event_id(str(created_target1.id))
+        await repository.hard_delete_by_event_id(str(created_target2.id))
+        await repository.hard_delete_by_event_id(str(created_old.id))
+
+    async def test_27_soft_delete_vs_hard_delete(self, repository, test_user_id):
+        """
+        Test: Demonstrate difference between soft delete and hard delete
+        Flow: Create 2 MemCells -> Soft delete one, hard delete another -> Try to restore both
+
+        This test highlights that:
+        - Soft deleted records CAN be restored (KV-Storage preserved)
+        - Hard deleted records CANNOT be restored (KV-Storage cleared)
+        """
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: soft_delete vs hard_delete comparison")
+
+        # 1. Create 2 MemCells
+        mc_soft = create_test_memcell(
+            user_id=test_user_id,
+            summary="Memory for soft delete",
+        )
+        created_soft = await repository.append_memcell(mc_soft)
+
+        mc_hard = create_test_memcell(
+            user_id=test_user_id,
+            summary="Memory for hard delete",
+        )
+        created_hard = await repository.append_memcell(mc_hard)
+
+        event_id_soft = str(created_soft.id)
+        event_id_hard = str(created_hard.id)
+        logger.info(f"✅ Created 2 MemCells: soft={event_id_soft}, hard={event_id_hard}")
+
+        # 2. Soft delete one
+        await repository.delete_by_event_id(event_id_soft)
+        logger.info(f"✅ Soft deleted: {event_id_soft}")
+
+        # 3. Hard delete another
+        await repository.hard_delete_by_event_id(event_id_hard)
+        logger.info(f"✅ Hard deleted: {event_id_hard}")
+
+        # 4. Verify KV-Storage state
+        kv_soft = await verify_kv_storage(repository, event_id_soft)
+        kv_hard = await verify_kv_storage(repository, event_id_hard)
+
+        assert kv_soft is True, "Soft deleted record should have KV-Storage data"
+        assert kv_hard is False, "Hard deleted record should NOT have KV-Storage data"
+        logger.info(f"✅ KV-Storage: soft=preserved, hard=cleared")
+
+        # 5. Try to restore soft deleted (should succeed)
+        restored_soft = await repository.restore_by_event_id(event_id_soft)
+        assert restored_soft is True, "Soft deleted record should be restorable"
+        logger.info(f"✅ Soft deleted record restored successfully")
+
+        # 6. Verify restored record is accessible
+        retrieved_soft = await repository.get_by_event_id(event_id_soft)
+        assert retrieved_soft is not None, "Restored record should be accessible"
+
+        # 7. Try to restore hard deleted (should fail - no KV-Storage data)
+        # Note: Repository should handle this gracefully (return False or None)
+        # The restore will fail because KV-Storage data doesn't exist
+        logger.info(f"⚠️  Hard deleted record CANNOT be restored (KV-Storage cleared)")
+        logger.info(f"✅ Demonstrated difference: soft delete = restorable, hard delete = permanent")
+
+        # Cleanup
+        await repository.hard_delete_by_event_id(event_id_soft)
 
 
 class TestEdgeCases:

@@ -96,10 +96,17 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             event_id: Event ID
 
         Returns:
-            MemCell instance or None
+            MemCell instance or None (returns None if soft-deleted)
         """
         try:
-            # Read directly from KV-Storage (no need to check MongoDB)
+            # First check MongoDB to see if the record is soft-deleted
+            # Using find_one (not hard_find_one) will return None if soft-deleted
+            memcell_lite = await self.model.find_one({"_id": ObjectId(event_id)})
+            if not memcell_lite:
+                logger.debug(f"⚠️  MemCell not found or soft-deleted in MongoDB: {event_id}")
+                return None
+
+            # Read from KV-Storage
             kv_storage = self._dual_storage.get_kv_storage()
             kv_json = await kv_storage.get(key=event_id)
             if not kv_json:
@@ -130,20 +137,32 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
 
         Returns:
             Dict[event_id, MemCell | ProjectionModel]: Mapping dictionary from event_id to MemCell (or projection model)
-            Unfound event_ids will not appear in the dictionary
+            Unfound event_ids will not appear in the dictionary (includes soft-deleted records)
         """
         try:
             if not event_ids:
                 logger.debug("⚠️  event_ids list is empty, returning empty dictionary")
                 return {}
 
-            # Batch get directly from KV-Storage (no need to check MongoDB)
+            # First check MongoDB to filter out soft-deleted records
+            # Using find (not hard_find) will exclude soft-deleted records
+            object_ids = [ObjectId(eid) for eid in event_ids]
+            memcell_lites = await self.model.find({"_id": {"$in": object_ids}}).to_list()
+
+            # Create set of valid (non-deleted) event_ids
+            valid_event_ids = {str(lite.id) for lite in memcell_lites}
+
+            if not valid_event_ids:
+                logger.debug("⚠️  No valid (non-deleted) MemCells found in MongoDB")
+                return {}
+
+            # Batch get from KV-Storage (only for valid event_ids)
             kv_storage = self._dual_storage.get_kv_storage()
-            kv_data_dict = await kv_storage.batch_get(keys=event_ids)
+            kv_data_dict = await kv_storage.batch_get(keys=list(valid_event_ids))
 
             # Reconstruct full MemCells from KV-Storage
             result_dict = {}
-            for event_id in event_ids:
+            for event_id in valid_event_ids:
                 kv_json = kv_data_dict.get(event_id)
                 if kv_json:
                     try:
@@ -412,13 +431,13 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
             query = self.model.find(
                 And(
                     Or(
-                        Eq(MemCell.user_id, user_id),
+                        Eq(MemCellLite.user_id, user_id),
                         Eq(
-                            MemCell.participants, user_id
+                            MemCellLite.participants, user_id
                         ),  # MongoDB checks if array contains the value
                     ),
-                    GTE(MemCell.timestamp, start_time),
-                    LT(MemCell.timestamp, end_time),
+                    GTE(MemCellLite.timestamp, start_time),
+                    LT(MemCellLite.timestamp, end_time),
                 )
             ).sort("-timestamp")
 
@@ -953,12 +972,12 @@ class MemCellRawRepository(BaseRepository[MemCellLite]):
         """
         try:
             conditions = [
-                GTE(MemCell.timestamp, start_time),
-                LT(MemCell.timestamp, end_time),
+                GTE(MemCellLite.timestamp, start_time),
+                LT(MemCellLite.timestamp, end_time),
             ]
 
             if user_id:
-                conditions.append(Eq(MemCell.user_id, user_id))
+                conditions.append(Eq(MemCellLite.user_id, user_id))
 
             count = await self.model.find(And(*conditions)).count()
             logger.debug(
