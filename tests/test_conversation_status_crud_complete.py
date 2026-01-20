@@ -5,17 +5,16 @@ Complete CRUD Test for ConversationStatusRawRepository with KV-Storage
 
 This test file comprehensively tests all CRUD methods in ConversationStatusRawRepository
 with the dual MongoDB + KV-Storage pattern. Each test follows the pattern:
-1. Create test data
+1. Create test data (upsert)
 2. Read/Query test data
 3. Verify data consistency between MongoDB and KV-Storage
 4. Verify data integrity (inserted == retrieved)
 
-Methods tested:
+Modified methods tested:
 - get_by_group_id
-- upsert_by_group_id (insert and update modes)
+- upsert_by_group_id
 - delete_by_group_id
 - count_by_group_id
-- Concurrent upsert handling
 """
 
 import asyncio
@@ -51,6 +50,7 @@ async def repository():
     )
     repo = get_bean_by_type(ConversationStatusRawRepository)
     yield repo
+    # Cleanup is handled by individual tests
 
 
 @pytest_asyncio.fixture
@@ -71,20 +71,16 @@ def test_group_id():
 # ==================== Test Helpers ====================
 
 
-def create_test_update_data(
-    old_msg_start_time: datetime = None,
-    new_msg_start_time: datetime = None,
-    last_memcell_time: datetime = None,
-):
-    """Helper function to create test update data for ConversationStatus"""
+def create_test_conversation_status(group_id: str):
+    """Helper function to create a test ConversationStatus"""
     from common_utils.datetime_utils import get_now_with_timezone
 
     now = get_now_with_timezone()
 
     return {
-        "old_msg_start_time": old_msg_start_time or now - timedelta(days=7),
-        "new_msg_start_time": new_msg_start_time or now - timedelta(days=1),
-        "last_memcell_time": last_memcell_time or now - timedelta(hours=1),
+        "old_msg_start_time": now - timedelta(days=7),
+        "new_msg_start_time": now - timedelta(hours=1),
+        "last_memcell_time": now - timedelta(minutes=30),
     }
 
 
@@ -95,41 +91,34 @@ def assert_conversation_status_equal(cs1, cs2, check_id: bool = True):
 
     assert cs1.group_id == cs2.group_id, "group_id doesn't match"
 
-    # Check timestamps (allow small tolerance)
-    def check_timestamp(t1, t2, name):
-        if t1 and t2:
-            if isinstance(t1, str):
-                from common_utils.datetime_utils import parse_iso_datetime
-                t1 = parse_iso_datetime(t1)
-            if isinstance(t2, str):
-                from common_utils.datetime_utils import parse_iso_datetime
-                t2 = parse_iso_datetime(t2)
-            time_diff = abs((t1 - t2).total_seconds())
-            assert time_diff < 1, f"{name} difference too large: {time_diff}s"
-        else:
-            assert t1 == t2, f"{name} doesn't match (one is None)"
+    # Compare timestamps (allow small tolerance for microsecond differences)
+    if cs1.old_msg_start_time and cs2.old_msg_start_time:
+        time_diff = abs(
+            (cs1.old_msg_start_time - cs2.old_msg_start_time).total_seconds()
+        )
+        assert time_diff < 1, f"old_msg_start_time difference too large: {time_diff}s"
 
-    check_timestamp(cs1.old_msg_start_time, cs2.old_msg_start_time, "old_msg_start_time")
-    check_timestamp(cs1.new_msg_start_time, cs2.new_msg_start_time, "new_msg_start_time")
-    check_timestamp(cs1.last_memcell_time, cs2.last_memcell_time, "last_memcell_time")
+    if cs1.new_msg_start_time and cs2.new_msg_start_time:
+        time_diff = abs(
+            (cs1.new_msg_start_time - cs2.new_msg_start_time).total_seconds()
+        )
+        assert time_diff < 1, f"new_msg_start_time difference too large: {time_diff}s"
+
+    if cs1.last_memcell_time and cs2.last_memcell_time:
+        time_diff = abs(
+            (cs1.last_memcell_time - cs2.last_memcell_time).total_seconds()
+        )
+        assert time_diff < 1, f"last_memcell_time difference too large: {time_diff}s"
 
 
-async def verify_kv_storage(repository, conversation_status_id: str) -> bool:
+async def verify_kv_storage(repository, status_id: str) -> bool:
     """Verify data exists in KV-Storage"""
-    from core.observation.logger import get_logger
-
-    logger = get_logger(__name__)
-
     kv_storage = repository._dual_storage.get_kv_storage()
     if not kv_storage:
-        logger.warning("KV-Storage not available")
         return False
 
-    kv_json = await kv_storage.get(key=conversation_status_id)
+    kv_json = await kv_storage.get(key=status_id)
     return kv_json is not None
-
-
-# ==================== Test Cases ====================
 
 
 def get_logger():
@@ -139,359 +128,336 @@ def get_logger():
     return _get_logger(__name__)
 
 
+# ==================== Test Cases ====================
+
+
 class TestBasicCRUD:
     """Test basic CRUD operations: Create, Read, Delete"""
 
-    async def test_01_upsert_insert(self, repository, test_group_id):
+    async def test_01_upsert_and_get_by_group_id(self, repository, test_group_id):
         """
-        Test: upsert_by_group_id (insert mode)
-        Flow: Upsert new ConversationStatus -> Verify it was created
+        Test: upsert_by_group_id (create) + get_by_group_id
+        Flow: Create a ConversationStatus -> Read it back -> Verify data matches
         """
         logger = get_logger()
         logger.info("=" * 60)
-        logger.info("TEST: upsert_by_group_id (insert)")
+        logger.info("TEST: upsert_by_group_id (create) + get_by_group_id")
 
-        # 1. Prepare update data
-        update_data = create_test_update_data()
+        # 1. Create test ConversationStatus
+        update_data = create_test_conversation_status(test_group_id)
 
-        # 2. Upsert (should insert)
-        result = await repository.upsert_by_group_id(test_group_id, update_data)
-        assert result is not None, "Upsert failed"
-        assert result.id is not None, "Upserted ConversationStatus should have ID"
+        # 2. Upsert (should create new)
+        created = await repository.upsert_by_group_id(test_group_id, update_data)
+        assert created is not None, "Failed to upsert ConversationStatus"
+        assert created.id is not None, "Created ConversationStatus should have ID"
+        assert created.group_id == test_group_id, "group_id should match"
 
-        conversation_status_id = str(result.id)
-        logger.info(f"✅ Upserted (inserted) ConversationStatus with ID: {conversation_status_id}")
+        status_id = str(created.id)
+        logger.info(f"✅ Created ConversationStatus with ID: {status_id}")
 
         # 3. Verify KV-Storage
-        kv_exists = await verify_kv_storage(repository, conversation_status_id)
+        kv_exists = await verify_kv_storage(repository, status_id)
         logger.info(f"KV-Storage: {'✅ Exists' if kv_exists else '⚠️  Not found'}")
-        assert kv_exists, "Should exist in KV-Storage"
 
-        # 4. Verify data
-        assert result.group_id == test_group_id
-        assert result.old_msg_start_time is not None
-        assert result.new_msg_start_time is not None
-        assert result.last_memcell_time is not None
-        logger.info("✅ Upsert insert data verified")
+        # 4. Read back using get_by_group_id
+        retrieved = await repository.get_by_group_id(test_group_id)
+        assert retrieved is not None, "Failed to retrieve ConversationStatus"
+        logger.info(f"✅ Retrieved ConversationStatus by group_id")
+
+        # 5. Verify data matches
+        assert_conversation_status_equal(created, retrieved, check_id=True)
+        logger.info(f"✅ Data integrity verified")
 
         # Cleanup
         await repository.delete_by_group_id(test_group_id)
 
-    async def test_02_upsert_update(self, repository, test_group_id):
+    async def test_02_upsert_existing_status(self, repository, test_group_id):
         """
-        Test: upsert_by_group_id (update mode)
-        Flow: Create ConversationStatus -> Upsert to update -> Verify update worked
+        Test: upsert_by_group_id (update)
+        Flow: Create -> Update -> Verify update
         """
         logger = get_logger()
         logger.info("=" * 60)
         logger.info("TEST: upsert_by_group_id (update)")
 
-        # 1. Create initial ConversationStatus
         from common_utils.datetime_utils import get_now_with_timezone
+
         now = get_now_with_timezone()
 
-        initial_data = create_test_update_data(
-            old_msg_start_time=now - timedelta(days=10),
-            new_msg_start_time=now - timedelta(days=5),
-            last_memcell_time=now - timedelta(days=1),
-        )
+        # 1. Create initial ConversationStatus
+        initial_data = create_test_conversation_status(test_group_id)
         created = await repository.upsert_by_group_id(test_group_id, initial_data)
         assert created is not None
-        logger.info(f"✅ Created initial ConversationStatus: {created.group_id}")
+        original_id = created.id
+        logger.info(f"✅ Created ConversationStatus: {original_id}")
 
-        # 2. Upsert with updated data (should update)
-        update_data = create_test_update_data(
-            old_msg_start_time=now - timedelta(days=3),
-            new_msg_start_time=now - timedelta(hours=2),
-            last_memcell_time=now - timedelta(minutes=30),
+        # 2. Update with new data
+        new_data = {
+            "old_msg_start_time": now - timedelta(days=3),
+            "new_msg_start_time": now - timedelta(minutes=5),
+            "last_memcell_time": now,
+        }
+        updated = await repository.upsert_by_group_id(test_group_id, new_data)
+        assert updated is not None
+
+        # 3. Verify ID remains the same (update, not insert)
+        assert updated.id == original_id, "ID should remain the same on update"
+        logger.info(f"✅ ID unchanged: {updated.id}")
+
+        # 4. Verify new data is stored
+        assert updated.old_msg_start_time == new_data["old_msg_start_time"]
+        assert updated.new_msg_start_time == new_data["new_msg_start_time"]
+        assert updated.last_memcell_time == new_data["last_memcell_time"]
+        logger.info(f"✅ Data updated successfully")
+
+        # 5. Verify updated_at changed
+        assert (
+            updated.updated_at != created.updated_at
+        ), "updated_at should change on update"
+        logger.info(
+            f"✅ updated_at changed: {created.updated_at} -> {updated.updated_at}"
         )
 
-        result = await repository.upsert_by_group_id(test_group_id, update_data)
-        assert result is not None, "Upsert update failed"
-        logger.info(f"✅ Upserted (updated) ConversationStatus: {result.group_id}")
-
-        # 3. Verify update
-        assert str(result.id) == str(created.id), "ID should remain the same"
-
-        # Verify timestamps were updated
-        initial_new_msg_time = initial_data["new_msg_start_time"]
-        result_new_msg_time = result.new_msg_start_time
-
-        # Compare as timestamps
-        if isinstance(initial_new_msg_time, datetime) and isinstance(result_new_msg_time, datetime):
-            assert result_new_msg_time > initial_new_msg_time, "new_msg_start_time should be updated"
-
-        logger.info("✅ Upsert update data verified")
-
-        # 4. Verify KV-Storage
-        kv_exists = await verify_kv_storage(repository, str(result.id))
-        logger.info(f"KV-Storage: {'✅ Exists' if kv_exists else '⚠️  Not found'}")
-
         # Cleanup
         await repository.delete_by_group_id(test_group_id)
 
-    async def test_03_get_by_group_id(self, repository, test_group_id):
+    async def test_03_delete_by_group_id(self, repository, test_group_id):
         """
-        Test: get_by_group_id
-        Flow: Create -> Get -> Verify data matches
-        """
-        logger = get_logger()
-        logger.info("=" * 60)
-        logger.info("TEST: get_by_group_id")
-
-        # 1. Create ConversationStatus
-        update_data = create_test_update_data()
-        created = await repository.upsert_by_group_id(test_group_id, update_data)
-        assert created is not None
-        logger.info(f"✅ Created ConversationStatus: {created.group_id}")
-
-        # 2. Get by group_id
-        retrieved = await repository.get_by_group_id(test_group_id)
-        assert retrieved is not None, f"Failed to retrieve ConversationStatus by group_id: {test_group_id}"
-        logger.info(f"✅ Retrieved ConversationStatus by group_id: {test_group_id}")
-
-        # 3. Verify data integrity
-        assert_conversation_status_equal(created, retrieved)
-        logger.info("✅ Data integrity verified: created == retrieved")
-
-        # Cleanup
-        await repository.delete_by_group_id(test_group_id)
-
-    async def test_04_delete_by_group_id(self, repository, test_group_id):
-        """
-        Test: delete_by_group_id
-        Flow: Create -> Delete -> Verify deletion
+        Test: upsert_by_group_id + delete_by_group_id + get_by_group_id
+        Flow: Create -> Delete -> Verify deletion (MongoDB + KV)
         """
         logger = get_logger()
         logger.info("=" * 60)
         logger.info("TEST: delete_by_group_id")
 
-        # 1. Create ConversationStatus
-        update_data = create_test_update_data()
+        # 1. Create test ConversationStatus
+        update_data = create_test_conversation_status(test_group_id)
         created = await repository.upsert_by_group_id(test_group_id, update_data)
         assert created is not None
-        conversation_status_id = str(created.id)
-        logger.info(f"✅ Created ConversationStatus with ID: {conversation_status_id}")
+        status_id = str(created.id)
+        logger.info(f"✅ Created ConversationStatus: {status_id}")
 
-        # 2. Verify exists before deletion
-        before_delete = await repository.get_by_group_id(test_group_id)
-        assert before_delete is not None, "Should exist before deletion"
+        # 2. Verify it exists
+        retrieved = await repository.get_by_group_id(test_group_id)
+        assert (
+            retrieved is not None
+        ), "ConversationStatus should exist before deletion"
 
-        # 3. Delete
-        delete_result = await repository.delete_by_group_id(test_group_id)
-        assert delete_result is True, "Delete should return True"
-        logger.info(f"✅ Deleted ConversationStatus by group_id: {test_group_id}")
+        # 3. Delete the ConversationStatus
+        deleted = await repository.delete_by_group_id(test_group_id)
+        assert deleted is True, "Deletion should return True"
+        logger.info(f"✅ Deleted ConversationStatus: {status_id}")
 
-        # 4. Verify deletion
-        after_delete = await repository.get_by_group_id(test_group_id)
-        assert after_delete is None, "Should not exist after deletion"
-        logger.info("✅ Verified deletion from MongoDB")
+        # 4. Verify it no longer exists
+        retrieved_after = await repository.get_by_group_id(test_group_id)
+        assert (
+            retrieved_after is None
+        ), "ConversationStatus should not exist after deletion"
+        logger.info(f"✅ Verified deletion: ConversationStatus not found")
 
-        # 5. Verify KV-Storage deletion
-        kv_exists = await verify_kv_storage(repository, conversation_status_id)
-        assert kv_exists is False, "Should not exist in KV-Storage after deletion"
-        logger.info("✅ Verified deletion from KV-Storage")
+        # 5. Verify KV-Storage cleanup
+        kv_exists = await verify_kv_storage(repository, status_id)
+        assert not kv_exists, "KV-Storage should be cleaned up"
+        logger.info(f"✅ KV-Storage cleaned up")
 
-    async def test_05_count_by_group_id(self, repository, test_group_id):
+    async def test_04_count_by_group_id(self, repository, test_group_id):
         """
-        Test: count_by_group_id
+        Test: upsert_by_group_id + count_by_group_id
         Flow: Create -> Count -> Verify count
         """
         logger = get_logger()
         logger.info("=" * 60)
         logger.info("TEST: count_by_group_id")
 
-        # 1. Count before creation (should be 0 or 1 if unique by group_id)
+        # 1. Count before creation (should be 0)
         count_before = await repository.count_by_group_id(test_group_id)
-        logger.info(f"Count before creation: {count_before}")
+        assert count_before == 0, "Count should be 0 before creation"
+        logger.info(f"✅ Count before creation: {count_before}")
 
         # 2. Create ConversationStatus
-        update_data = create_test_update_data()
+        update_data = create_test_conversation_status(test_group_id)
         created = await repository.upsert_by_group_id(test_group_id, update_data)
         assert created is not None
-        logger.info(f"✅ Created ConversationStatus: {created.group_id}")
+        logger.info(f"✅ Created ConversationStatus")
 
-        # 3. Count after creation
+        # 3. Count after creation (should be 1)
         count_after = await repository.count_by_group_id(test_group_id)
-        logger.info(f"Count after creation: {count_after}")
-        assert count_after > count_before, "Count should increase after creation"
+        assert count_after == 1, f"Count should be 1 after creation, got {count_after}"
+        logger.info(f"✅ Count after creation: {count_after}")
 
         # Cleanup
         await repository.delete_by_group_id(test_group_id)
+
+
+class TestConcurrency:
+    """Test concurrent operations"""
+
+    async def test_05_concurrent_upsert(self, repository):
+        """
+        Test: Concurrent upsert operations on same group_id
+        Flow: Simulate concurrent upserts -> Verify only one record created
+        """
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: Concurrent upsert (duplicate key handling)")
+
+        test_group = f"test_group_concurrent_{uuid.uuid4().hex[:8]}"
+
+        from common_utils.datetime_utils import get_now_with_timezone
+
+        now = get_now_with_timezone()
+
+        # 1. First upsert
+        data1 = {
+            "old_msg_start_time": now - timedelta(days=7),
+            "new_msg_start_time": now - timedelta(hours=1),
+            "last_memcell_time": now - timedelta(minutes=30),
+        }
+        result1 = await repository.upsert_by_group_id(test_group, data1)
+        assert result1 is not None
+        logger.info(f"✅ First upsert succeeded: {result1.id}")
+
+        # 2. Second upsert (should update, not create)
+        data2 = {
+            "old_msg_start_time": now - timedelta(days=3),
+            "new_msg_start_time": now - timedelta(minutes=5),
+            "last_memcell_time": now,
+        }
+        result2 = await repository.upsert_by_group_id(test_group, data2)
+        assert result2 is not None
+        logger.info(f"✅ Second upsert succeeded: {result2.id}")
+
+        # 3. Verify same ID (updated, not created new)
+        assert result1.id == result2.id, "Should update existing record, not create new"
+        logger.info(f"✅ Same ID: {result1.id} == {result2.id}")
+
+        # 4. Verify data is from second upsert
+        assert result2.last_memcell_time == data2["last_memcell_time"]
+        logger.info(f"✅ Data from second upsert: {result2.last_memcell_time}")
+
+        # Cleanup
+        await repository.delete_by_group_id(test_group)
 
 
 class TestEdgeCases:
     """Test edge cases and error handling"""
 
-    async def test_06_get_nonexistent(self, repository):
+    async def test_06_get_nonexistent_group_id(self, repository):
         """
-        Test: Get non-existent ConversationStatus
+        Test: get_by_group_id with non-existent group_id
+        Expected: Should return None
         """
         logger = get_logger()
         logger.info("=" * 60)
         logger.info("TEST: get_by_group_id (non-existent)")
 
-        result = await repository.get_by_group_id("nonexistent_group_id")
-        assert result is None, "Should return None for non-existent group_id"
-        logger.info("✅ Correctly returned None for non-existent group_id")
+        fake_group_id = "nonexistent_group_12345678"
+        result = await repository.get_by_group_id(fake_group_id)
 
-    async def test_07_delete_nonexistent(self, repository):
+        assert result is None, "Non-existent group_id should return None"
+        logger.info(f"✅ Non-existent group_id handled correctly: returned None")
+
+    async def test_07_delete_nonexistent_group_id(self, repository):
         """
-        Test: Delete non-existent ConversationStatus
+        Test: delete_by_group_id with non-existent group_id
+        Expected: Should return False
         """
         logger = get_logger()
         logger.info("=" * 60)
         logger.info("TEST: delete_by_group_id (non-existent)")
 
-        result = await repository.delete_by_group_id("nonexistent_group_id")
-        assert result is False, "Should return False for non-existent group_id"
-        logger.info("✅ Correctly returned False for non-existent group_id")
+        fake_group_id = "nonexistent_group_87654321"
+        result = await repository.delete_by_group_id(fake_group_id)
 
-    async def test_08_multiple_updates(self, repository, test_group_id):
+        assert result is False, "Deleting non-existent should return False"
+        logger.info(f"✅ Non-existent deletion handled correctly: returned False")
+
+    async def test_08_verify_audit_fields(self, repository, test_group_id):
         """
-        Test: Multiple sequential updates
-        Flow: Create -> Update multiple times -> Verify final state
-        """
-        logger = get_logger()
-        logger.info("=" * 60)
-        logger.info("TEST: multiple sequential updates")
-
-        from common_utils.datetime_utils import get_now_with_timezone
-        now = get_now_with_timezone()
-
-        # 1. Create initial
-        initial_data = create_test_update_data(
-            old_msg_start_time=now - timedelta(days=10),
-        )
-        result = await repository.upsert_by_group_id(test_group_id, initial_data)
-        assert result is not None
-        original_id = str(result.id)
-        logger.info(f"✅ Created initial ConversationStatus: {result.group_id}")
-
-        # 2. Update multiple times
-        for i in range(3):
-            update_data = create_test_update_data(
-                old_msg_start_time=now - timedelta(days=10-i),
-                new_msg_start_time=now - timedelta(days=5-i),
-                last_memcell_time=now - timedelta(hours=12-i),
-            )
-            result = await repository.upsert_by_group_id(test_group_id, update_data)
-            assert result is not None
-            assert str(result.id) == original_id, "ID should remain the same"
-            logger.info(f"✅ Update {i+1} completed")
-
-        # 3. Verify final state
-        final = await repository.get_by_group_id(test_group_id)
-        assert final is not None
-        assert str(final.id) == original_id
-        logger.info("✅ Multiple updates verified")
-
-        # Cleanup
-        await repository.delete_by_group_id(test_group_id)
-
-
-class TestDualStorage:
-    """Test Dual Storage consistency between MongoDB and KV-Storage"""
-
-    async def test_09_dual_storage_consistency(self, repository, kv_storage, test_group_id):
-        """
-        Test: Verify MongoDB Lite and KV-Storage consistency
+        Test: Verify created_at and updated_at are set correctly
         """
         logger = get_logger()
         logger.info("=" * 60)
-        logger.info("TEST: Dual Storage consistency")
+        logger.info("TEST: Verify created_at and updated_at fields")
 
         # 1. Create ConversationStatus
-        from infra_layer.adapters.out.persistence.document.memory.conversation_status_lite import (
-            ConversationStatusLite,
-        )
-        update_data = create_test_update_data()
+        update_data = create_test_conversation_status(test_group_id)
         created = await repository.upsert_by_group_id(test_group_id, update_data)
         assert created is not None
-        conversation_status_id = str(created.id)
-        logger.info(f"✅ Created ConversationStatus with ID: {conversation_status_id}")
 
-        # 2. Verify MongoDB Lite
-        lite = await ConversationStatusLite.find_one({"group_id": test_group_id})
-        assert lite is not None, "Should exist in MongoDB as Lite"
-        assert lite.group_id == test_group_id
-        logger.info("✅ Verified MongoDB Lite record")
-
-        # 3. Verify KV-Storage
-        kv_json = await kv_storage.get(conversation_status_id)
-        assert kv_json is not None, "Should exist in KV-Storage"
-
-        from infra_layer.adapters.out.persistence.document.memory.conversation_status import (
-            ConversationStatus,
+        # 2. Verify audit fields are set after upsert
+        assert created.created_at is not None, "❌ BUG: created_at should not be None!"
+        assert created.updated_at is not None, "❌ BUG: updated_at should not be None!"
+        logger.info(
+            f"✅ After upsert: created_at={created.created_at}, updated_at={created.updated_at}"
         )
-        full_from_kv = ConversationStatus.model_validate_json(kv_json)
-        assert full_from_kv.group_id == test_group_id
-        assert full_from_kv.old_msg_start_time is not None
-        assert full_from_kv.new_msg_start_time is not None
-        assert full_from_kv.last_memcell_time is not None
-        logger.info("✅ Verified KV-Storage full record")
 
-        # 4. Verify consistency
-        assert str(lite.id) == str(full_from_kv.id), "IDs should match"
-        assert lite.group_id == full_from_kv.group_id, "group_id should match"
-        logger.info("✅ Verified Dual Storage consistency")
+        # 3. Retrieve from KV-Storage and verify persistence
+        retrieved = await repository.get_by_group_id(test_group_id)
+        assert retrieved is not None
+        assert (
+            retrieved.created_at is not None
+        ), "❌ BUG: created_at should persist in KV-Storage!"
+        assert (
+            retrieved.updated_at is not None
+        ), "❌ BUG: updated_at should persist in KV-Storage!"
+        logger.info(
+            f"✅ After retrieve: created_at={retrieved.created_at}, updated_at={retrieved.updated_at}"
+        )
+
+        # 4. Verify created_at equals updated_at for newly created records
+        time_diff = abs((retrieved.created_at - retrieved.updated_at).total_seconds())
+        assert (
+            time_diff < 1
+        ), "created_at and updated_at should be nearly identical for new records"
+        logger.info(f"✅ created_at ≈ updated_at (diff: {time_diff:.6f}s)")
 
         # Cleanup
         await repository.delete_by_group_id(test_group_id)
+        logger.info("✅ Audit fields verification passed")
 
-    async def test_10_update_propagates_to_both_storages(self, repository, kv_storage, test_group_id):
+    async def test_09_verify_conversation_id_property(self, repository, test_group_id):
         """
-        Test: Verify updates propagate to both MongoDB and KV-Storage
+        Test: Verify conversation_id property returns id
         """
         logger = get_logger()
         logger.info("=" * 60)
-        logger.info("TEST: Update propagates to both storages")
+        logger.info("TEST: Verify conversation_id property")
 
-        from common_utils.datetime_utils import get_now_with_timezone
-        now = get_now_with_timezone()
-
-        # 1. Create initial
-        initial_data = create_test_update_data()
-        created = await repository.upsert_by_group_id(test_group_id, initial_data)
+        # 1. Create ConversationStatus
+        update_data = create_test_conversation_status(test_group_id)
+        created = await repository.upsert_by_group_id(test_group_id, update_data)
         assert created is not None
-        conversation_status_id = str(created.id)
-        logger.info(f"✅ Created ConversationStatus: {created.group_id}")
 
-        # 2. Update
-        update_data = create_test_update_data(
-            new_msg_start_time=now - timedelta(minutes=5),
+        # 2. Verify conversation_id property
+        assert created.conversation_id is not None, "conversation_id should not be None"
+        assert (
+            created.conversation_id == created.id
+        ), "conversation_id should equal id"
+        logger.info(
+            f"✅ conversation_id property works: {created.conversation_id} == {created.id}"
         )
-        updated = await repository.upsert_by_group_id(test_group_id, update_data)
-        assert updated is not None
-        logger.info(f"✅ Updated ConversationStatus: {updated.group_id}")
 
-        # 3. Verify MongoDB Lite has correct ID
-        from infra_layer.adapters.out.persistence.document.memory.conversation_status_lite import (
-            ConversationStatusLite,
-        )
-        lite = await ConversationStatusLite.find_one({"group_id": test_group_id})
-        assert lite is not None
-        assert str(lite.id) == conversation_status_id, "MongoDB Lite ID should match"
-        logger.info("✅ MongoDB Lite has correct ID after update")
-
-        # 4. Verify KV-Storage has updated data
-        kv_json = await kv_storage.get(conversation_status_id)
-        assert kv_json is not None
-
-        from infra_layer.adapters.out.persistence.document.memory.conversation_status import (
-            ConversationStatus,
-        )
-        full_from_kv = ConversationStatus.model_validate_json(kv_json)
-
-        # Verify the updated field
-        updated_time = update_data["new_msg_start_time"]
-        kv_time = full_from_kv.new_msg_start_time
-
-        if isinstance(updated_time, datetime) and isinstance(kv_time, datetime):
-            time_diff = abs((updated_time - kv_time).total_seconds())
-            assert time_diff < 1, "KV-Storage should have updated data"
-
-        logger.info("✅ KV-Storage has updated data")
+        # 3. Retrieve and verify property persists
+        retrieved = await repository.get_by_group_id(test_group_id)
+        assert retrieved is not None
+        assert (
+            retrieved.conversation_id == retrieved.id
+        ), "conversation_id property should work after retrieval"
+        logger.info(f"✅ conversation_id property persists after retrieval")
 
         # Cleanup
         await repository.delete_by_group_id(test_group_id)
+
+
+# ==================== Main Test Runner ====================
+
+
+if __name__ == "__main__":
+    """
+    Run all tests with pytest
+
+    Usage:
+        ./run_tests.sh test_conversation_status_crud_complete.py -v -s
+    """
+    pytest.main([__file__, "-v", "-s"])

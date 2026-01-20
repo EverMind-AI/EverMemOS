@@ -30,7 +30,7 @@ async def init_database():
     from infra_layer.adapters.out.persistence.document.memory.foresight_record_lite import ForesightRecordLite
     from infra_layer.adapters.out.persistence.document.memory.cluster_state_lite import ClusterStateLite
     from infra_layer.adapters.out.persistence.document.memory.user_profile_lite import UserProfileLite
-    from infra_layer.adapters.out.persistence.document.memory.conversation_meta_lite import ConversationMetaLite
+    from infra_layer.adapters.out.persistence.document.memory.conversation_meta import ConversationMeta
     from infra_layer.adapters.out.persistence.document.memory.conversation_status_lite import ConversationStatusLite
     from core.di import get_container
 
@@ -65,7 +65,7 @@ async def init_database():
             ForesightRecordLite,
             ClusterStateLite,
             UserProfileLite,
-            ConversationMetaLite,
+            ConversationMeta,
             ConversationStatusLite,
         ]
     )
