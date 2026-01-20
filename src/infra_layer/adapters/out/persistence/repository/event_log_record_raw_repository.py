@@ -63,7 +63,8 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecordLite]):
             id=event_log.id,
             user_id=event_log.user_id,
             group_id=event_log.group_id,
-            parent_episode_id=event_log.parent_episode_id,
+            parent_id=event_log.parent_id,
+            parent_type=event_log.parent_type,
             timestamp=event_log.timestamp,
         )
 
@@ -103,19 +104,20 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecordLite]):
             return [
                 EventLogRecordProjection(
                     id=log.id,
+                    created_at=log.created_at,
+                    updated_at=log.updated_at,
                     user_id=log.user_id,
                     user_name=log.user_name,
                     group_id=log.group_id,
                     group_name=log.group_name,
                     atomic_fact=log.atomic_fact,
-                    parent_episode_id=log.parent_episode_id,
+                    parent_type=log.parent_type,
+                    parent_id=log.parent_id,
                     timestamp=log.timestamp,
                     participants=log.participants,
                     vector_model=log.vector_model,
                     event_type=log.event_type,
                     extend=log.extend,
-                    created_at=log.created_at,
-                    updated_at=log.updated_at,
                 )
                 for log in full_event_logs
             ]
@@ -236,15 +238,8 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecordLite]):
             if parent_type:
                 query_filter["parent_type"] = parent_type
 
-            # Determine whether to use projection based on model type
-            if target_model == self.model:
-                query = self.model.find(query_filter, session=session)
-            else:
-                query = self.model.find(
-                    query_filter, projection_model=target_model, session=session
-                )
-
-            lite_results = await query.to_list()
+            # Query MongoDB for Lite results
+            lite_results = await self.model.find(query_filter, session=session).to_list()
 
             # Reconstruct from KV-Storage
             full_event_logs = await self._event_log_lite_to_full(lite_results)
@@ -330,17 +325,8 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecordLite]):
                 else:
                     filter_dict["group_id"] = group_id
 
-            # If model is not specified, use full version
-            target_model = model if model is not None else self.model
-
-            # Determine whether to use projection based on model type
-            if target_model == self.model:
-                query = self.model.find(filter_dict, session=session)
-            else:
-                query = self.model.find(
-                    filter_dict, projection_model=target_model, session=session
-                )
-
+            # Query MongoDB Lite
+            query = self.model.find(filter_dict, session=session)
 
             if sort_desc:
                 query = query.sort("-timestamp")
@@ -430,7 +416,7 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecordLite]):
             if parent_type is not None:
                 query_filter["parent_type"] = parent_type
 
-            lite_results = await self.model.find(query_filter, session=session)
+            lite_results = await self.model.find(query_filter, session=session).to_list()
             event_log_ids = [str(result.id) for result in lite_results]
 
             # Delete from MongoDB
@@ -444,7 +430,7 @@ class EventLogRecordRawRepository(BaseRepository[EventLogRecordLite]):
                     await kv_storage.batch_delete(event_log_ids)
                 except Exception as kv_error:
                     logger.error(
-                        f"⚠️  KV-Storage batch delete error for parent {parent_episode_id}: {kv_error}"
+                        f"⚠️  KV-Storage batch delete error for parent {parent_id}: {kv_error}"
                     )
 
             logger.info(
