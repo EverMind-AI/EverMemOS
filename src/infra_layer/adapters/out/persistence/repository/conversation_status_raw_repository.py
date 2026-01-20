@@ -6,16 +6,24 @@ from infra_layer.adapters.out.persistence.document.memory.conversation_status im
 )
 from core.observation.logger import get_logger
 from core.di.decorators import repository
+from infra_layer.adapters.out.persistence.repository.dual_storage_mixin import (
+    DualStorageMixin,
+)
 
 logger = get_logger(__name__)
 
 
 @repository("conversation_status_raw_repository", primary=True)
-class ConversationStatusRawRepository(BaseRepository[ConversationStatus]):
+class ConversationStatusRawRepository(
+    DualStorageMixin,  # 添加双存储支持 - 自动拦截 MongoDB 调用
+    BaseRepository[ConversationStatus],
+):
     """
     Conversation status raw data repository
 
     Provides CRUD operations and query capabilities for conversation status data.
+
+    Dual Storage: DualStorageMixin automatically intercepts all MongoDB operations
     """
 
     def __init__(self):

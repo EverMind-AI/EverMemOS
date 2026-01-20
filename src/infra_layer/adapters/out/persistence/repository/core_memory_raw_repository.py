@@ -4,12 +4,18 @@ from core.observation.logger import get_logger
 from core.di.decorators import repository
 from core.oxm.mongo.base_repository import BaseRepository
 from infra_layer.adapters.out.persistence.document.memory.core_memory import CoreMemory
+from infra_layer.adapters.out.persistence.repository.dual_storage_mixin import (
+    DualStorageMixin,
+)
 
 logger = get_logger(__name__)
 
 
 @repository("core_memory_raw_repository", primary=True)
-class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
+class CoreMemoryRawRepository(
+    DualStorageMixin,  # 添加双存储支持 - 自动拦截 MongoDB 调用
+    BaseRepository[CoreMemory],
+):
     """
     Core memory raw data repository
 

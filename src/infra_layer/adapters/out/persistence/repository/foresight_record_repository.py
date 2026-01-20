@@ -17,6 +17,9 @@ from infra_layer.adapters.out.persistence.document.memory.foresight_record impor
     ForesightRecord,
     ForesightRecordProjection,
 )
+from infra_layer.adapters.out.persistence.repository.dual_storage_mixin import (
+    DualStorageMixin,
+)
 
 # Define generic type variable
 T = TypeVar('T', ForesightRecord, ForesightRecordProjection)
@@ -25,12 +28,17 @@ logger = get_logger(__name__)
 
 
 @repository("foresight_record_repository", primary=True)
-class ForesightRecordRawRepository(BaseRepository[ForesightRecord]):
+class ForesightRecordRawRepository(
+    DualStorageMixin,  # 添加双存储支持 - 自动拦截 MongoDB 调用
+    BaseRepository[ForesightRecord],
+):
     """
     Raw repository for personal foresight data
 
     Provides CRUD operations and basic query functions for personal foresight records.
     Note: Vectors should be generated during extraction; this Repository is not responsible for vector generation.
+
+    Dual Storage: DualStorageMixin automatically intercepts all MongoDB operations
     """
 
     def __init__(self):

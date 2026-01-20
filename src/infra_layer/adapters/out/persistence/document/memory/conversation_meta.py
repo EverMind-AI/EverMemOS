@@ -150,3 +150,5 @@ class ConversationMeta(DocumentBase, AuditBase):
         ]
         validate_on_save = True
         use_state_management = True
+        # Query fields for dual storage (fields that can be queried but are not indexed)
+        query_fields = ["scene"]

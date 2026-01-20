@@ -16,6 +16,9 @@ from infra_layer.adapters.out.persistence.document.memory.event_log_record impor
     EventLogRecord,
     EventLogRecordProjection,
 )
+from infra_layer.adapters.out.persistence.repository.dual_storage_mixin import (
+    DualStorageMixin,
+)
 
 # Define generic type variable
 T = TypeVar('T', EventLogRecord, EventLogRecordProjection)
@@ -24,12 +27,17 @@ logger = get_logger(__name__)
 
 
 @repository("event_log_record_repository", primary=True)
-class EventLogRecordRawRepository(BaseRepository[EventLogRecord]):
+class EventLogRecordRawRepository(
+    DualStorageMixin,  # 添加双存储支持 - 自动拦截 MongoDB 调用
+    BaseRepository[EventLogRecord],
+):
     """
     Personal event log raw data repository
 
     Provides CRUD operations and basic query functions for personal event logs.
     Note: Vectors should be generated during extraction; this Repository is not responsible for vector generation.
+
+    Dual Storage: DualStorageMixin automatically intercepts all MongoDB operations
     """
 
     def __init__(self):

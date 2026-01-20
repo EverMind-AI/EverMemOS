@@ -13,12 +13,18 @@ from core.oxm.mongo.base_repository import BaseRepository
 from infra_layer.adapters.out.persistence.document.memory.cluster_state import (
     ClusterState,
 )
+from infra_layer.adapters.out.persistence.repository.dual_storage_mixin import (
+    DualStorageMixin,
+)
 
 logger = get_logger(__name__)
 
 
 @repository("cluster_state_raw_repository", primary=True)
-class ClusterStateRawRepository(BaseRepository[ClusterState]):
+class ClusterStateRawRepository(
+    DualStorageMixin,  # 添加双存储支持 - 自动拦截 MongoDB 调用
+    BaseRepository[ClusterState],
+):
     """
     ClusterState native CRUD repository
 
@@ -55,7 +61,7 @@ class ClusterStateRawRepository(BaseRepository[ClusterState]):
 
     async def get_by_group_id(self, group_id: str) -> Optional[ClusterState]:
         try:
-            return await self.model.find_one(ClusterState.group_id == group_id)
+            return await self.model.find_one({"group_id": group_id})
         except Exception as e:
             logger.error(
                 f"Failed to retrieve cluster state: group_id={group_id}, error={e}"
@@ -66,15 +72,37 @@ class ClusterStateRawRepository(BaseRepository[ClusterState]):
         self, group_id: str, state: Dict[str, Any]
     ) -> Optional[ClusterState]:
         try:
-            existing = await self.model.find_one(ClusterState.group_id == group_id)
+            existing = await self.model.find_one({"group_id": group_id})
 
             if existing:
-                for key, value in state.items():
-                    if hasattr(existing, key):
-                        setattr(existing, key, value)
-                await existing.save()
+                # Merge state with existing document data
+                existing_data = existing.model_dump(exclude={"id", "revision_id"})
+                existing_data.update(state)
+                existing_data["group_id"] = group_id  # Ensure group_id is set
+
+                # Create new document with merged data, preserving ID
+                doc_id = existing.id
+                cluster_state = ClusterState(**existing_data)
+                cluster_state.id = doc_id
+
+                # Delete old and insert new to work around save() issue
+                await existing.delete()
+                # Use raw insert bypassing Beanie's ID generation
+                await cluster_state.get_pymongo_collection().insert_one(
+                    cluster_state.model_dump(by_alias=True, exclude={"revision_id"})
+                )
+
+                # Sync to KV
+                from core.di import get_bean_by_type
+                from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import KVStorageInterface
+                import json
+                kv_storage = get_bean_by_type(KVStorageInterface)
+                # Use model_dump and manual JSON conversion to avoid ExpressionField issues
+                data_dict = cluster_state.model_dump(mode="json", exclude={"revision_id"})
+                await kv_storage.put(key=str(doc_id), value=json.dumps(data_dict))
+
                 logger.debug(f"Updated cluster state: group_id={group_id}")
-                return existing
+                return cluster_state
             else:
                 state["group_id"] = group_id
                 cluster_state = ClusterState(**state)
@@ -89,7 +117,7 @@ class ClusterStateRawRepository(BaseRepository[ClusterState]):
 
     async def get_cluster_assignments(self, group_id: str) -> Dict[str, str]:
         try:
-            cluster_state = await self.model.find_one(ClusterState.group_id == group_id)
+            cluster_state = await self.model.find_one({"group_id": group_id})
             if cluster_state is None:
                 return {}
             return cluster_state.eventid_to_cluster or {}
@@ -101,7 +129,7 @@ class ClusterStateRawRepository(BaseRepository[ClusterState]):
 
     async def delete_by_group_id(self, group_id: str) -> bool:
         try:
-            cluster_state = await self.model.find_one(ClusterState.group_id == group_id)
+            cluster_state = await self.model.find_one({"group_id": group_id})
             if cluster_state:
                 await cluster_state.delete()
                 logger.info(f"Deleted cluster state: group_id={group_id}")
@@ -114,8 +142,15 @@ class ClusterStateRawRepository(BaseRepository[ClusterState]):
 
     async def delete_all(self) -> int:
         try:
-            result = await self.model.delete_all()
-            count = result.deleted_count if result else 0
+            # Get all documents first to delete from KV storage
+            all_docs = await self.model.find({}).to_list()
+            count = 0
+            for doc in all_docs:
+                try:
+                    await doc.delete()
+                    count += 1
+                except Exception as e:
+                    logger.error(f"Failed to delete cluster state {doc.id}: {e}")
             logger.info(f"Deleted all cluster states: {count} items")
             return count
         except Exception as e:

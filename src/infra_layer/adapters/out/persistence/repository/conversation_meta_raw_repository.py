@@ -14,6 +14,9 @@ from core.constants.exceptions import ValidationException
 from infra_layer.adapters.out.persistence.document.memory.conversation_meta import (
     ConversationMeta,
 )
+from infra_layer.adapters.out.persistence.repository.dual_storage_mixin import (
+    DualStorageMixin,
+)
 from memory_layer.profile_manager.config import ScenarioType
 
 logger = logging.getLogger(__name__)
@@ -23,11 +26,16 @@ ALLOWED_SCENES = [e.value for e in ScenarioType]
 
 
 @repository("conversation_meta_raw_repository", primary=True)
-class ConversationMetaRawRepository(BaseRepository[ConversationMeta]):
+class ConversationMetaRawRepository(
+    DualStorageMixin,  # 添加双存储支持 - 自动拦截 MongoDB 调用
+    BaseRepository[ConversationMeta],
+):
     """
     Raw repository layer for conversation metadata
 
     Provides basic database operations for conversation metadata
+
+    Dual Storage: DualStorageMixin automatically intercepts all MongoDB operations
     """
 
     def __init__(self):
@@ -322,16 +330,24 @@ class ConversationMetaRawRepository(BaseRepository[ConversationMeta]):
             Whether deletion was successful
         """
         try:
-            result = await self.model.find_one(
+            # First find the document
+            doc = await self.model.find_one(
                 {"group_id": group_id}, session=session
-            ).delete()
-            if result:
+            )
+            if doc:
+                # Then delete it
+                await doc.delete(session=session)
                 logger.info(
                     "✅ Successfully deleted conversation metadata: group_id=%s",
                     group_id,
                 )
                 return True
-            return False
+            else:
+                logger.warning(
+                    "⚠️  Conversation metadata not found for deletion: group_id=%s",
+                    group_id,
+                )
+                return False
         except Exception as e:
             logger.error("❌ Failed to delete conversation metadata: %s", e)
             return False

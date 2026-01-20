@@ -6,7 +6,6 @@ Provides ProfileStorage compatible interface (duck typing).
 """
 
 from typing import Optional, Dict, Any, List
-from beanie.operators import Or, Eq
 from core.observation.logger import get_logger
 from core.di.decorators import repository
 from core.oxm.mongo.base_repository import BaseRepository
@@ -15,12 +14,18 @@ from core.oxm.constants import MAGIC_ALL
 from infra_layer.adapters.out.persistence.document.memory.user_profile import (
     UserProfile,
 )
+from infra_layer.adapters.out.persistence.repository.dual_storage_mixin import (
+    DualStorageMixin,
+)
 
 logger = get_logger(__name__)
 
 
 @repository("user_profile_raw_repository", primary=True)
-class UserProfileRawRepository(BaseRepository[UserProfile]):
+class UserProfileRawRepository(
+    DualStorageMixin,  # Add dual storage support - automatically intercepts MongoDB calls
+    BaseRepository[UserProfile],
+):
     """
     UserProfile native CRUD repository
 
@@ -30,6 +35,8 @@ class UserProfileRawRepository(BaseRepository[UserProfile]):
     - get_all_profiles() -> Dict[str, Any]
     - get_profile_history(user_id, limit) -> List[Dict]
     - clear() -> bool
+
+    Dual Storage: DualStorageMixin automatically intercepts all MongoDB operations
     """
 
     def __init__(self):
@@ -92,7 +99,7 @@ class UserProfileRawRepository(BaseRepository[UserProfile]):
     ) -> Optional[UserProfile]:
         try:
             return await self.model.find_one(
-                UserProfile.user_id == user_id, UserProfile.group_id == group_id
+                {"user_id": user_id, "group_id": group_id}
             )
         except Exception as e:
             logger.error(
@@ -102,7 +109,7 @@ class UserProfileRawRepository(BaseRepository[UserProfile]):
 
     async def get_all_by_group(self, group_id: str) -> List[UserProfile]:
         try:
-            return await self.model.find(UserProfile.group_id == group_id).to_list()
+            return await self.model.find({"group_id": group_id}).to_list()
         except Exception as e:
             logger.error(
                 f"Failed to retrieve group user profiles: group_id={group_id}, error={e}"
@@ -112,7 +119,7 @@ class UserProfileRawRepository(BaseRepository[UserProfile]):
     async def get_all_by_user(self, user_id: str, limit: int = 40) -> List[UserProfile]:
         try:
             return (
-                await self.model.find(UserProfile.user_id == user_id)
+                await self.model.find({"user_id": user_id})
                 .sort([("version", -1)])
                 .limit(limit)
                 .to_list()
@@ -145,36 +152,27 @@ class UserProfileRawRepository(BaseRepository[UserProfile]):
             List of UserProfile
         """
         try:
-            # Build query conditions
-            conditions = []
+            # Build query conditions using dict syntax
+            filter_dict = {}
 
             # Handle user_id filter
             if user_id != MAGIC_ALL:
                 if user_id == "" or user_id is None:
                     # Explicitly filter for null or empty string
-                    conditions.append(
-                        Or(Eq(UserProfile.user_id, None), Eq(UserProfile.user_id, ""))
-                    )
+                    filter_dict["user_id"] = {"$in": [None, ""]}
                 else:
-                    conditions.append(UserProfile.user_id == user_id)
+                    filter_dict["user_id"] = user_id
 
             # Handle group_id filter
             if group_id != MAGIC_ALL:
                 if group_id == "" or group_id is None:
                     # Explicitly filter for null or empty string
-                    conditions.append(
-                        Or(Eq(UserProfile.group_id, None), Eq(UserProfile.group_id, ""))
-                    )
+                    filter_dict["group_id"] = {"$in": [None, ""]}
                 else:
-                    conditions.append(UserProfile.group_id == group_id)
+                    filter_dict["group_id"] = group_id
 
             # Build query
-            if conditions:
-                # Combine conditions with AND
-                query = self.model.find(*conditions)
-            else:
-                # No conditions - find all
-                query = self.model.find()
+            query = self.model.find(filter_dict)
 
             # Sort by version descending
             query = query.sort([("version", -1)])
@@ -207,6 +205,7 @@ class UserProfileRawRepository(BaseRepository[UserProfile]):
             existing = await self.get_by_user_and_group(user_id, group_id)
 
             if existing:
+                # Update fields directly on existing document
                 existing.profile_data = profile_data
                 existing.version += 1
                 existing.confidence = metadata.get("confidence", existing.confidence)
@@ -220,10 +219,58 @@ class UserProfileRawRepository(BaseRepository[UserProfile]):
                 if "memcell_count" in metadata:
                     existing.memcell_count = metadata["memcell_count"]
 
-                await existing.save()
+                # Use replace_one directly to avoid ExpressionField serialization issues
+                # This bypasses Beanie's save() which has issues with Indexed fields
+                from bson import ObjectId
+                from datetime import datetime, timezone
+
+                # Prepare update data (exclude id and internal fields)
+                update_data = {
+                    "user_id": user_id,
+                    "group_id": group_id,
+                    "profile_data": profile_data,
+                    "scenario": existing.scenario,
+                    "confidence": existing.confidence,
+                    "version": existing.version,
+                    "cluster_ids": existing.cluster_ids,
+                    "memcell_count": existing.memcell_count,
+                    "last_updated_cluster": existing.last_updated_cluster,
+                    "created_at": existing.created_at,
+                    "updated_at": datetime.now(timezone.utc),
+                }
+
+                # Get pymongo collection and update
+                mongo_collection = UserProfile.get_pymongo_collection()
+                await mongo_collection.replace_one(
+                    {"_id": ObjectId(existing.id)},
+                    update_data
+                )
+
+                # Update KV storage manually (since we bypassed Beanie's save)
+                from core.di import get_bean_by_type
+                from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import KVStorageInterface
+                kv_storage = get_bean_by_type(KVStorageInterface)
+
+                # Create a dict with full data including id
+                full_data = update_data.copy()
+                full_data["id"] = existing.id
+
+                import json
+                def json_serializer(obj):
+                    if isinstance(obj, ObjectId):
+                        return str(obj)
+                    elif isinstance(obj, datetime):
+                        return obj.isoformat()
+                    raise TypeError(f"Type {type(obj)} not serializable")
+
+                kv_value = json.dumps(full_data, default=json_serializer)
+                await kv_storage.put(key=str(existing.id), value=kv_value)
+
                 logger.debug(
                     f"Updated user profile: user_id={user_id}, group_id={group_id}, version={existing.version}"
                 )
+
+                # Return the updated existing object (with updated fields)
                 return existing
             else:
                 user_profile = UserProfile(
@@ -252,7 +299,7 @@ class UserProfileRawRepository(BaseRepository[UserProfile]):
 
     async def delete_by_group(self, group_id: str) -> int:
         try:
-            result = await self.model.find(UserProfile.group_id == group_id).delete()
+            result = await self.model.find({"group_id": group_id}).delete()
             count = result.deleted_count if result else 0
             logger.info(
                 f"Deleted group user profiles: group_id={group_id}, count={count}"

@@ -1,0 +1,410 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Test ForesightRecordRawRepository with DualStorageMixin
+
+Verify that DualStorageMixin works correctly for ForesightRecord.
+Repository code remains unchanged, all dual storage logic is handled transparently by Mixin.
+"""
+
+import pytest
+import pytest_asyncio
+import uuid
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
+
+from core.observation.logger import get_logger
+from api_specs.memory_types import ParentType
+
+# Mark all test functions in this module as asyncio tests
+pytestmark = pytest.mark.asyncio
+
+if TYPE_CHECKING:
+    from infra_layer.adapters.out.persistence.repository.foresight_record_repository import (
+        ForesightRecordRawRepository,
+    )
+
+
+@pytest_asyncio.fixture
+async def repository():
+    """Get repository instance"""
+    from core.di import get_bean_by_type
+    from infra_layer.adapters.out.persistence.repository.foresight_record_repository import (
+        ForesightRecordRawRepository,
+    )
+    return get_bean_by_type(ForesightRecordRawRepository)
+
+
+@pytest_asyncio.fixture
+async def kv_storage():
+    """Get KV-Storage instance"""
+    from core.di import get_bean_by_type
+    from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import (
+        KVStorageInterface,
+    )
+    return get_bean_by_type(KVStorageInterface)
+
+
+@pytest.fixture
+def test_user_id():
+    """Generate unique test user ID"""
+    return f"test_user_{uuid.uuid4().hex[:8]}"
+
+
+@pytest.fixture
+def test_group_id():
+    """Generate unique test group ID"""
+    return f"test_group_{uuid.uuid4().hex[:8]}"
+
+
+def create_test_foresight(
+    user_id: str,
+    content: str = "Test foresight content",
+    group_id: str = None,
+    parent_type: str = ParentType.MEMCELL.value,
+    parent_id: str = None,
+    start_time: str = None,
+    end_time: str = None,
+):
+    """Create test ForesightRecord"""
+    from infra_layer.adapters.out.persistence.document.memory.foresight_record import (
+        ForesightRecord,
+    )
+
+    if start_time is None:
+        start_time = datetime.now().strftime("%Y-%m-%d")
+    if end_time is None:
+        end_time = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    if parent_id is None:
+        parent_id = f"parent_{uuid.uuid4().hex[:8]}"
+
+    return ForesightRecord(
+        user_id=user_id,
+        user_name="Test User",
+        group_id=group_id,
+        content=content,
+        parent_type=parent_type,
+        parent_id=parent_id,
+        start_time=start_time,
+        end_time=end_time,
+        participants=["Alice", "Bob"],
+        evidence="Test evidence",
+        extend={"test_key": "test_value"},
+    )
+
+
+@pytest.mark.asyncio
+class TestForesightRecordDualStorage:
+    """Test ForesightRecord dual storage functionality"""
+
+    async def test_01_save_syncs_to_kv(self, repository, kv_storage, test_user_id):
+        """Test: save() syncs to KV-Storage"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: ForesightRecord save() syncs to KV-Storage")
+
+        # Create test data
+        test_data = create_test_foresight(user_id=test_user_id)
+        saved = await repository.save(test_data)
+
+        assert saved is not None, "save failed"
+        doc_id = str(saved.id)
+        logger.info(f"✅ Saved: {doc_id}")
+
+        # Verify KV-Storage has the data
+        kv_value = await kv_storage.get(doc_id)
+        assert kv_value is not None, "KV-Storage should have the data"
+
+        # Verify full data in KV
+        from infra_layer.adapters.out.persistence.document.memory.foresight_record import (
+            ForesightRecord,
+        )
+
+        kv_doc = ForesightRecord.model_validate_json(kv_value)
+        assert kv_doc.content == test_data.content
+        assert kv_doc.user_id == test_user_id
+        logger.info("✅ Test passed: save() syncs to KV-Storage")
+
+    async def test_02_get_by_id_reads_from_kv(
+        self, repository, kv_storage, test_user_id
+    ):
+        """Test: get_by_id() reads from KV-Storage"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: ForesightRecord get_by_id() reads from KV-Storage")
+
+        # Create test data
+        test_data = create_test_foresight(
+            user_id=test_user_id, content="Test get from KV"
+        )
+        saved = await repository.save(test_data)
+        assert saved is not None
+        doc_id = str(saved.id)
+        logger.info(f"✅ Created: {doc_id}")
+
+        # Get by ID
+        retrieved = await repository.get_by_id(doc_id)
+        assert retrieved is not None, "get_by_id failed"
+        assert retrieved.content == "Test get from KV"
+        assert retrieved.user_id == test_user_id
+        logger.info("✅ Test passed: get_by_id() reads from KV-Storage")
+
+    async def test_03_find_by_filters_works(
+        self, repository, kv_storage, test_user_id
+    ):
+        """Test: find_by_filters() returns full data from KV"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: ForesightRecord find_by_filters() works with dual storage")
+
+        # Create multiple test records
+        for i in range(3):
+            test_data = create_test_foresight(
+                user_id=test_user_id, content=f"Test foresight {i+1}"
+            )
+            await repository.save(test_data)
+
+        # Query by user_id
+        results = await repository.find_by_filters(user_id=test_user_id, limit=10)
+        assert len(results) == 3, f"Should return 3 records, got {len(results)}"
+
+        # Verify full data
+        for result in results:
+            assert result.content is not None
+            assert result.user_id == test_user_id
+            assert result.extend is not None  # Full data field
+
+        logger.info("✅ Test passed: find_by_filters() returns full data")
+
+    async def test_04_delete_by_id_removes_from_kv(
+        self, repository, kv_storage, test_user_id
+    ):
+        """Test: delete_by_id() removes from KV-Storage"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: ForesightRecord delete_by_id() removes from KV-Storage")
+
+        # Create test data
+        test_data = create_test_foresight(user_id=test_user_id)
+        saved = await repository.save(test_data)
+        doc_id = str(saved.id)
+
+        # Verify KV has data
+        kv_value = await kv_storage.get(doc_id)
+        assert kv_value is not None
+
+        # Delete
+        success = await repository.delete_by_id(doc_id)
+        assert success, "delete_by_id should return True"
+
+        # Verify KV removed
+        kv_value = await kv_storage.get(doc_id)
+        assert kv_value is None, "KV-Storage should not have the data after delete"
+
+        logger.info("✅ Test passed: delete_by_id() removes from KV-Storage")
+
+    async def test_05_get_by_parent_id_works(
+        self, repository, kv_storage, test_user_id
+    ):
+        """Test: get_by_parent_id() returns full data from KV"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: ForesightRecord get_by_parent_id() works")
+
+        parent_id = f"parent_{uuid.uuid4().hex[:8]}"
+
+        # Create multiple records with same parent_id
+        for i in range(3):
+            test_data = create_test_foresight(
+                user_id=test_user_id,
+                content=f"Test foresight {i+1}",
+                parent_id=parent_id,
+            )
+            await repository.save(test_data)
+
+        # Query by parent_id
+        results = await repository.get_by_parent_id(parent_id)
+        assert len(results) == 3, f"Should return 3 records, got {len(results)}"
+
+        # Verify full data
+        for result in results:
+            assert result.parent_id == parent_id
+            assert result.content is not None
+
+        logger.info("✅ Test passed: get_by_parent_id() returns full data")
+
+    async def test_06_delete_by_parent_id_removes_from_kv(
+        self, repository, kv_storage, test_user_id
+    ):
+        """Test: delete_by_parent_id() removes from KV-Storage"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: ForesightRecord delete_by_parent_id() removes from KV")
+
+        parent_id = f"parent_{uuid.uuid4().hex[:8]}"
+
+        # Create multiple records with same parent_id
+        doc_ids = []
+        for i in range(3):
+            test_data = create_test_foresight(
+                user_id=test_user_id, parent_id=parent_id
+            )
+            saved = await repository.save(test_data)
+            doc_ids.append(str(saved.id))
+
+        # Verify KV has all data
+        for doc_id in doc_ids:
+            kv_value = await kv_storage.get(doc_id)
+            assert kv_value is not None
+
+        # Delete by parent_id
+        deleted_count = await repository.delete_by_parent_id(parent_id)
+        assert deleted_count == 3, f"Should delete 3 records, got {deleted_count}"
+
+        # Verify KV removed all
+        for doc_id in doc_ids:
+            kv_value = await kv_storage.get(doc_id)
+            assert (
+                kv_value is None
+            ), f"KV-Storage should not have {doc_id} after delete"
+
+        logger.info("✅ Test passed: delete_by_parent_id() removes from KV")
+
+    async def test_07_find_with_time_range(
+        self, repository, kv_storage, test_user_id
+    ):
+        """Test: find_by_filters() with time range works correctly"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: ForesightRecord find_by_filters() with time range")
+
+        now = datetime.now()
+
+        # Create records with different time ranges
+        time_ranges = [
+            (now - timedelta(days=5), now - timedelta(days=3)),  # Old, should not match
+            (now - timedelta(days=1), now + timedelta(days=1)),  # Current, should match
+            (now + timedelta(days=1), now + timedelta(days=2)),  # Future, should match
+        ]
+
+        for i, (start, end) in enumerate(time_ranges):
+            test_data = create_test_foresight(
+                user_id=test_user_id,
+                content=f"Test foresight {i+1}",
+                start_time=start.strftime("%Y-%m-%d"),
+                end_time=end.strftime("%Y-%m-%d"),
+            )
+            await repository.save(test_data)
+
+        # Query with time range: foresights that are valid from now onwards
+        # This should match records whose end_time >= now
+        start_time = now
+        results = await repository.find_by_filters(
+            user_id=test_user_id, start_time=start_time
+        )
+
+        assert len(results) == 2, f"Should return 2 records (records 2 and 3), got {len(results)}"
+
+        logger.info("✅ Test passed: find_by_filters() with time range works")
+
+    async def test_08_find_with_group_filter(
+        self, repository, kv_storage, test_user_id, test_group_id
+    ):
+        """Test: find_by_filters() with group_id filter"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: ForesightRecord find_by_filters() with group_id")
+
+        # Create records with and without group_id
+        for i in range(2):
+            test_data = create_test_foresight(
+                user_id=test_user_id,
+                group_id=test_group_id,
+                content=f"Group foresight {i+1}",
+            )
+            await repository.save(test_data)
+
+        for i in range(2):
+            test_data = create_test_foresight(
+                user_id=test_user_id, group_id=None, content=f"Personal foresight {i+1}"
+            )
+            await repository.save(test_data)
+
+        # Query by group_id
+        results = await repository.find_by_filters(
+            user_id=test_user_id, group_id=test_group_id
+        )
+        assert len(results) == 2, f"Should return 2 group records, got {len(results)}"
+
+        for result in results:
+            assert result.group_id == test_group_id
+
+        logger.info("✅ Test passed: find_by_filters() with group_id works")
+
+    async def test_09_pagination_works(self, repository, kv_storage, test_user_id):
+        """Test: find_by_filters() with limit and skip"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info("TEST: ForesightRecord pagination (limit and skip)")
+
+        # Create 10 records
+        for i in range(10):
+            test_data = create_test_foresight(
+                user_id=test_user_id, content=f"Test foresight {i+1}"
+            )
+            await repository.save(test_data)
+
+        # Get first page (5 records)
+        page1 = await repository.find_by_filters(user_id=test_user_id, limit=5)
+        assert len(page1) == 5, f"First page should have 5 records, got {len(page1)}"
+
+        # Get second page (skip 5, limit 5)
+        page2 = await repository.find_by_filters(
+            user_id=test_user_id, skip=5, limit=5
+        )
+        assert len(page2) == 5, f"Second page should have 5 records, got {len(page2)}"
+
+        # Verify no overlap
+        page1_ids = {str(r.id) for r in page1}
+        page2_ids = {str(r.id) for r in page2}
+        assert page1_ids.isdisjoint(page2_ids), "Pages should not overlap"
+
+        logger.info("✅ Test passed: Pagination works correctly")
+
+    async def test_10_projection_model_not_supported(
+        self, repository, kv_storage, test_user_id
+    ):
+        """Test: Projection model is not supported in Lite storage mode"""
+        logger = get_logger()
+        logger.info("=" * 60)
+        logger.info(
+            "TEST: ForesightRecord projection model (not supported in Lite mode)"
+        )
+
+        # Create test data
+        test_data = create_test_foresight(user_id=test_user_id)
+        saved = await repository.save(test_data)
+        doc_id = str(saved.id)
+
+        from infra_layer.adapters.out.persistence.document.memory.foresight_record import (
+            ForesightRecordProjection,
+        )
+
+        # Note: In Lite storage mode, projection is not supported
+        # because we always load full data from KV-Storage
+        # The projection_model parameter is ignored
+        result = await repository.get_by_id(doc_id, model=ForesightRecordProjection)
+
+        # Result should be full ForesightRecord (not projection)
+        assert result is not None
+        # In dual storage mode, we always get full data from KV
+        assert hasattr(result, "vector")  # Full model has vector field
+
+        logger.info(
+            "ℹ️  Note: Projection models are not supported in Lite storage mode"
+        )
+        logger.info("✅ Test passed: Handles projection model gracefully")
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "-s"])

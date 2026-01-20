@@ -145,7 +145,26 @@ class LiteModelExtractor:
         Returns:
             Dict[str, Any]: 只包含索引字段的字典
         """
-        full_data = document.model_dump(mode="python")
+        # Exclude Beanie internal fields that might be ExpressionField objects
+        # These fields should not be serialized before the document is inserted
+        exclude_fields = {'_id', 'id', 'revision_id'}
+
+        try:
+            full_data = document.model_dump(mode="python", exclude=exclude_fields)
+        except Exception as e:
+            # If model_dump fails, try to extract fields manually
+            logger.warning(f"⚠️  model_dump failed, falling back to manual extraction: {e}")
+            full_data = {}
+            for field_name in document.model_fields.keys():
+                if field_name not in exclude_fields:
+                    try:
+                        value = getattr(document, field_name, None)
+                        # Skip ExpressionField objects
+                        if value is not None and 'ExpressionField' not in str(type(value)):
+                            full_data[field_name] = value
+                    except Exception:
+                        pass
+
         lite_data = {}
 
         for field_name in indexed_fields:

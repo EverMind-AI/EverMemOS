@@ -573,11 +573,34 @@ class DocumentInstanceWrapper:
         KV-Storage: Full data (all fields, encrypted)
         """
         async def wrapped_insert(self, **kwargs):
-            # 1. 提取 Lite 数据（只包含索引字段）
-            lite_data = LiteModelExtractor.extract_lite_data(self, indexed_fields)
+            # Debug: Check self's fields
+            logger.debug(f"🔍 Inserting {self.__class__.__name__}, fields: {self.model_fields.keys()}")
 
-            # 2. 保存完整数据到 KV-Storage（在 insert 之前，避免 ID 问题）
-            full_data_for_kv = self.model_dump(mode="python")
+            try:
+                # 1. 提取 Lite 数据（只包含索引字段）
+                lite_data = LiteModelExtractor.extract_lite_data(self, indexed_fields)
+            except Exception as e:
+                logger.error(f"❌ Failed to extract lite data: {e}")
+                logger.error(f"Document type: {type(self)}")
+                logger.error(f"Document __dict__: {self.__dict__.keys()}")
+
+                # Check for ExpressionField in instance
+                for key, value in self.__dict__.items():
+                    logger.error(f"  {key}: {type(value)}")
+
+                import traceback
+                traceback.print_exc()
+                raise
+
+            try:
+                # 2. 保存完整数据到 KV-Storage（在 insert 之前，避免 ID 问题）
+                # Exclude Beanie internal fields
+                full_data_for_kv = self.model_dump(mode="python", exclude={'_id', 'id', 'revision_id'})
+            except Exception as e:
+                logger.error(f"❌ Failed to dump full data: {e}")
+                import traceback
+                traceback.print_exc()
+                raise
 
             # 3. 使用底层 pymongo API 直接插入 Lite 数据到 MongoDB
             mongo_collection = self.get_pymongo_collection()
@@ -598,14 +621,27 @@ class DocumentInstanceWrapper:
                 # 更新 full_data 的 ID
                 full_data_for_kv["id"] = self.id
 
-                # 序列化完整数据
-                full_document = self.__class__.model_validate(full_data_for_kv)
-                kv_value = full_document.model_dump_json()
+                # 直接序列化字典为 JSON（避免重新创建 Document 导致 ExpressionField 问题）
+                import json
+                from bson import ObjectId
+                from datetime import datetime
+
+                def json_serializer(obj):
+                    """Custom JSON serializer for ObjectId and datetime"""
+                    if isinstance(obj, ObjectId):
+                        return str(obj)
+                    elif isinstance(obj, datetime):
+                        return obj.isoformat()
+                    raise TypeError(f"Type {type(obj)} not serializable")
+
+                kv_value = json.dumps(full_data_for_kv, default=json_serializer)
 
                 await kv_storage.put(key=kv_key, value=kv_value)
                 logger.debug(f"💾 MongoDB: Lite ({len(lite_data)} fields), KV: Full ({len(full_data_for_kv)} fields) - {kv_key}")
             except Exception as e:
                 logger.warning(f"⚠️  Failed to sync full data to KV-Storage: {e}")
+                import traceback
+                traceback.print_exc()
 
             # 6. 返回 document 对象（Beanie 的 insert 返回 self）
             return self
@@ -628,56 +664,94 @@ class DocumentInstanceWrapper:
                 logger.warning("save() called on document without ID, should use insert()")
                 return await self.insert(**kwargs)
 
-            # 1. 提取 Lite 数据
-            lite_data = LiteModelExtractor.extract_lite_data(self, indexed_fields)
-
-            # 2. 保存完整数据
-            full_data = self.model_dump(mode="python")
-
-            # 3. 使用底层 pymongo API 更新 MongoDB（只更新 Lite 字段）
-            mongo_collection = self.get_pymongo_collection()
-            session = kwargs.get("session", None)
-
-            # 使用 replace_one 替换整个文档为 Lite 数据
-            from bson import ObjectId
-            await mongo_collection.replace_one(
-                {"_id": ObjectId(self.id)},
-                lite_data,
-                session=session
-            )
-
-            # 4. 将完整数据存入 KV-Storage
             try:
-                kv_key = str(self.id)
-                kv_value = self.model_dump_json()
-                await kv_storage.put(key=kv_key, value=kv_value)
-                logger.debug(f"💾 MongoDB: Lite ({len(lite_data)} fields), KV: Full ({len(full_data)} fields) - {kv_key}")
-            except Exception as e:
-                logger.warning(f"⚠️  Failed to sync full data to KV-Storage: {e}")
+                # 1. 提取 Lite 数据
+                lite_data = LiteModelExtractor.extract_lite_data(self, indexed_fields)
 
-            # 5. 返回 document 对象
-            return self
+                # 2. 使用底层 pymongo API 更新 MongoDB（只更新 Lite 字段）
+                mongo_collection = self.get_pymongo_collection()
+                session = kwargs.get("session", None)
+
+                # 使用 replace_one 替换整个文档为 Lite 数据
+                from bson import ObjectId
+                await mongo_collection.replace_one(
+                    {"_id": ObjectId(self.id)},
+                    lite_data,
+                    session=session
+                )
+
+                # 3. 将完整数据存入 KV-Storage
+                try:
+                    kv_key = str(self.id)
+
+                    # 使用 model_dump + json.dumps 避免 ExpressionField 问题
+                    # model_dump_json() 可能失败，因为从 KV 恢复的对象可能有 lazy_model 的 ExpressionField
+                    import json
+                    from bson import ObjectId
+                    from datetime import datetime
+
+                    def json_serializer(obj):
+                        """Custom JSON serializer for ObjectId and datetime"""
+                        if isinstance(obj, ObjectId):
+                            return str(obj)
+                        elif isinstance(obj, datetime):
+                            return obj.isoformat()
+                        raise TypeError(f"Type {type(obj)} not serializable")
+
+                    full_data = self.model_dump(mode="python", exclude={'_id', 'revision_id'})
+                    kv_value = json.dumps(full_data, default=json_serializer)
+
+                    await kv_storage.put(key=kv_key, value=kv_value)
+                    logger.debug(f"💾 MongoDB: Lite ({len(lite_data)} fields), KV: Full - {kv_key}")
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to sync full data to KV-Storage: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+
+                # 4. 返回 document 对象
+                return self
+
+            except Exception as e:
+                logger.error(f"❌ Failed in wrapped_save: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                raise
 
         return wrapped_save
 
     @staticmethod
     def wrap_delete(original_delete, kv_storage: "KVStorageInterface"):
         """
-        Wrap document.delete() - Lite 存储模式下的软删除
+        Wrap document.delete() - 支持软删除和硬删除
 
-        Lite 模式下的软删除行为：
-        - MongoDB：标记 deleted_at（只更新 Lite 数据）
-        - KV-Storage：保留完整数据（不删除）
-
-        原因：MongoDB 只有索引字段，如果删除 KV，恢复时无法重建完整数据
+        行为取决于文档是否有 hard_delete 方法：
+        - 有 hard_delete（软删除文档）：
+          - MongoDB：标记 deleted_at（只更新 Lite 数据）
+          - KV-Storage：保留完整数据（不删除）
+        - 无 hard_delete（普通文档）：
+          - MongoDB：物理删除
+          - KV-Storage：物理删除
         """
         async def wrapped_delete(self, **kwargs):
-            # 调用原始 delete（只在 MongoDB 标记 deleted_at）
+            doc_id = str(self.id) if self.id else None
+
+            # 调用原始 delete
             result = await original_delete(self, **kwargs)
 
-            # Lite 模式下不从 KV 删除，保留完整数据以便恢复
-            # KV中的数据仍然存在，只是MongoDB标记为已删除
-            logger.debug(f"✅ Soft deleted in MongoDB (KV data preserved): {self.id}")
+            # 判断是软删除还是硬删除
+            has_hard_delete = hasattr(self.__class__, "hard_delete")
+
+            if has_hard_delete:
+                # 软删除文档：保留 KV 数据
+                logger.debug(f"✅ Soft deleted in MongoDB (KV data preserved): {self.id}")
+            else:
+                # 硬删除文档：删除 KV 数据
+                if doc_id:
+                    try:
+                        await kv_storage.delete(key=doc_id)
+                        logger.debug(f"✅ Hard deleted from KV-Storage: {doc_id}")
+                    except Exception as e:
+                        logger.warning(f"⚠️  Failed to delete from KV-Storage: {e}")
 
             return result
 
