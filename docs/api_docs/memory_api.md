@@ -117,8 +117,6 @@ Retrieve memories by type with optional filters.
 | `memory_type` | string | No | `episodic_memory` | Memory type |
 | `limit` | integer | No | 40 | Max results (max: 500) |
 | `offset` | integer | No | 0 | Pagination offset |
-| `sort_by` | string | No | - | Sort field (e.g., `created_at`) |
-| `sort_order` | string | No | `desc` | `asc` or `desc` |
 | `start_time` | string | No | - | Filter start time (ISO 8601) |
 | `end_time` | string | No | - | Filter end time (ISO 8601) |
 | `version_range` | array | No | - | Version range `[start, end]` |

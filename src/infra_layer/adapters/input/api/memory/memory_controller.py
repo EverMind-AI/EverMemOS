@@ -255,8 +255,6 @@ class MemoryController(BaseController):
             - event_log: event log (atomic facts)
         - **limit** (optional): Max records to return (default: 10, max: 100)
         - **offset** (optional): Pagination offset (default: 0)
-        - **sort_by** (optional): Sort field
-        - **sort_order** (optional): Sort direction (asc/desc, default: desc)
         - **version_range** (optional): Version range filter [start, end]
         
         ## Use cases:

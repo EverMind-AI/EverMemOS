@@ -71,8 +71,6 @@ def convert_dict_to_fetch_mem_request(data: Dict[str, Any]) -> FetchMemRequest:
             memory_type=memory_type,
             limit=limit,
             offset=offset,
-            sort_by=data.get("sort_by"),
-            sort_order=data.get("sort_order", "desc"),
             version_range=data.get("version_range", None),
             start_time=data.get("start_time"),
             end_time=data.get("end_time"),

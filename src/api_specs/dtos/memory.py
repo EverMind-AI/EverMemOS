@@ -487,16 +487,6 @@ class FetchMemRequest(BaseModel):
 - event_log: event log (atomic facts)""",
         examples=["episodic_memory"],
     )
-    sort_by: Optional[str] = Field(
-        default=None, description="Sort field", examples=["created_at"]
-    )
-    sort_order: str = Field(
-        default="desc",
-        description="""Sort direction, enum values:
-- asc: ascending order
-- desc: descending order (default)""",
-        examples=["desc"],
-    )
     version_range: Optional[Tuple[Optional[str], Optional[str]]] = Field(
         default=None,
         description="Version range filter, format (start, end), closed interval",
