@@ -9,17 +9,25 @@ from core.oxm.constants import MAGIC_ALL
 from infra_layer.adapters.out.persistence.document.memory.episodic_memory import (
     EpisodicMemory,
 )
+from infra_layer.adapters.out.persistence.repository.dual_storage_mixin import (
+    DualStorageMixin,
+)
 from agentic_layer.vectorize_service import get_vectorize_service
 
 logger = get_logger(__name__)
 
 
 @repository("episodic_memory_raw_repository", primary=True)
-class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemory]):
+class EpisodicMemoryRawRepository(
+    DualStorageMixin[EpisodicMemory],  # 添加双存储支持 - 自动拦截 CRUD
+    BaseRepository[EpisodicMemory],
+):
     """
     Episodic memory raw data repository
     Generates vectorized text content and saves it to the database
     Provides CRUD operations and basic query functions for episodic memory.
+
+    Dual Storage: DualStorageMixin automatically syncs documents to KV-Storage
     """
 
     def __init__(self):
@@ -235,13 +243,14 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemory]):
             except Exception as e:
                 logger.error("❌ Failed to synchronize vector: %s", e)
         try:
-            await episodic_memory.insert(session=session)
+            # 使用 Mixin 的 append 方法 - 自动同步到 KV-Storage
+            result = await self.append(episodic_memory, session=session)
             logger.info(
                 "✅ Successfully appended episodic memory: event_id=%s, user_id=%s",
-                episodic_memory.event_id,
-                episodic_memory.user_id,
+                result.event_id,
+                result.user_id,
             )
-            return episodic_memory
+            return result
         except Exception as e:
             logger.error("❌ Failed to append episodic memory: %s", e)
             return None
