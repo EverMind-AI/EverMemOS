@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 
 @repository("episodic_memory_raw_repository", primary=True)
 class EpisodicMemoryRawRepository(
-    DualStorageMixin[EpisodicMemory],  # 添加双存储支持 - 自动拦截 CRUD
+    DualStorageMixin,  # 添加双存储支持 - 自动拦截 MongoDB 调用
     BaseRepository[EpisodicMemory],
 ):
     """
@@ -27,7 +27,7 @@ class EpisodicMemoryRawRepository(
     Generates vectorized text content and saves it to the database
     Provides CRUD operations and basic query functions for episodic memory.
 
-    Dual Storage: DualStorageMixin automatically syncs documents to KV-Storage
+    Dual Storage: DualStorageMixin automatically intercepts all MongoDB operations
     """
 
     def __init__(self):
@@ -243,14 +243,13 @@ class EpisodicMemoryRawRepository(
             except Exception as e:
                 logger.error("❌ Failed to synchronize vector: %s", e)
         try:
-            # 使用 Mixin 的 append 方法 - 自动同步到 KV-Storage
-            result = await self.append(episodic_memory, session=session)
+            await episodic_memory.insert(session=session)
             logger.info(
                 "✅ Successfully appended episodic memory: event_id=%s, user_id=%s",
-                result.event_id,
-                result.user_id,
+                episodic_memory.event_id,
+                episodic_memory.user_id,
             )
-            return result
+            return episodic_memory
         except Exception as e:
             logger.error("❌ Failed to append episodic memory: %s", e)
             return None
