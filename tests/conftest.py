@@ -32,6 +32,7 @@ async def init_database():
     from infra_layer.adapters.out.persistence.document.memory.user_profile_lite import UserProfileLite
     from infra_layer.adapters.out.persistence.document.memory.conversation_meta_lite import ConversationMetaLite
     from infra_layer.adapters.out.persistence.document.memory.conversation_status_lite import ConversationStatusLite
+    from infra_layer.adapters.out.persistence.document.memory.core_memory_lite import CoreMemoryLite
     from infra_layer.adapters.out.persistence.document.request.memory_request_log_lite import MemoryRequestLogLite
     from core.di import get_container
 
@@ -68,6 +69,7 @@ async def init_database():
             UserProfileLite,
             ConversationMetaLite,
             ConversationStatusLite,
+            CoreMemoryLite,
             MemoryRequestLogLite,
         ]
     )
@@ -124,6 +126,12 @@ async def init_database():
     except Exception as e:
         print(f"Warning: Failed to import ConversationStatusRawRepository: {e}")
         ConversationStatusRawRepository = None
+
+    try:
+        from infra_layer.adapters.out.persistence.repository.core_memory_raw_repository import CoreMemoryRawRepository
+    except Exception as e:
+        print(f"Warning: Failed to import CoreMemoryRawRepository: {e}")
+        CoreMemoryRawRepository = None
 
     from infra_layer.adapters.out.persistence.kv_storage.in_memory_kv_storage import InMemoryKVStorage
     from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import KVStorageInterface
@@ -235,6 +243,17 @@ async def init_database():
                 bean_type=ConversationStatusRawRepository,
                 bean_name="ConversationStatusRawRepository",
                 instance=ConversationStatusRawRepository()
+            )
+
+    # Register CoreMemory repository manually (only if not already registered and successfully imported)
+    if CoreMemoryRawRepository is not None:
+        try:
+            container.get_bean("CoreMemoryRawRepository")
+        except:
+            container.register_bean(
+                bean_type=CoreMemoryRawRepository,
+                bean_name="CoreMemoryRawRepository",
+                instance=CoreMemoryRawRepository()
             )
 
     yield

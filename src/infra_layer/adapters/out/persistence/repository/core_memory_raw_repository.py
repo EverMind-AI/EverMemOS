@@ -1,15 +1,24 @@
 from typing import List, Optional, Dict, Any, Tuple, Union
 from pymongo.asynchronous.client_session import AsyncClientSession
+from bson import ObjectId
 from core.observation.logger import get_logger
 from core.di.decorators import repository
 from core.oxm.mongo.base_repository import BaseRepository
-from infra_layer.adapters.out.persistence.document.memory.core_memory import CoreMemory
+from infra_layer.adapters.out.persistence.document.memory.core_memory import (
+    CoreMemory,
+)
+from infra_layer.adapters.out.persistence.document.memory.core_memory_lite import (
+    CoreMemoryLite,
+)
+from infra_layer.adapters.out.persistence.repository.dual_storage_helper import (
+    DualStorageHelper,
+)
 
 logger = get_logger(__name__)
 
 
 @repository("core_memory_raw_repository", primary=True)
-class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
+class CoreMemoryRawRepository(BaseRepository[CoreMemoryLite]):
     """
     Core memory raw data repository
 
@@ -19,7 +28,47 @@ class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
     """
 
     def __init__(self):
-        super().__init__(CoreMemory)
+        super().__init__(CoreMemoryLite)
+        self._dual_storage = DualStorageHelper[CoreMemory, CoreMemoryLite](
+            model_name="CoreMemory", full_model=CoreMemory
+        )
+
+    # ==================== Helper Methods ====================
+
+    def _core_to_lite(self, core: CoreMemory) -> CoreMemoryLite:
+        """
+        Convert full CoreMemory to CoreMemoryLite (only indexed fields).
+
+        Args:
+            core: Full CoreMemory object
+
+        Returns:
+            CoreMemoryLite with only indexed fields
+
+        Note:
+            Audit fields (created_at/updated_at) are not copied here.
+            They will be automatically set by AuditBase during insert/update operations.
+        """
+        return CoreMemoryLite(
+            id=core.id,
+            user_id=core.user_id,
+            version=core.version,
+            is_latest=core.is_latest,
+        )
+
+    async def _core_lite_to_full(
+        self, results: List[CoreMemoryLite]
+    ) -> List[CoreMemory]:
+        """
+        Reconstruct full CoreMemory objects from KV-Storage.
+
+        Args:
+            results: List of CoreMemoryLite from MongoDB query
+
+        Returns:
+            List of full CoreMemory objects from KV-Storage
+        """
+        return await self._dual_storage.reconstruct_batch(results)
 
     # ==================== Version Management Methods ====================
 
@@ -50,10 +99,31 @@ class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
                 return True
 
             # Bulk update: set is_latest to False for all old versions
+            old_versions_lite = await self.model.find(
+                {"user_id": user_id, "version": {"$ne": latest_version.version}},
+                session=session,
+            ).to_list()
+
+            # Update MongoDB lite records
             await self.model.find(
                 {"user_id": user_id, "version": {"$ne": latest_version.version}},
                 session=session,
             ).update_many({"$set": {"is_latest": False}})
+
+            # Sync old versions to KV-Storage
+            kv_storage = self._dual_storage.get_kv_storage()
+            for lite_doc in old_versions_lite:
+                try:
+                    kv_json = await kv_storage.get(key=str(lite_doc.id))
+                    if kv_json:
+                        full_core = CoreMemory.model_validate_json(kv_json)
+                        full_core.is_latest = False
+                        full_core.updated_at = lite_doc.updated_at
+                        await self._dual_storage.write_to_kv(full_core)
+                except Exception as kv_error:
+                    logger.warning(
+                        f"⚠️  Failed to sync is_latest to KV for version {lite_doc.version}: {kv_error}"
+                    )
 
             # Update the latest version's is_latest to True
             if latest_version.is_latest != True:
@@ -64,6 +134,19 @@ class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
                     user_id,
                     latest_version.version,
                 )
+
+                # Sync latest version to KV-Storage
+                try:
+                    kv_json = await kv_storage.get(key=str(latest_version.id))
+                    if kv_json:
+                        full_core = CoreMemory.model_validate_json(kv_json)
+                        full_core.is_latest = True
+                        full_core.updated_at = latest_version.updated_at
+                        await self._dual_storage.write_to_kv(full_core)
+                except Exception as kv_error:
+                    logger.warning(
+                        f"⚠️  Failed to sync latest version to KV: {kv_error}"
+                    )
 
             return True
         except Exception as e:
@@ -125,9 +208,12 @@ class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
                         user_id,
                         result.version,
                     )
+                    # Reconstruct from KV-Storage
+                    full_cores = await self._core_lite_to_full([result])
+                    return full_cores[0] if full_cores else None
                 else:
                     logger.debug("ℹ️  Core memory not found: user_id=%s", user_id)
-                return result
+                    return None
             else:
                 # If version range is specified, get all matching versions
                 results = await self.model.find(
@@ -141,7 +227,9 @@ class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
                     version_range,
                     len(results),
                 )
-                return results
+                # Reconstruct from KV-Storage
+                full_cores = await self._core_lite_to_full(results)
+                return full_cores
         except Exception as e:
             logger.error("❌ Failed to retrieve core memory by user ID: %s", e)
             return None if version_range is None else []
@@ -186,20 +274,43 @@ class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
                 )
                 return None
 
-            # Update document
-            for key, value in update_data.items():
-                if hasattr(existing_doc, key):
-                    setattr(existing_doc, key, value)
+            # Get full object from KV-Storage
+            kv_storage = self._dual_storage.get_kv_storage()
+            kv_json = await kv_storage.get(key=str(existing_doc.id))
+            if not kv_json:
+                logger.error(
+                    "❌ Core memory not found in KV-Storage: id=%s", existing_doc.id
+                )
+                return None
 
-            # Save updated document
+            full_core = CoreMemory.model_validate_json(kv_json)
+
+            # Update full object
+            for key, value in update_data.items():
+                if hasattr(full_core, key):
+                    setattr(full_core, key, value)
+
+            # Update lite object (only indexed fields)
+            if "version" in update_data and hasattr(existing_doc, "version"):
+                existing_doc.version = update_data["version"]
+            if "is_latest" in update_data and hasattr(existing_doc, "is_latest"):
+                existing_doc.is_latest = update_data["is_latest"]
+
+            # Save updated lite document
             await existing_doc.save(session=session)
+
+            # Copy audit fields back to full object
+            full_core.updated_at = existing_doc.updated_at
+
             logger.debug(
                 "✅ Successfully updated core memory by user ID: user_id=%s, version=%s",
                 user_id,
                 existing_doc.version,
             )
 
-            return existing_doc
+            # Write to KV-Storage
+            success = await self._dual_storage.write_to_kv(full_core)
+            return full_core if success else None
         except Exception as e:
             logger.error("❌ Failed to update core memory by user ID: %s", e)
             return None
@@ -227,7 +338,24 @@ class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
                 query_filter["version"] = version
 
             if version is not None:
-                # Delete specific version - delete directly and check deletion count
+                # Delete specific version
+                # 1. Query all IDs to delete first
+                lite_docs = await self.model.find(query_filter, session=session).to_list()
+                doc_ids = [str(doc.id) for doc in lite_docs]
+
+                # 2. Delete from KV-Storage first
+                kv_deleted_count = 0
+                if doc_ids:
+                    kv_storage = self._dual_storage.get_kv_storage()
+                    try:
+                        kv_deleted_count = await kv_storage.batch_delete(keys=doc_ids)
+                        logger.debug(
+                            f"✅ KV-Storage deleted: {kv_deleted_count} records"
+                        )
+                    except Exception as kv_error:
+                        logger.warning(f"⚠️  KV-Storage delete failed: {kv_error}")
+
+                # 3. Delete from MongoDB
                 result = await self.model.find(query_filter, session=session).delete()
                 deleted_count = (
                     result.deleted_count if hasattr(result, 'deleted_count') else 0
@@ -250,6 +378,23 @@ class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
                     )
             else:
                 # Delete all versions
+                # 1. Query all IDs to delete first
+                lite_docs = await self.model.find(query_filter, session=session).to_list()
+                doc_ids = [str(doc.id) for doc in lite_docs]
+
+                # 2. Delete from KV-Storage first
+                kv_deleted_count = 0
+                if doc_ids:
+                    kv_storage = self._dual_storage.get_kv_storage()
+                    try:
+                        kv_deleted_count = await kv_storage.batch_delete(keys=doc_ids)
+                        logger.debug(
+                            f"✅ KV-Storage deleted: {kv_deleted_count} records"
+                        )
+                    except Exception as kv_error:
+                        logger.warning(f"⚠️  KV-Storage delete failed: {kv_error}")
+
+                # 3. Delete from MongoDB
                 result = await self.model.find(query_filter, session=session).delete()
                 deleted_count = (
                     result.deleted_count if hasattr(result, 'deleted_count') else 0
@@ -311,21 +456,48 @@ class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
 
             if existing_doc:
                 # Update existing record
+                # Get full object from KV-Storage
+                kv_storage = self._dual_storage.get_kv_storage()
+                kv_json = await kv_storage.get(key=str(existing_doc.id))
+                if not kv_json:
+                    logger.error(
+                        "❌ Core memory not found in KV-Storage: id=%s", existing_doc.id
+                    )
+                    return None
+
+                full_core = CoreMemory.model_validate_json(kv_json)
+
+                # Update full object
                 for key, value in update_data.items():
-                    if hasattr(existing_doc, key):
-                        setattr(existing_doc, key, value)
+                    if hasattr(full_core, key):
+                        setattr(full_core, key, value)
+
+                # Update lite object (only indexed fields)
+                if "version" in update_data and hasattr(existing_doc, "version"):
+                    existing_doc.version = update_data["version"]
+                if "is_latest" in update_data and hasattr(existing_doc, "is_latest"):
+                    existing_doc.is_latest = update_data["is_latest"]
+
+                # Save updated lite document
                 await existing_doc.save(session=session)
+
+                # Copy audit fields back to full object
+                full_core.updated_at = existing_doc.updated_at
+
                 logger.debug(
                     "✅ Successfully updated existing core memory: user_id=%s, version=%s",
                     user_id,
                     existing_doc.version,
                 )
 
+                # Write to KV-Storage
+                await self._dual_storage.write_to_kv(full_core)
+
                 # If version was updated, ensure latest flag is correct
                 if version is not None:
                     await self.ensure_latest(user_id, session)
 
-                return existing_doc
+                return full_core
             else:
                 # When creating a new record, version must be provided
                 if version is None:
@@ -337,19 +509,31 @@ class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
                         f"Version field must be provided when creating new core memory: user_id={user_id}"
                     )
 
-                # Create new record
-                new_doc = CoreMemory(user_id=user_id, **update_data)
-                await new_doc.create(session=session)
+                # Create new record (update_data should already contain user_id)
+                new_core = CoreMemory(**update_data)
+
+                # 1. Write CoreMemoryLite to MongoDB (indexed fields only)
+                core_lite = self._core_to_lite(new_core)
+                await core_lite.insert(session=session)
+
+                # Copy generated ID and audit fields back to full CoreMemory
+                new_core.id = core_lite.id
+                new_core.created_at = core_lite.created_at
+                new_core.updated_at = core_lite.updated_at
+
                 logger.info(
                     "✅ Successfully created new core memory: user_id=%s, version=%s",
                     user_id,
-                    new_doc.version,
+                    new_core.version,
                 )
+
+                # 2. Write to KV-Storage (always full CoreMemory)
+                success = await self._dual_storage.write_to_kv(new_core)
 
                 # After creation, ensure latest version flag is correct
                 await self.ensure_latest(user_id, session)
 
-                return new_doc
+                return new_core if success else None
         except ValueError:
             # Re-raise ValueError, do not catch it in Exception
             raise
@@ -440,7 +624,9 @@ class CoreMemoryRawRepository(BaseRepository[CoreMemory]):
                 only_latest,
                 len(results),
             )
-            return results
+            # Reconstruct from KV-Storage
+            full_cores = await self._core_lite_to_full(results)
+            return full_cores
         except Exception as e:
             logger.error("❌ Failed to retrieve core memory by user ID list: %s", e)
             return []
