@@ -19,12 +19,18 @@ from infra_layer.adapters.out.persistence.document.memory.memcell import (
     MemCell,
     DataTypeEnum,
 )
+from infra_layer.adapters.out.persistence.repository.dual_storage_mixin import (
+    DualStorageMixin,
+)
 
 logger = get_logger(__name__)
 
 
 @repository("memcell_raw_repository", primary=True)
-class MemCellRawRepository(BaseRepository[MemCell]):
+class MemCellRawRepository(
+    DualStorageMixin,  # 添加双存储支持 - 自动拦截 MongoDB 调用
+    BaseRepository[MemCell],
+):
     """
     MemCell Native CRUD Repository
 
@@ -34,6 +40,8 @@ class MemCellRawRepository(BaseRepository[MemCell]):
     - Batch operations
     - Statistics and aggregation queries
     - Transaction management (inherited from BaseRepository)
+
+    Dual Storage: DualStorageMixin automatically intercepts all MongoDB operations
     """
 
     def __init__(self):

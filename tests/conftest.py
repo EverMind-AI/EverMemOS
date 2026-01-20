@@ -28,6 +28,9 @@ async def init_database():
     from infra_layer.adapters.out.persistence.document.memory.episodic_memory import (
         EpisodicMemory,
     )
+    from infra_layer.adapters.out.persistence.document.memory.memcell import (
+        MemCell,
+    )
     from core.di import get_container
 
     # Load environment variables from .env file
@@ -55,6 +58,7 @@ async def init_database():
         database=database,
         document_models=[
             EpisodicMemory,
+            MemCell,
         ]
     )
 
@@ -69,6 +73,14 @@ async def init_database():
     except ImportError as e:
         print(f"Warning: Failed to import EpisodicMemoryRawRepository: {e}")
         EpisodicMemoryRawRepository = None
+
+    try:
+        from infra_layer.adapters.out.persistence.repository.memcell_raw_repository import (
+            MemCellRawRepository,
+        )
+    except ImportError as e:
+        print(f"Warning: Failed to import MemCellRawRepository: {e}")
+        MemCellRawRepository = None
 
     # Import KV-Storage
     from infra_layer.adapters.out.persistence.kv_storage.in_memory_kv_storage import (
@@ -98,6 +110,17 @@ async def init_database():
                 bean_type=EpisodicMemoryRawRepository,
                 bean_name="EpisodicMemoryRawRepository",
                 instance=EpisodicMemoryRawRepository()
+            )
+
+    # Register MemCell repository
+    if MemCellRawRepository is not None:
+        try:
+            container.get_bean("MemCellRawRepository")
+        except:
+            container.register_bean(
+                bean_type=MemCellRawRepository,
+                bean_name="MemCellRawRepository",
+                instance=MemCellRawRepository()
             )
 
     yield
