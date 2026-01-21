@@ -125,7 +125,6 @@ class TestConversationMetaDualStorage:
         assert retrieved.name == "Test Conversation 2"
         logger.info("✅ Test passed: get_by_group_id() reads from KV-Storage")
 
-    @pytest.mark.skip(reason="Skipped due to stale data in test database - KV miss from previous test runs")
     async def test_03_list_by_scene_works(self, repository, kv_storage, test_group_id):
         """Test: list_by_scene() returns full data from KV"""
         logger = get_logger()
@@ -133,27 +132,41 @@ class TestConversationMetaDualStorage:
         logger.info("TEST: ConversationMeta list_by_scene() works with dual storage")
 
         # Create multiple test records with same scene
+        created_ids = []
         for i in range(3):
             test_data = create_test_conversation_meta(
                 group_id=f"{test_group_id}_{i}",
                 scene=ScenarioType.GROUP_CHAT.value,
                 name=f"Test Conversation {i}",
             )
-            await repository.create_conversation_meta(test_data)
+            created = await repository.create_conversation_meta(test_data)
+            if created:
+                created_ids.append(created.id)
 
-        # Query by scene
-        results = await repository.list_by_scene(scene=ScenarioType.GROUP_CHAT.value, limit=10)
-        assert len(results) >= 3, f"Should return at least 3 records, got {len(results)}"
+        # Query by scene - only verify the records we just created
+        results = await repository.list_by_scene(scene=ScenarioType.GROUP_CHAT.value, limit=100)
 
-        # Verify full data
+        # Filter to only our test records (by matching group_id prefix)
+        test_results = [r for r in results if r.group_id and r.group_id.startswith(test_group_id)]
+
+        assert len(test_results) >= 3, f"Should return at least 3 test records, got {len(test_results)}"
+
+        # Verify full data for our test records
         found_count = 0
-        for result in results:
-            if result.group_id and result.group_id.startswith(test_group_id):
+        for result in test_results:
+            if result.group_id.startswith(test_group_id):
                 found_count += 1
                 assert result.scene == ScenarioType.GROUP_CHAT.value
                 assert result.name is not None
+                logger.info(f"  Found test record: {result.group_id} - {result.name}")
 
         assert found_count == 3, f"Should find 3 test records, found {found_count}"
+
+        # Clean up test data
+        for result in test_results:
+            if result.group_id:
+                await repository.delete_by_group_id(result.group_id)
+
         logger.info("✅ Test passed: list_by_scene() returns full data")
 
     async def test_04_update_by_group_id_syncs_to_kv(
@@ -263,73 +276,120 @@ class TestConversationMetaDualStorage:
 
         logger.info("✅ Test passed: delete_by_group_id() removes from KV-Storage")
 
-    @pytest.mark.skip(reason="Skipped due to stale data in test database - unique index on group_id=None")
     async def test_07_default_config_works(self, repository, kv_storage):
         """Test: Default configuration (group_id=None) works with dual storage"""
         logger = get_logger()
         logger.info("=" * 60)
         logger.info("TEST: ConversationMeta default config works with dual storage")
 
-        # Clean up any existing default config first (due to unique index on group_id)
-        existing = await repository.get_by_group_id(None)
-        if existing:
-            await repository.delete_by_group_id(None)
-            logger.info("Cleaned up existing default config")
+        # Clean up any existing default config using direct MongoDB access
+        # This avoids the KV miss issue when old data exists in MongoDB but not in KV
+        try:
+            from infra_layer.adapters.out.persistence.document.memory.conversation_meta import (
+                ConversationMeta,
+            )
+
+            # Use Beanie's find().delete() to bypass Repository proxy
+            delete_result = await ConversationMeta.find({"group_id": None}).delete()
+            if delete_result and delete_result.deleted_count > 0:
+                logger.info(f"Cleaned up {delete_result.deleted_count} existing default config(s)")
+
+            # Wait a moment for deletion to complete
+            import asyncio
+            await asyncio.sleep(0.1)
+        except Exception as e:
+            logger.warning(f"Failed to clean up existing default config: {e}")
 
         # Create default config (group_id=None)
         test_data = create_test_conversation_meta(
-            group_id=None, name="Default Conversation"
+            group_id=None, name="Default Conversation Test07"
         )
-        created = await repository.create_conversation_meta(test_data)
-        assert created is not None
-        doc_id = str(created.id)
 
-        # Verify KV has data
-        kv_value = await kv_storage.get(doc_id)
-        assert kv_value is not None
+        try:
+            created = await repository.create_conversation_meta(test_data)
+            assert created is not None, "Failed to create default config"
+            doc_id = str(created.id)
 
-        # Get default config
-        retrieved = await repository.get_by_group_id(None)
-        assert retrieved is not None
-        assert retrieved.group_id is None
-        assert retrieved.name == "Default Conversation"
+            # Verify KV has data
+            kv_value = await kv_storage.get(doc_id)
+            assert kv_value is not None, "KV should have default config"
 
-        # Clean up
-        await repository.delete_by_group_id(None)
+            # Get default config
+            retrieved = await repository.get_by_group_id(None)
+            assert retrieved is not None, "Should retrieve default config"
+            assert retrieved.group_id is None, "group_id should be None"
+            assert "Default Conversation Test07" in retrieved.name, f"Name mismatch: {retrieved.name}"
 
-        logger.info("✅ Test passed: Default config works with dual storage")
+            logger.info("✅ Test passed: Default config works with dual storage")
 
-    @pytest.mark.skip(reason="Skipped due to stale data in test database - unique index on group_id=None")
+        finally:
+            # Clean up using direct MongoDB access
+            try:
+                from infra_layer.adapters.out.persistence.document.memory.conversation_meta import (
+                    ConversationMeta,
+                )
+
+                await ConversationMeta.find({"group_id": None}).delete()
+                logger.info("Cleaned up test default config")
+            except Exception as e:
+                logger.warning(f"Failed to clean up test default config: {e}")
+
     async def test_08_fallback_to_default_works(self, repository, kv_storage):
         """Test: Fallback to default config works with dual storage"""
         logger = get_logger()
         logger.info("=" * 60)
         logger.info("TEST: ConversationMeta fallback to default works")
 
-        # Clean up any existing default config first
-        existing = await repository.get_by_group_id(None)
-        if existing:
-            await repository.delete_by_group_id(None)
-            logger.info("Cleaned up existing default config")
+        # Clean up any existing default config using direct MongoDB access
+        try:
+            from infra_layer.adapters.out.persistence.document.memory.conversation_meta import (
+                ConversationMeta,
+            )
+
+            # Use Beanie's find().delete() to bypass Repository proxy
+            delete_result = await ConversationMeta.find({"group_id": None}).delete()
+            if delete_result and delete_result.deleted_count > 0:
+                logger.info(f"Cleaned up {delete_result.deleted_count} existing default config(s)")
+
+            import asyncio
+            await asyncio.sleep(0.1)
+        except Exception as e:
+            logger.warning(f"Failed to clean up existing default config: {e}")
 
         # Create default config
         default_data = create_test_conversation_meta(
-            group_id=None, name="Fallback Default Conversation"
+            group_id=None, name="Fallback Default Conversation Test08"
         )
-        created_default = await repository.create_conversation_meta(default_data)
-        assert created_default is not None
 
-        # Try to get non-existent group_id, should fallback to default
-        non_existent_group_id = f"non_existent_{uuid.uuid4().hex[:8]}"
-        retrieved = await repository.get_by_group_id(non_existent_group_id)
-        assert retrieved is not None, "Should fallback to default config"
-        assert retrieved.group_id is None
-        assert retrieved.name == "Fallback Default Conversation"
+        try:
+            created_default = await repository.create_conversation_meta(default_data)
+            assert created_default is not None, "Failed to create default config"
+            doc_id = str(created_default.id)
 
-        # Clean up
-        await repository.delete_by_group_id(None)
+            # Verify KV has data
+            kv_value = await kv_storage.get(doc_id)
+            assert kv_value is not None, "KV should have default config"
 
-        logger.info("✅ Test passed: Fallback to default works")
+            # Try to get non-existent group_id, should fallback to default
+            non_existent_group_id = f"non_existent_{uuid.uuid4().hex[:8]}"
+            retrieved = await repository.get_by_group_id(non_existent_group_id)
+            assert retrieved is not None, "Should fallback to default config"
+            assert retrieved.group_id is None, "group_id should be None for default config"
+            assert "Fallback Default Conversation Test08" in retrieved.name, f"Name mismatch: {retrieved.name}"
+
+            logger.info("✅ Test passed: Fallback to default works")
+
+        finally:
+            # Clean up using direct MongoDB access
+            try:
+                from infra_layer.adapters.out.persistence.document.memory.conversation_meta import (
+                    ConversationMeta,
+                )
+
+                await ConversationMeta.find({"group_id": None}).delete()
+                logger.info("Cleaned up test default config")
+            except Exception as e:
+                logger.warning(f"Failed to clean up test default config: {e}")
 
     async def test_09_scene_validation_works(self, repository, test_group_id):
         """Test: Scene validation works correctly"""
