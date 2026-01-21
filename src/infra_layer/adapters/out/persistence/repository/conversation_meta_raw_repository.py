@@ -330,24 +330,16 @@ class ConversationMetaRawRepository(
             Whether deletion was successful
         """
         try:
-            # First find the document
-            doc = await self.model.find_one(
+            result = await self.model.find(
                 {"group_id": group_id}, session=session
-            )
-            if doc:
-                # Then delete it
-                await doc.delete(session=session)
+            ).delete()
+            if result and result.deleted_count > 0:
                 logger.info(
                     "✅ Successfully deleted conversation metadata: group_id=%s",
                     group_id,
                 )
                 return True
-            else:
-                logger.warning(
-                    "⚠️  Conversation metadata not found for deletion: group_id=%s",
-                    group_id,
-                )
-                return False
+            return False
         except Exception as e:
             logger.error("❌ Failed to delete conversation metadata: %s", e)
             return False
