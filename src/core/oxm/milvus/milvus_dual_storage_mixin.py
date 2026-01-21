@@ -130,15 +130,22 @@ class MilvusDualStorageMixin:
 
     def _get_collection_name(self) -> str:
         """
-        Get Milvus collection name
+        Get Milvus collection base name (for KV key prefix)
+
+        Prefer base name without tenant suffix for logical KV keys.
 
         Try in order:
-        1. self.collection.collection.name (AsyncCollection)
-        2. self.model.collection_name (if exists)
-        3. self.model.__name__.lower() (fallback)
+        1. self.model._COLLECTION_NAME (base name without suffix)
+        2. self.collection.collection.name (full name with suffix)
+        3. self.model.collection_name (if exists)
+        4. self.model.__name__.lower() (fallback)
         """
         try:
-            # Try AsyncCollection name
+            # Try to get base collection name (without tenant suffix)
+            if hasattr(self, "model") and hasattr(self.model, "_COLLECTION_NAME"):
+                return self.model._COLLECTION_NAME
+
+            # Try AsyncCollection name (may have suffix)
             if hasattr(self, "collection") and hasattr(self.collection, "collection"):
                 if hasattr(self.collection.collection, "name"):
                     return self.collection.collection.name

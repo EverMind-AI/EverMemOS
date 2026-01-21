@@ -265,32 +265,29 @@ class EventLogMilvusRepository(
                     keep = hit.score >= threshold
 
                     if keep:
-                        # Parse metadata
-                        metadata_json = hit.entity.get("metadata", "{}")
-                        metadata = json.loads(metadata_json) if metadata_json else {}
+                        # Start with all fields from entity (includes KV-enhanced fields)
+                        result = dict(hit.entity)
 
-                        # Parse search_content (unified as JSON array format)
-                        search_content_raw = hit.entity.get("search_content", "[]")
-                        search_content = (
-                            json.loads(search_content_raw) if search_content_raw else []
-                        )
+                        # Add score
+                        result["score"] = float(hit.score)
 
-                        # Build result
-                        result = {
-                            "id": hit.entity.get("id"),
-                            "score": float(hit.score),
-                            "user_id": hit.entity.get("user_id"),
-                            "group_id": hit.entity.get("group_id"),
-                            "parent_type": hit.entity.get("parent_type"),
-                            "parent_id": hit.entity.get("parent_id"),
-                            "event_type": hit.entity.get("event_type"),
-                            "timestamp": datetime.fromtimestamp(
-                                hit.entity.get("timestamp", 0)
-                            ),
-                            "atomic_fact": hit.entity.get("atomic_fact"),
-                            "search_content": search_content,
-                            "metadata": metadata,
-                        }
+                        # Parse metadata if it's a JSON string
+                        metadata_raw = result.get("metadata", "{}")
+                        if isinstance(metadata_raw, str):
+                            result["metadata"] = json.loads(metadata_raw) if metadata_raw else {}
+
+                        # Parse search_content if it's a JSON string (unified as JSON array format)
+                        search_content_raw = result.get("search_content", "[]")
+                        if isinstance(search_content_raw, str):
+                            result["search_content"] = (
+                                json.loads(search_content_raw) if search_content_raw else []
+                            )
+
+                        # Convert timestamp to datetime if it's an int
+                        timestamp_raw = result.get("timestamp")
+                        if isinstance(timestamp_raw, int):
+                            result["timestamp"] = datetime.fromtimestamp(timestamp_raw)
+
                         search_results.append(result)
 
             logger.debug(

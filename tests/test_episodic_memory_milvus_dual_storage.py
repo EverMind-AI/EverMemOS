@@ -55,65 +55,65 @@ async def milvus_repo():
     # Try to get repository instance
     # If Milvus is not available, this will fail and we skip the test
     try:
-        # Create a temporary instance to initialize the collection
+        # Create a temporary instance
         collection_instance = EpisodicMemoryCollection()
+        print(f"Initializing collection: {collection_instance.name}")
 
+        # Step 1: Ensure collection structure exists (schema only, no loading)
+        print("Step 1: Creating collection schema...")
         try:
-            await collection_instance.ensure_loaded()
-        except SchemaNotReadyException:
-            # Collection exists but schema is different
-            # Drop the collection directly using utility
-            print("Milvus collection schema mismatch, dropping old collection...")
-
-            # Get the real collection name (not alias)
+            # Just create the schema, don't load
+            coll_obj = collection_instance.load_collection()
+            print(f"✅ Collection schema created: {coll_obj.name}")
+        except SchemaNotReadyException as e:
+            print(f"Schema mismatch, need to recreate collection: {e}")
+            # Drop and recreate
             from pymilvus import Collection
-            temp_coll = Collection(name=collection_instance.name)
-            real_collection_name = temp_coll.name
-            alias_name = collection_instance.name
-            print(f"Alias: {alias_name}, Real collection: {real_collection_name}")
+            try:
+                temp_coll = Collection(name=collection_instance.name)
+                real_name = temp_coll.name
+                if utility.has_collection(real_name):
+                    utility.drop_collection(real_name)
+                    print(f"Dropped old collection: {real_name}")
+            except:
+                pass
+            # Recreate
+            coll_obj = collection_instance.load_collection()
+            print(f"✅ Collection recreated: {coll_obj.name}")
 
-            # Drop alias first if it exists
-            if alias_name != real_collection_name:
-                try:
-                    utility.drop_alias(alias_name)
-                    print(f"Dropped alias: {alias_name}")
-                except Exception as e:
-                    print(f"Warning: Failed to drop alias: {e}")
-
-            # Then drop the real collection
-            if utility.has_collection(real_collection_name):
-                utility.drop_collection(real_collection_name)
-                print(f"Dropped collection: {real_collection_name}")
-
-            # Now recreate the collection with new schema
-            await collection_instance.ensure_loaded()
-            print("Collection recreated with new schema")
-
-        # Make sure the collection is loaded in memory with indexes
-        print("Ensuring collection is loaded with indexes...")
-
-        # Always try to create index (it will skip if already exists)
+        # Step 2: Create indexes
+        print("Step 2: Creating indexes...")
         try:
-            print("Creating index...")
-            await collection_instance.create_index()
-            print("✅ Index created")
+            collection_instance.ensure_indexes()
+            print("✅ Indexes created")
         except Exception as e:
-            # Index might already exist, that's ok
-            print(f"Index creation info: {e}")
+            print(f"Index creation: {e}")
 
-        # Load the collection into memory
+        # Step 3: Load collection into memory
+        print("Step 3: Loading collection into memory...")
         from pymilvus import Collection
+        import time
+        time.sleep(0.5)  # Wait for indexes to be ready
+
         coll = Collection(name=collection_instance.name)
-
         try:
-            print("Loading collection into memory...")
             coll.load()
-            print("✅ Collection loaded into memory")
+            print("✅ Collection loaded successfully")
         except Exception as e:
-            # Collection might already be loaded
-            print(f"Load info: {e}")
+            if "loaded" in str(e).lower():
+                print("✅ Collection already loaded")
+            else:
+                print(f"Load failed: {e}")
+                raise
 
-        print("✅ Collection ready with indexes loaded")
+        print("✅ Collection initialization complete")
+
+        # Make sure the class-level instance is set
+        # This is needed for Repository to work
+        from core.oxm.milvus.async_collection import AsyncCollection
+        EpisodicMemoryCollection._collection_instance = coll_obj
+        EpisodicMemoryCollection._async_collection_instance = AsyncCollection(coll_obj)
+        print("✅ Class-level collection instances set")
 
         # Now get the repository from DI container
         repo = get_bean_by_type(EpisodicMemoryMilvusRepository)
@@ -287,6 +287,10 @@ class TestEpisodicMemoryMilvusDualStorage:
 
             logger.info(f"✅ Created test data: {entity_id}")
 
+            # Flush to make data searchable immediately
+            await milvus_repo.collection.flush()
+            logger.info("✅ Flushed collection")
+
             # Perform vector search
             query_vector = [0.1] * 1024  # Same as test vector
             results = await milvus_repo.vector_search(
@@ -354,6 +358,10 @@ class TestEpisodicMemoryMilvusDualStorage:
 
             logger.info(f"✅ Created test data with extra fields in KV")
 
+            # Flush to make data searchable immediately
+            await milvus_repo.collection.flush()
+            logger.info("✅ Flushed collection")
+
             # Perform vector search - should auto-load Full data
             query_vector = [0.1] * 1024
             results = await milvus_repo.vector_search(
@@ -391,6 +399,7 @@ class TestEpisodicMemoryMilvusDualStorage:
 
         entity = create_test_entity(test_user_id, test_group_id, with_extra_fields=False)
         entity_id = entity["id"]
+        kv_key = f"milvus:episodic_memory:{entity_id}"
 
         # Create test data
         await milvus_repo.create_and_save_episodic_memory(
@@ -410,6 +419,10 @@ class TestEpisodicMemoryMilvusDualStorage:
 
         logger.info(f"✅ Created test data: {entity_id}")
 
+        # Flush to make data accessible immediately
+        await milvus_repo.collection.flush()
+        logger.info("✅ Flushed collection")
+
         # Verify data exists in both Milvus and KV
         milvus_data = await milvus_repo.get_by_id(entity_id)
         assert milvus_data is not None, "Milvus should have data before delete"
@@ -425,6 +438,10 @@ class TestEpisodicMemoryMilvusDualStorage:
         assert result is True, "Delete should succeed"
 
         logger.info(f"✅ Deleted data: {entity_id}")
+
+        # Flush to make delete visible immediately
+        await milvus_repo.collection.flush()
+        logger.info("✅ Flushed after delete")
 
         # Verify data removed from Milvus
         milvus_data_after = await milvus_repo.get_by_id(entity_id)
@@ -447,6 +464,7 @@ class TestEpisodicMemoryMilvusDualStorage:
         # Create entity with extra fields
         entity = create_test_entity(test_user_id, test_group_id, with_extra_fields=True)
         entity_id = entity["id"]
+        kv_key = f"milvus:episodic_memory:{entity_id}"
 
         try:
             # Save entity
@@ -467,6 +485,10 @@ class TestEpisodicMemoryMilvusDualStorage:
 
             logger.info(f"✅ Created entity: {entity_id}")
 
+            # Flush to make data accessible immediately
+            await milvus_repo.collection.flush()
+            logger.info("✅ Flushed collection")
+
             # Get data from Milvus
             milvus_data = await milvus_repo.get_by_id(entity_id)
             assert milvus_data is not None, "Milvus should have data"
@@ -480,7 +502,6 @@ class TestEpisodicMemoryMilvusDualStorage:
             logger.info("✅ Milvus has Lite fields")
 
             # Get data from KV
-            kv_key = f"milvus:episodic_memory:{entity_id}"
             kv_value = await kv_storage.get(kv_key)
             assert kv_value is not None, "KV should have data"
 
