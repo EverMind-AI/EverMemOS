@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 
 @repository("cluster_state_raw_repository", primary=True)
 class ClusterStateRawRepository(
-    DualStorageMixin,  # 添加双存储支持 - 自动拦截 MongoDB 调用
+    DualStorageMixin,  # Add dual storage support - automatically intercepts MongoDB calls
     BaseRepository[ClusterState],
 ):
     """
@@ -33,6 +33,8 @@ class ClusterStateRawRepository(
     - load_cluster_state(group_id) -> Optional[Dict]
     - get_cluster_assignments(group_id) -> Dict[str, str]
     - clear(group_id) -> bool
+
+    Dual Storage: DualStorageMixin automatically intercepts all MongoDB operations
     """
 
     def __init__(self):
@@ -75,34 +77,12 @@ class ClusterStateRawRepository(
             existing = await self.model.find_one({"group_id": group_id})
 
             if existing:
-                # Merge state with existing document data
-                existing_data = existing.model_dump(exclude={"id", "revision_id"})
-                existing_data.update(state)
-                existing_data["group_id"] = group_id  # Ensure group_id is set
-
-                # Create new document with merged data, preserving ID
-                doc_id = existing.id
-                cluster_state = ClusterState(**existing_data)
-                cluster_state.id = doc_id
-
-                # Delete old and insert new to work around save() issue
-                await existing.delete()
-                # Use raw insert bypassing Beanie's ID generation
-                await cluster_state.get_pymongo_collection().insert_one(
-                    cluster_state.model_dump(by_alias=True, exclude={"revision_id"})
-                )
-
-                # Sync to KV
-                from core.di import get_bean_by_type
-                from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import KVStorageInterface
-                import json
-                kv_storage = get_bean_by_type(KVStorageInterface)
-                # Use model_dump and manual JSON conversion to avoid ExpressionField issues
-                data_dict = cluster_state.model_dump(mode="json", exclude={"revision_id"})
-                await kv_storage.put(key=str(doc_id), value=json.dumps(data_dict))
-
+                for key, value in state.items():
+                    if hasattr(existing, key):
+                        setattr(existing, key, value)
+                await existing.save()
                 logger.debug(f"Updated cluster state: group_id={group_id}")
-                return cluster_state
+                return existing
             else:
                 state["group_id"] = group_id
                 cluster_state = ClusterState(**state)
@@ -142,7 +122,7 @@ class ClusterStateRawRepository(
 
     async def delete_all(self) -> int:
         try:
-            # Get all documents first to delete from KV storage
+            # Get all documents first to ensure KV-Storage deletion via DualStorageMixin
             all_docs = await self.model.find({}).to_list()
             count = 0
             for doc in all_docs:
