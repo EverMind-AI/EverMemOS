@@ -56,6 +56,22 @@ Store a single message into memory.
 | `role` | string | No | `user` (human) or `assistant` (AI) |
 | `refer_list` | array | No | Referenced message IDs |
 
+### Group ID Behavior
+
+When `group_id` and `group_name` are not provided (null), the API automatically creates a default group based on the `sender` field. This enables simpler use cases where correlated memories between multiple senders are not needed.
+
+**When to omit `group_id`:**
+- **Knowledge base ingestion** - Single-source content where sender correlation is not needed
+- **Persona/profile building** - Building memories for a single user without multi-party context
+- **Simple chatbot interactions** - 1:1 conversations where grouping is not required
+
+**When to provide `group_id`:**
+- **Multi-user conversations** - Group chats where multiple participants interact
+- **User + AI assistant** - Conversations between a user and AI where context correlation matters
+- **Project/topic-based organization** - When you want to query memories by logical groupings
+
+Providing a `group_id` enables better episodic memory extraction by giving the system context about related messages across multiple senders. See the [Group Chat Guide](../advanced/GROUP_CHAT_GUIDE.md) for detailed guidance.
+
 ### Example
 
 ```bash

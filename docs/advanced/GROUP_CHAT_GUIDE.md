@@ -33,6 +33,53 @@ This guide covers how to leverage group-based memory management for various use 
 
 ---
 
+## When to Use Group ID
+
+Starting from v1.2.0, `group_id` and `group_name` are **truly optional**. When omitted, the API automatically creates a default group based on the `sender` field.
+
+### Scenarios Where Group ID is NOT Needed
+
+| Use Case | Description |
+|----------|-------------|
+| **Knowledge Base** | Ingesting documents or content from a single source where cross-message correlation isn't needed |
+| **Persona Building** | Building user profiles/personas from individual interactions |
+| **Simple Q&A** | Single-user chatbot interactions without complex context |
+
+**Example without group_id:**
+```json
+{
+  "message_id": "msg_001",
+  "create_time": "2025-01-15T10:00:00+00:00",
+  "sender": "user_001",
+  "content": "I prefer dark roast coffee in the morning"
+}
+```
+
+### Scenarios Where Group ID is Recommended
+
+| Use Case | Description |
+|----------|-------------|
+| **Multi-User Conversations** | Group chats where multiple participants interact and context between messages matters |
+| **User + AI Assistant** | Conversations between a user and AI where you want correlated episodic memories |
+| **Project/Topic Organization** | When you need to query and organize memories by logical groupings |
+| **Meeting Transcripts** | Multi-participant discussions where speaker context is important |
+
+**Why it matters:** Episodic memories are extracted from multiple related messages. When messages share a `group_id`, the system can build richer context by understanding the relationships between messages from different senders. Without a `group_id`, each sender's messages are processed independently.
+
+**Example with group_id:**
+```json
+{
+  "message_id": "msg_001",
+  "create_time": "2025-01-15T10:00:00+00:00",
+  "sender": "user_001",
+  "content": "What should we use for the database?",
+  "group_id": "project_alpha",
+  "group_name": "Project Alpha Discussion"
+}
+```
+
+---
+
 ## Use Cases
 
 ### 1. Team/Department Conversations
@@ -178,7 +225,7 @@ Organize meeting notes and transcripts.
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `group_id` | Yes | Unique identifier for filtering and retrieval |
+| `group_id` | No | Unique identifier for filtering and retrieval (see [When to Use Group ID](#when-to-use-group-id)) |
 | `name` | No | Human-readable group name |
 | `scene` | No | Scene type: `assistant` (1:1 with AI) or `group_chat` (group chat) |
 | `user_details` | No | Participant information for context |
