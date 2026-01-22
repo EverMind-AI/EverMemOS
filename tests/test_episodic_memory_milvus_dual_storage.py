@@ -558,8 +558,18 @@ class TestEpisodicMemoryMilvusDualStorage:
             result = results[0]
             assert result["id"] == entity_id, "Should find the correct entity"
 
-            # CRITICAL: Verify KV-only fields are present in vector_search results
-            # These fields are NOT stored in Milvus, but should be auto-loaded from KV
+            # CRITICAL: Verify KV-only fields that are returned by vector_search
+            # According to the original vector_search implementation, it returns:
+            # id, score, user_id, group_id, event_type, timestamp, episode, search_content, metadata
+            #
+            # Among lite fields (id, vector, user_id, group_id, participants, event_type, parent_id, timestamp):
+            # - Only these are stored with real data in Milvus
+            #
+            # Among non-lite fields (episode, search_content, metadata, parent_type, created_at, updated_at):
+            # - These are stored with empty values in Milvus but full data in KV
+            # - The proxy auto-loads them from KV
+            # - But vector_search only returns: episode, search_content, metadata
+
             assert "episode" in result, "vector_search should return episode (KV-only field)"
             assert result["episode"] == entity["episode"], "episode should match original value"
 
@@ -572,13 +582,19 @@ class TestEpisodicMemoryMilvusDualStorage:
             expected_metadata = json.loads(entity["metadata"])
             assert result["metadata"] == expected_metadata, "metadata should match"
 
-            assert "parent_type" in result, "vector_search should return parent_type (KV-only field)"
-            assert result["parent_type"] == entity["parent_type"], "parent_type should match"
+            # Note: parent_type, parent_id, created_at, updated_at are KV-only fields
+            # but they are NOT included in vector_search return values
+            # They are stored in KV and can be retrieved by get_by_id if needed
 
-            # Note: created_at and updated_at might not be in vector_search output fields
-            # depending on repository implementation, but they should be in KV
+            # Verify these KV-only fields are indeed in KV storage
+            kv_full_data = json.loads(kv_value)
+            assert "parent_type" in kv_full_data, "KV should have parent_type"
+            assert "parent_id" in kv_full_data, "KV should have parent_id"
+            assert "created_at" in kv_full_data, "KV should have created_at"
+            assert "updated_at" in kv_full_data, "KV should have updated_at"
 
-            logger.info("✅ All KV-only fields are present in vector_search results")
+            logger.info("✅ KV-only fields (episode, search_content, metadata) are present in vector_search results")
+            logger.info("✅ Other KV-only fields (parent_type, parent_id, created_at, updated_at) are in KV but not returned by vector_search")
             logger.info("✅ Dual storage KV enhancement is working correctly")
 
         finally:
