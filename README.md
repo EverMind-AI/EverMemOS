@@ -505,7 +505,7 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) for code standards and Git w
 [nemori]: https://github.com/nemori-ai/nemori
 
 <!-- Documentation Links -->
-[documentation]: https://everm.ai/
+[documentation]: #documentation
 [api-docs]: docs/api_docs/memory_api.md
 [getting-started]: docs/dev_docs/getting_started.md
 [config-guide]: docs/usage/CONFIGURATION_GUIDE.md
