@@ -50,73 +50,36 @@ async def milvus_repo():
         EpisodicMemoryMilvusRepository,
     )
     from pymilvus.exceptions import SchemaNotReadyException
-    from pymilvus import utility, connections
+    from pymilvus import utility
 
-    # Try to get repository instance
-    # If Milvus is not available, this will fail and we skip the test
     try:
-        # Create a temporary instance
-        collection_instance = EpisodicMemoryCollection()
-        print(f"Initializing collection: {collection_instance.name}")
+        # Initialize collection using ensure_all() method (same as app startup)
+        collection = EpisodicMemoryCollection()
+        print(f"Initializing collection: {collection.name}")
 
-        # Step 1: Ensure collection structure exists (schema only, no loading)
-        print("Step 1: Creating collection schema...")
         try:
-            # Just create the schema, don't load
-            coll_obj = collection_instance.load_collection()
-            print(f"✅ Collection schema created: {coll_obj.name}")
+            # Use ensure_all() method - same as application startup
+            collection.ensure_all()
+            print(f"✅ Collection '{collection.name}' initialized successfully")
         except SchemaNotReadyException as e:
-            print(f"Schema mismatch, need to recreate collection: {e}")
-            # Drop and recreate
+            # Handle schema mismatch: drop and recreate
+            print(f"⚠️  Schema mismatch, recreating collection: {e}")
             from pymilvus import Collection
             try:
-                temp_coll = Collection(name=collection_instance.name)
+                temp_coll = Collection(name=collection.name)
                 real_name = temp_coll.name
                 if utility.has_collection(real_name):
                     utility.drop_collection(real_name)
-                    print(f"Dropped old collection: {real_name}")
+                    print(f"✅ Dropped old collection: {real_name}")
             except:
                 pass
-            # Recreate
-            coll_obj = collection_instance.load_collection()
-            print(f"✅ Collection recreated: {coll_obj.name}")
+            # Retry initialization after dropping
+            collection.ensure_all()
+            print(f"✅ Collection '{collection.name}' recreated and initialized")
 
-        # Step 2: Create indexes
-        print("Step 2: Creating indexes...")
-        try:
-            collection_instance.ensure_indexes()
-            print("✅ Indexes created")
-        except Exception as e:
-            print(f"Index creation: {e}")
-
-        # Step 3: Load collection into memory
-        print("Step 3: Loading collection into memory...")
-        from pymilvus import Collection
-        import time
-        time.sleep(0.5)  # Wait for indexes to be ready
-
-        coll = Collection(name=collection_instance.name)
-        try:
-            coll.load()
-            print("✅ Collection loaded successfully")
-        except Exception as e:
-            if "loaded" in str(e).lower():
-                print("✅ Collection already loaded")
-            else:
-                print(f"Load failed: {e}")
-                raise
-
-        print("✅ Collection initialization complete")
-
-        # Make sure the class-level instance is set
-        # This is needed for Repository to work
-        from core.oxm.milvus.async_collection import AsyncCollection
-        EpisodicMemoryCollection._collection_instance = coll_obj
-        EpisodicMemoryCollection._async_collection_instance = AsyncCollection(coll_obj)
-        print("✅ Class-level collection instances set")
-
-        # Now get the repository from DI container
+        # Get repository from DI container
         repo = get_bean_by_type(EpisodicMemoryMilvusRepository)
+        print("✅ Repository obtained from DI container")
         return repo
     except Exception as e:
         # If Milvus is not available in test environment, skip the test
