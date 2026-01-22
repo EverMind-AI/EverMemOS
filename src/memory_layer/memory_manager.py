@@ -6,6 +6,7 @@ import asyncio
 from typing import List, Optional
 
 from core.observation.logger import get_logger
+from agentic_layer.metrics.memorize_metrics import record_extract_memory_call
 
 from memory_layer.llm.llm_provider import LLMProvider
 from memory_layer.memcell_extractor.conv_memcell_extractor import ConvMemCellExtractor
@@ -158,39 +159,65 @@ class MemoryManager:
             - PERSONAL_EVENT_LOG: Returns EventLog
             - PROFILE/GROUP_PROFILE: Returns Memory
         """
-        # Dispatch based on memory_type enum
-        match memory_type:
-            case MemoryType.EPISODIC_MEMORY:
-                return await self._extract_episode(memcell, user_id, group_id)
+        start_time = time.perf_counter()
+        memory_type_str = memory_type.value if hasattr(memory_type, 'value') else str(memory_type)
+        result = None
+        status = 'success'
+        
+        try:
+            # Dispatch based on memory_type enum
+            match memory_type:
+                case MemoryType.EPISODIC_MEMORY:
+                    result = await self._extract_episode(memcell, user_id, group_id)
 
-            case MemoryType.FORESIGHT:
-                return await self._extract_foresight(
-                    memcell, user_id=user_id, group_id=group_id
-                )
+                case MemoryType.FORESIGHT:
+                    result = await self._extract_foresight(
+                        memcell, user_id=user_id, group_id=group_id
+                    )
 
-            case MemoryType.EVENT_LOG:
-                return await self._extract_event_log(
-                    memcell, user_id=user_id, group_id=group_id
-                )
+                case MemoryType.EVENT_LOG:
+                    result = await self._extract_event_log(
+                        memcell, user_id=user_id, group_id=group_id
+                    )
 
-            case MemoryType.PROFILE:
-                return await self._extract_profile(
-                    memcell, user_id, group_id, old_memory_list
-                )
+                case MemoryType.PROFILE:
+                    result = await self._extract_profile(
+                        memcell, user_id, group_id, old_memory_list
+                    )
 
-            case MemoryType.GROUP_PROFILE:
-                return await self._extract_group_profile(
-                    memcell,
-                    user_id,
-                    group_id,
-                    group_name,
-                    old_memory_list,
-                    user_organization,
-                )
+                case MemoryType.GROUP_PROFILE:
+                    result = await self._extract_group_profile(
+                        memcell,
+                        user_id,
+                        group_id,
+                        group_name,
+                        old_memory_list,
+                        user_organization,
+                    )
 
-            case _:
-                logger.warning(f"[MemoryManager] Unknown memory_type: {memory_type}")
-                return None
+                case _:
+                    logger.warning(f"[MemoryManager] Unknown memory_type: {memory_type}")
+                    status = 'error'
+                    return None
+            
+            # Determine status based on result
+            if result is None:
+                status = 'empty_result'
+            elif isinstance(result, list) and len(result) == 0:
+                status = 'empty_result'
+            
+            return result
+            
+        except Exception as e:
+            status = 'error'
+            raise
+        finally:
+            duration = time.perf_counter() - start_time
+            record_extract_memory_call(
+                memory_type=memory_type_str,
+                status=status,
+                duration_seconds=duration,
+            )
 
     async def _extract_episode(
         self, memcell: MemCell, user_id: Optional[str], group_id: Optional[str]

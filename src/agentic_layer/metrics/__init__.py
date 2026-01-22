@@ -1,10 +1,11 @@
 """
 Agentic Layer Metrics
 
-Memory retrieval flow metrics including:
+Memory flow metrics including:
 - Vectorize (Embedding) metrics
 - Rerank metrics
 - Retrieve pipeline metrics
+- Memorize pipeline metrics
 """
 
 from .vectorize_metrics import (
@@ -32,6 +33,22 @@ from .retrieve_metrics import (
     RETRIEVE_ERRORS_TOTAL,
 )
 
+from .memorize_metrics import (
+    MEMORIZE_REQUESTS_TOTAL,
+    MEMORIZE_DURATION_SECONDS,
+    MEMORIZE_STAGE_DURATION_SECONDS,
+    MEMORIZE_MEMORIES_EXTRACTED,
+    MEMORIZE_MESSAGES_TOTAL,
+    MEMORIZE_ERRORS_TOTAL,
+    BOUNDARY_DETECTION_TOTAL,
+    BOUNDARY_DETECTION_DURATION_SECONDS,
+    MEMCELL_EXTRACTED_TOTAL,
+    MEMORY_EXTRACTION_STAGE_DURATION_SECONDS,
+    MEMORY_EXTRACTED_TOTAL,
+    EXTRACT_MEMORY_REQUESTS_TOTAL,
+    EXTRACT_MEMORY_DURATION_SECONDS,
+)
+
 __all__ = [
     # Vectorize metrics
     'VECTORIZE_REQUESTS_TOTAL',
@@ -54,5 +71,24 @@ __all__ = [
     'RETRIEVE_RESULTS_COUNT',
     'RETRIEVE_STAGE_DURATION_SECONDS',
     'RETRIEVE_ERRORS_TOTAL',
+    
+    # Memorize metrics
+    'MEMORIZE_REQUESTS_TOTAL',
+    'MEMORIZE_DURATION_SECONDS',
+    'MEMORIZE_STAGE_DURATION_SECONDS',
+    'MEMORIZE_MEMORIES_EXTRACTED',
+    'MEMORIZE_MESSAGES_TOTAL',
+    'MEMORIZE_ERRORS_TOTAL',
+    
+    # Boundary detection metrics
+    'BOUNDARY_DETECTION_TOTAL',
+    'BOUNDARY_DETECTION_DURATION_SECONDS',
+    'MEMCELL_EXTRACTED_TOTAL',
+    
+    # Memory extraction metrics
+    'MEMORY_EXTRACTION_STAGE_DURATION_SECONDS',
+    'MEMORY_EXTRACTED_TOTAL',
+    'EXTRACT_MEMORY_REQUESTS_TOTAL',
+    'EXTRACT_MEMORY_DURATION_SECONDS',
 ]
 

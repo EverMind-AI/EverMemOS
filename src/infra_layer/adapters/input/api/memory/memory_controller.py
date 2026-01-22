@@ -11,6 +11,7 @@ Provides RESTful API routes for:
 
 import json
 import logging
+import time
 from contextlib import suppress
 from fastapi import HTTPException, Request as FastAPIRequest
 
@@ -56,6 +57,13 @@ from service.memory_request_log_service import MemoryRequestLogService
 from service.memcell_delete_service import MemCellDeleteService
 from service.conversation_meta_service import ConversationMetaService
 from api_specs.memory_types import RawDataType
+from agentic_layer.metrics.memorize_metrics import (
+    record_memorize_request,
+    record_memorize_stage,
+    record_memorize_error,
+    record_memorize_message,
+    classify_memorize_error,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -159,10 +167,14 @@ class MemoryController(BaseController):
             HTTPException: When request processing fails
         """
         del request_body  # Used for OpenAPI documentation only
+        start_time = time.perf_counter()
+        memory_count = 0
+        
         try:
             # 1. Get JSON body from request (simple direct format)
             message_data = await request.json()
             logger.info("Received memorize request (single message)")
+            record_memorize_message(status='received', count=1)
 
             # 2. Convert directly to MemorizeRequest (unified single-step conversion)
             logger.info(
@@ -214,8 +226,17 @@ class MemoryController(BaseController):
             # Optimize return message to help users understand runtime status
             if memory_count > 0:
                 message = f"Extracted {memory_count} memories"
+                status = 'extracted'
             else:
                 message = "Message queued, awaiting boundary detection"
+                status = 'accumulated'
+
+            # Record success metrics
+            record_memorize_request(
+                status=status,
+                duration_seconds=time.perf_counter() - start_time,
+                memories_extracted=memory_count,
+            )
 
             return {
                 "status": ErrorStatus.OK.value,
@@ -229,12 +250,30 @@ class MemoryController(BaseController):
 
         except ValueError as e:
             logger.error("memorize request parameter error: %s", e)
+            record_memorize_error(stage='conversion', error_type='validation_error')
+            record_memorize_request(
+                status='error',
+                duration_seconds=time.perf_counter() - start_time,
+                memories_extracted=0,
+            )
             raise HTTPException(status_code=400, detail=str(e)) from e
         except HTTPException:
-            # Re-raise HTTPException
+            # Re-raise HTTPException (already handled errors)
+            record_memorize_request(
+                status='error',
+                duration_seconds=time.perf_counter() - start_time,
+                memories_extracted=0,
+            )
             raise
         except Exception as e:
             logger.error("memorize request processing failed: %s", e, exc_info=True)
+            error_type = classify_memorize_error(e)
+            record_memorize_error(stage='memorize_process', error_type=error_type)
+            record_memorize_request(
+                status='error',
+                duration_seconds=time.perf_counter() - start_time,
+                memories_extracted=0,
+            )
             raise HTTPException(
                 status_code=500, detail="Failed to store memory, please try again later"
             ) from e

@@ -26,6 +26,11 @@ from memory_layer.memcell_extractor.base_memcell_extractor import (
     MemCellExtractRequest,
 )
 from core.observation.logger import get_logger
+from agentic_layer.metrics.memorize_metrics import (
+    record_boundary_detection,
+    record_memcell_extracted,
+)
+import time
 
 logger = get_logger(__name__)
 
@@ -275,6 +280,8 @@ class ConvMemCellExtractor(MemCellExtractor):
         conversation_history: list[dict[str, str]],
         new_messages: list[dict[str, str]],
     ) -> BoundaryDetectionResult:
+        start_time = time.perf_counter()
+        
         if not conversation_history:
             return BoundaryDetectionResult(
                 should_end=False,
@@ -311,13 +318,21 @@ class ConvMemCellExtractor(MemCellExtractor):
                 json_match = re.search(r"\{[^{}]*\}", resp, re.DOTALL)
                 if json_match:
                     data = json.loads(json_match.group())
-                    return BoundaryDetectionResult(
+                    result = BoundaryDetectionResult(
                         should_end=data.get("should_end", False),
                         should_wait=data.get("should_wait", True),
                         reasoning=data.get("reasoning", "No reason provided"),
                         confidence=data.get("confidence", 1.0),
                         topic_summary=data.get("topic_summary", ""),
                     )
+                    # Record success metrics
+                    detection_result = 'should_end' if result.should_end else 'should_wait'
+                    record_boundary_detection(
+                        result=detection_result,
+                        trigger_type='llm',
+                        duration_seconds=time.perf_counter() - start_time,
+                    )
+                    return result
                 else:
                     # JSON parsing failed, retry
                     logger.warning(
@@ -333,6 +348,11 @@ class ConvMemCellExtractor(MemCellExtractor):
         # All retries exhausted, return default result
         logger.error(
             f"[ConversationEpisodeBuilder] All 5 retries exhausted for boundary detection, returning default (should_end=False)"
+        )
+        record_boundary_detection(
+            result='error',
+            trigger_type='llm',
+            duration_seconds=time.perf_counter() - start_time,
         )
         return BoundaryDetectionResult(
             should_end=False,
@@ -410,6 +430,9 @@ class ConvMemCellExtractor(MemCellExtractor):
 
         if needs_force_split and len(history_message_dict_list) >= 2:
             # Force split: create MemCell from history, new message starts next accumulation
+            force_split_start = time.perf_counter()
+            trigger_type = 'token_limit' if total_tokens >= self.hard_token_limit else 'message_limit'
+            
             logger.debug(
                 f"[ConvMemCellExtractor] Force split triggered: "
                 f"tokens={total_tokens}/{self.hard_token_limit}, "
@@ -430,6 +453,14 @@ class ConvMemCellExtractor(MemCellExtractor):
                 participants=participants,
                 type=self.raw_data_type,
             )
+
+            # Record force split metrics
+            record_boundary_detection(
+                result='force_split',
+                trigger_type=trigger_type,
+                duration_seconds=time.perf_counter() - force_split_start,
+            )
+            record_memcell_extracted(trigger_type=trigger_type)
 
             logger.debug(
                 f"✅ Force split MemCell created: event_id={memcell.event_id}, "
@@ -494,6 +525,9 @@ class ConvMemCellExtractor(MemCellExtractor):
                 participants=participants,
                 type=self.raw_data_type,
             )
+
+            # Record MemCell extraction metric
+            record_memcell_extracted(trigger_type='llm')
 
             logger.debug(
                 f"✅ Successfully created basic MemCell: event_id={memcell.event_id}, "
