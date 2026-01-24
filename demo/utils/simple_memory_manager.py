@@ -324,9 +324,11 @@ class SimpleMemoryManager:
             if subject:
                 print(f"         Subject: {subject}")
             if summary:
-                print(f"         Summary: {summary[:60]}...")
+                print(f"         Summary: {summary}")
             if episode:
-                print(f"         Details: {episode[:80]}...")
+                print(f"         Details: {episode}")
+
+            print(f"      mem: {mem}")
 
     async def wait_for_index(self, seconds: int = 10):
         """Wait for index building
