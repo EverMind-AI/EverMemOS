@@ -428,6 +428,14 @@ class DualStorageQueryProxy:
                     modified_count = 0
                 return UpdateResult()
 
+            # 1.5. Auto-set updated_at if document has this field (AuditBase)
+            from common_utils.datetime_utils import get_now_with_timezone
+            if hasattr(self._full_model_class, 'model_fields') and 'updated_at' in self._full_model_class.model_fields:
+                # Add updated_at to $set operator
+                if "$set" not in update_data:
+                    update_data = {"$set": {}}
+                update_data["$set"]["updated_at"] = get_now_with_timezone()
+
             # 2. 执行MongoDB批量更新
             result = await self._mongo_cursor.update_many(update_data, **kwargs)
 
@@ -770,6 +778,14 @@ class DualStorageModelProxy:
                     modified_count = 0
                 return UpdateResult()
 
+            # 2.5. Auto-set updated_at if document has this field (AuditBase)
+            from common_utils.datetime_utils import get_now_with_timezone
+            if hasattr(self._full_model_class, 'model_fields') and 'updated_at' in self._full_model_class.model_fields:
+                # Add updated_at to $set operator
+                if "$set" not in update_data:
+                    update_data = {"$set": {}}
+                update_data["$set"]["updated_at"] = get_now_with_timezone()
+
             # 3. Execute MongoDB batch update using PyMongo
             collection = self._original_model.get_pymongo_collection()
             result = await collection.update_many(filter_query, update_data, **kwargs)
@@ -949,6 +965,95 @@ class DualStorageModelProxy:
             logger.error(f"❌ Failed to restore_many with dual storage: {e}")
             raise
 
+    async def insert_many(
+        self,
+        documents: List[Any],
+        session: Optional[AsyncClientSession] = None,
+        **kwargs
+    ):
+        """
+        Intercept insert_many() - 批量插入并同步 KV-Storage（Lite 存储模式）
+
+        Lite 模式下的批量插入：
+        - MongoDB：只存储 Lite 数据（索引字段）
+        - KV-Storage：存储完整数据（全部字段）
+
+        Args:
+            documents: 要插入的文档列表
+            session: Optional MongoDB session
+            **kwargs: 其他参数
+
+        Returns:
+            InsertManyResult
+        """
+        try:
+            from bson import ObjectId
+            from datetime import datetime
+            import json
+
+            def json_serializer(obj):
+                """Custom JSON serializer for ObjectId and datetime"""
+                if isinstance(obj, ObjectId):
+                    return str(obj)
+                elif isinstance(obj, datetime):
+                    return obj.isoformat()
+                raise TypeError(f"Type {type(obj)} not serializable")
+
+            # 1. 触发 before_event 钩子（批量设置审计字段）
+            if hasattr(self._full_model_class, 'prepare_for_insert_many'):
+                self._full_model_class.prepare_for_insert_many(documents)
+            else:
+                # 手动设置审计字段
+                from common_utils.datetime_utils import get_now_with_timezone
+                now = get_now_with_timezone()
+                for doc in documents:
+                    if hasattr(doc, 'created_at') and doc.created_at is None:
+                        doc.created_at = now
+                    if hasattr(doc, 'updated_at') and doc.updated_at is None:
+                        doc.updated_at = now
+
+            # 2. 提取所有文档的 Lite 数据
+            lite_data_list = []
+            full_data_list = []
+
+            for doc in documents:
+                # 提取 Lite 数据
+                lite_data = LiteModelExtractor.extract_lite_data(doc, self._indexed_fields)
+                lite_data_list.append(lite_data)
+
+                # 保存完整数据（用于 KV-Storage）
+                full_data = doc.model_dump(mode="python", exclude={'_id', 'id', 'revision_id'})
+                full_data_list.append(full_data)
+
+            # 3. 使用 PyMongo 批量插入 Lite 数据到 MongoDB
+            mongo_collection = self._original_model.get_pymongo_collection()
+            insert_result = await mongo_collection.insert_many(lite_data_list, session=session)
+
+            # 4. 将生成的 IDs 赋值给 document 对象
+            for doc, inserted_id in zip(documents, insert_result.inserted_ids):
+                doc.id = inserted_id
+
+            # 5. 批量存储完整数据到 KV-Storage
+            for doc, full_data in zip(documents, full_data_list):
+                try:
+                    kv_key = str(doc.id)
+                    full_data["id"] = doc.id  # 添加生成的 ID
+                    kv_value = json.dumps(full_data, default=json_serializer)
+                    await self._kv_storage.put(key=kv_key, value=kv_value)
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to sync to KV-Storage for {doc.id}: {e}")
+
+            logger.debug(
+                f"💾 insert_many: MongoDB Lite ({len(lite_data_list)} docs), "
+                f"KV Full ({len(full_data_list)} docs)"
+            )
+
+            return insert_result
+
+        except Exception as e:
+            logger.error(f"❌ Failed to insert_many with dual storage: {e}")
+            raise
+
     def __getattr__(self, name):
         """Proxy all other methods to original model"""
         return getattr(self._original_model, name)
@@ -976,6 +1081,14 @@ class DocumentInstanceWrapper:
         async def wrapped_insert(self, **kwargs):
             # Debug: Check self's fields
             logger.debug(f"🔍 Inserting {self.__class__.__name__}, fields: {self.model_fields.keys()}")
+
+            # 0. Trigger Beanie's before_event hooks (e.g., AuditBase.set_created_at)
+            # Since we're using PyMongo directly, we need to manually trigger these hooks
+            if hasattr(self, 'set_created_at'):
+                try:
+                    await self.set_created_at()
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to call set_created_at hook: {e}")
 
             try:
                 # 1. 提取 Lite 数据（只包含索引字段）
@@ -1064,6 +1177,14 @@ class DocumentInstanceWrapper:
                 # 如果没有 ID，应该使用 insert 而不是 save
                 logger.warning("save() called on document without ID, should use insert()")
                 return await self.insert(**kwargs)
+
+            # 0. Trigger Beanie's before_event hooks (e.g., AuditBase.set_updated_at)
+            # Since we're using PyMongo directly, we need to manually trigger these hooks
+            if hasattr(self, 'set_updated_at'):
+                try:
+                    await self.set_updated_at()
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to call set_updated_at hook: {e}")
 
             try:
                 # 1. 提取 Lite 数据
