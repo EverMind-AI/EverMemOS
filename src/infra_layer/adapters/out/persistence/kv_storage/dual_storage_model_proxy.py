@@ -1043,11 +1043,25 @@ class DualStorageModelProxy:
                 except Exception as e:
                     logger.warning(f"⚠️  Failed to sync to KV-Storage for {doc.id}: {e}")
 
+            # 6. CRITICAL: 确保返回的 documents 对象包含完整数据
+            # 因为 PyMongo 直接插入 lite_data 后，documents 对象可能被 Beanie 修改
+            # 需要将 full_data 的所有字段重新设置回 doc 对象
+            for doc, full_data in zip(documents, full_data_list):
+                for field_name, field_value in full_data.items():
+                    # 只设置非特殊字段（排除 _id 等）
+                    if not field_name.startswith('_') and field_name != 'id':
+                        try:
+                            setattr(doc, field_name, field_value)
+                        except Exception:
+                            pass  # 忽略只读字段
+
             logger.debug(
                 f"💾 insert_many: MongoDB Lite ({len(lite_data_list)} docs), "
-                f"KV Full ({len(full_data_list)} docs)"
+                f"KV Full ({len(full_data_list)} docs), restored full data to documents"
             )
 
+            # IMPORTANT: Return InsertManyResult, NOT documents
+            # BaseRepository.create_batch expects InsertManyResult and will handle assigning IDs
             return insert_result
 
         except Exception as e:
