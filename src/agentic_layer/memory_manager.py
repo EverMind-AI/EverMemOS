@@ -784,8 +784,19 @@ class MemoryManager:
         memories, scores, importance_scores, original_data, total_count = (
             await self.group_by_groupid_stratagy(hits, source_type=source_type)
         )
+
+        # Convert Memory objects to dicts for proper Pydantic serialization
+        # memories format: List[Dict[str, List[BaseMemory]]]
+        memories_dict = []
+        for group_dict in memories:
+            converted_group = {}
+            for group_id, memory_list in group_dict.items():
+                # Convert each Memory object to dict
+                converted_group[group_id] = [m.to_dict() for m in memory_list]
+            memories_dict.append(converted_group)
+
         return RetrieveMemResponse(
-            memories=memories,
+            memories=memories_dict,
             scores=scores,
             importance_scores=importance_scores,
             original_data=original_data,

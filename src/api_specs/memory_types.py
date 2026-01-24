@@ -181,7 +181,7 @@ class BaseMemory:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
-            "memory_type": self.memory_type.value if self.memory_type else None,
+            "memory_type": getattr(self.memory_type, 'value', self.memory_type) if self.memory_type else None,
             "user_id": self.user_id,
             "user_name": self.user_name,
             "timestamp": self._format_timestamp(),
@@ -189,7 +189,7 @@ class BaseMemory:
             "group_id": self.group_id,
             "group_name": self.group_name,
             "participants": self.participants,
-            "type": self.type.value if self.type else None,
+            "type": getattr(self.type, 'value', self.type) if self.type else None,
             "keywords": self.keywords,
             "linked_entities": self.linked_entities,
             "extend": self.extend,
