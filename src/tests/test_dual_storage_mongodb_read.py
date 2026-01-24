@@ -4,13 +4,14 @@
 
 本测试完全模仿 sync 脚本的读取方式，验证：
 1. 通过 Repository.model.find().to_list() 读取的数据是否包含完整字段
-2. 4个集合：episodic_memories, event_log_records, foresight_records, conversation_meta
+2. 5个集合：episodic_memories, event_log_records, foresight_records, conversation_meta, memcells
 
 预期结果：
 - episodic_memories: 应包含 subject, summary, episode
 - event_log_records: 应包含 atomic_fact
 - foresight_records: 应包含 content/foresight
 - conversation_meta: 应包含完整数据
+- memcells: 应包含 summary, original_data
 
 这验证了 DualStorageQueryProxy 能正确从 KV-Storage 加载完整数据
 """
@@ -303,6 +304,77 @@ async def test_conversation_meta_read():
         print("⚠️  集合为空，无法测试")
 
 
+async def test_memcell_read():
+    """
+    测试 memcells 集合读取
+
+    完全模仿 sync 脚本的读取方式
+    """
+    print("\n" + "="*80)
+    print("测试 5: MemCell 读取")
+    print("="*80)
+
+    from infra_layer.adapters.out.persistence.repository.memcell_raw_repository import (
+        MemCellRawRepository,
+    )
+
+    # 获取 Repository
+    mongo_repo = get_bean_by_type(MemCellRawRepository)
+
+    # 使用和 sync 脚本完全相同的读取方式
+    # 注意：为了测试新数据，按 created_at 降序排列（最新的数据在前）
+    query = mongo_repo.model.find({}).sort("-created_at")  # Descending order to get newest
+    mongo_docs = await query.limit(3).to_list()
+
+    print(f"\n📊 读取到 {len(mongo_docs)} 条文档")
+
+    if mongo_docs:
+        print("\n检查第一条文档的字段完整性：")
+        doc = mongo_docs[0]
+
+        # 检查关键字段
+        fields_to_check = {
+            "id": getattr(doc, 'id', None),
+            "user_id": getattr(doc, 'user_id', None),
+            "group_id": getattr(doc, 'group_id', None),
+            "timestamp": getattr(doc, 'timestamp', None),
+            "summary": getattr(doc, 'summary', None),
+            "original_data": getattr(doc, 'original_data', None),
+            "subject": getattr(doc, 'subject', None),
+            "episode": getattr(doc, 'episode', None),
+            "participants": getattr(doc, 'participants', None),
+        }
+
+        for field_name, field_value in fields_to_check.items():
+            has_value = field_value is not None
+            value_preview = ""
+            if has_value:
+                if field_name == "original_data":
+                    value_preview = f"(列表长度: {len(field_value)})" if isinstance(field_value, list) else ""
+                elif field_name == "participants":
+                    value_preview = f"(列表长度: {len(field_value)})" if isinstance(field_value, list) else ""
+                elif isinstance(field_value, str) and len(field_value) > 50:
+                    value_preview = f"'{field_value[:50]}...'"
+                else:
+                    value_preview = f"'{field_value}'"
+
+            status = "✅" if has_value else "❌"
+            print(f"  {status} {field_name:20s}: {'有值' if has_value else '空值'} {value_preview}")
+
+        # 关键验证
+        print("\n🎯 关键验证:")
+        has_summary = getattr(doc, 'summary', None) is not None and doc.summary
+        has_original_data = getattr(doc, 'original_data', None) is not None and doc.original_data
+
+        if has_summary or has_original_data:
+            print(f"  ✅ PASS - 包含完整数据字段 (summary: {has_summary}, original_data: {has_original_data})")
+        else:
+            print("  ❌ FAIL - 缺少数据字段！")
+
+    else:
+        print("⚠️  集合为空，无法测试")
+
+
 async def main():
     """主测试函数"""
     print("\n" + "🔬" * 40)
@@ -316,6 +388,7 @@ async def main():
         await test_event_log_read()
         await test_foresight_read()
         await test_conversation_meta_read()
+        await test_memcell_read()
 
         # 最终总结
         print("\n" + "="*80)
