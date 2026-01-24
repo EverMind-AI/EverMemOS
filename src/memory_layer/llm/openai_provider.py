@@ -100,9 +100,11 @@ class OpenAIProvider(LLMProvider):
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": temperature if temperature is not None else self.temperature,
-            "provider": openrouter_provider,
             "response_format": response_format,
         }
+        if openrouter_provider is not None:
+            data["provider"] = openrouter_provider
+
         # print(data)
         # print(data["extra_body"])
         # Add max_tokens if specified

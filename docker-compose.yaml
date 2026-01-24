@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # MongoDB database
   mongodb:
@@ -64,7 +62,7 @@ services:
       - ETCD_SNAPSHOT_COUNT=50000
     command: etcd -advertise-client-urls=http://127.0.0.1:2479 -listen-client-urls http://0.0.0.0:2479 --data-dir /etcd
     healthcheck:
-      test: ["CMD", "etcdctl", "endpoint", "health"]
+      test: ["CMD", "etcdctl", "endpoint", "health", "--endpoints=http://localhost:2479"]
       interval: 30s
       timeout: 20s
       retries: 3
