@@ -9,8 +9,10 @@ from typing import Optional, Dict, List
 from infra_layer.adapters.out.persistence.kv_storage.kv_storage_interface import (
     KVStorageInterface,
 )
+from core.di.decorators import component
 
 
+@component("in_memory_kv_storage", primary=True)
 class InMemoryKVStorage(KVStorageInterface):
     """In-memory KV-Storage implementation using dict"""
 
