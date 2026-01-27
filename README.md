@@ -46,8 +46,7 @@
 > 
 > **[Get Started with the Hackathon Starter Kit](docs/STARTER_KIT.md)** 
 > 
-> Join our [Discord](https://discord.gg/gYep5nQRZJ
-) to find teammates and brainstorm ideas!
+> Join our [Discord](https://discord.gg/gYep5nQRZJ) to find teammates and brainstorm ideas!
 > 
 
 <br>
@@ -61,16 +60,16 @@
 <br>
 
 - [Welcome to EverMemOS][welcome]
+- [Introduction][introduction]
 - [Star and stay tuned with us][star-us]
 - [Why EverMemOS][why-evermemos]
-  - [How EverMemOS works][how-evermemos-works]
-  - [EverMemOS benchmark][evermemos-benchmark]
 - [Quick Start][quick-start]
   - [Prerequisites][prerequisites]
   - [Installation][installation]
+- [API Usage][api-usage]
+- [Demo][demo-section]
   - [Run the Demo][run-demo]
   - [Full Demo Experience][full-demo-experience]
-- [API Usage][api-usage]
 - [Evaluation][evaluation-section]
 - [Documentation][docs-section]
 - [Questions][questions-section]
@@ -239,9 +238,35 @@ for memory_group in result.get("memories", []):
     print(f"Memory: {memory_group}")
 ```
 
-**Try it now**: `uv run python src/bootstrap.py demo/simple_demo.py` ([Demo Guide](docs/usage/DEMOS.md))
-
 📖 [More Examples](docs/usage/USAGE_EXAMPLES.md) • 📚 [API Reference](docs/api_docs/memory_api.md) • 🎯 [Interactive Demos](docs/usage/DEMOS.md)
+
+<br>
+
+## Demo
+
+### Run the Demo
+
+```bash
+# Terminal 1: Start the API server
+uv run python src/run.py --port 8001
+
+# Terminal 2: Run the simple demo
+uv run python src/bootstrap.py demo/simple_demo.py
+```
+
+**Try it now**: Follow the [Demo Guide](docs/usage/DEMOS.md) for step-by-step instructions.
+
+### Full Demo Experience
+
+```bash
+# Extract memories from sample data
+uv run python src/bootstrap.py demo/extract_memory.py
+
+# Start interactive chat with memory
+uv run python src/bootstrap.py demo/chat_with_memory.py
+```
+
+See the [Demo Guide](docs/usage/DEMOS.md) for details.
 
 <br>
 
@@ -251,6 +276,20 @@ for memory_group in result.get("memories", []):
 - **[Conversation Metadata Control](docs/advanced/METADATA_CONTROL.md)** - Fine-grained control over conversation context
 - **[Memory Retrieval Strategies](docs/advanced/RETRIEVAL_STRATEGIES.md)** - Lightweight vs Agentic retrieval modes
 - **[Batch Operations](docs/usage/BATCH_OPERATIONS.md)** - Process multiple messages efficiently
+
+<br>
+
+## Documentation
+
+| Guide | Description |
+| ----- | ----------- |
+| [Quick Start][getting-started] | Installation and configuration |
+| [Configuration Guide][config-guide] | Environment variables and services |
+| [API Usage Guide][api-usage-guide] | Endpoints and data formats |
+| [Development Guide][dev-guide] | Architecture and best practices |
+| [Memory API][api-docs] | Complete API reference |
+| [Demo Guide][demo-guide] | Interactive examples |
+| [Evaluation Guide][evaluation-guide] | Benchmark testing |
 
 <br>
 
@@ -568,20 +607,19 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) for code standards and Git w
 <!-- Navigation -->
 [readme-top]: #readme-top
 [welcome]: #welcome-to-evermemos
+[introduction]: #introduction
 [why-evermemos]: #why-evermemos
-[how-evermemos-works]: #how-evermemos-works
-[evermemos-benchmark]: #evermemos-benchmark
 [quick-start]: #quick-start
 [prerequisites]: #prerequisites
 [installation]: #installation
 [run-demo]: #run-the-demo
 [full-demo-experience]: #full-demo-experience
 [api-usage]: #api-usage
-[evaluation-section]: #evaluation
+[evaluation-section]: #evaluation--benchmarking
 [docs-section]: #documentation
 [questions-section]: #questions
 [contributing]: #contributing
-[demo-section]: #run-the-demo
+[demo-section]: #demo
 
 <!-- Dividers -->
 [divider-light]: https://github.com/user-attachments/assets/aec54c94-ced9-4683-ae58-0a5a7ed803bd#gh-light-mode-only
