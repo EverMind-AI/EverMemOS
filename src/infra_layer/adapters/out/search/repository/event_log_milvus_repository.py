@@ -10,7 +10,6 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 import json
 from core.oxm.milvus.base_repository import BaseMilvusRepository
-from core.oxm.milvus.milvus_dual_storage_mixin import MilvusDualStorageMixin
 from core.oxm.constants import MAGIC_ALL
 from infra_layer.adapters.out.search.milvus.memory.event_log_collection import (
     EventLogCollection,
@@ -23,9 +22,7 @@ logger = get_logger(__name__)
 
 
 @repository("event_log_milvus_repository", primary=False)
-class EventLogMilvusRepository(
-    MilvusDualStorageMixin, BaseMilvusRepository[EventLogCollection]
-):
+class EventLogMilvusRepository(BaseMilvusRepository[EventLogCollection]):
     """
     Event Log Milvus Repository
 
@@ -41,14 +38,6 @@ class EventLogMilvusRepository(
     def __init__(self):
         """Initialize the event log repository"""
         super().__init__(EventLogCollection)
-
-    def _get_lite_fields(self):
-        """
-        Get lite fields for EventLogCollection
-
-        Returns collection-specific lite fields (query + index fields only)
-        """
-        return EventLogCollection._LITE_FIELDS
 
     # ==================== Document Creation and Management ====================
 
