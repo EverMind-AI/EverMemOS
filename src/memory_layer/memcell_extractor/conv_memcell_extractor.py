@@ -511,9 +511,6 @@ class ConvMemCellExtractor(MemCellExtractor):
             summary_text = boundary_detection_result.topic_summary or (
                 fallback_text.strip()[:200] if fallback_text else "Conversation segment"
             )
-            summary_text = boundary_detection_result.topic_summary or (
-                fallback_text.strip()[:200] if fallback_text else "Conversation segment"
-            )
 
             # Create basic MemCell (without episode, foresight, event_log, embedding)
             memcell = MemCell(

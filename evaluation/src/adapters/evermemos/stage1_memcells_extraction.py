@@ -527,27 +527,8 @@ async def process_single_conversation(
                 memcell_dict, cluster_state
             )
 
-        # Save cluster state
+        # Save cluster state (cluster_storage.save_cluster_state internally saves both cluster_state and cluster_map)
         await cluster_storage.save_cluster_state(group_id, cluster_state.to_dict())
-
-        # Export clustering results
-        cluster_output_dir = Path(save_dir) / "clusters" / f"conv_{conv_id}"
-        cluster_output_dir.mkdir(parents=True, exist_ok=True)
-
-        state_file = cluster_output_dir / f"cluster_state_{group_id}.json"
-        with open(state_file, "w", encoding="utf-8") as f:
-            json.dump(
-                cluster_state.to_dict(), f, ensure_ascii=False, indent=2, default=str
-            )
-
-        assignments_file = cluster_output_dir / f"cluster_map_{group_id}.json"
-        with open(assignments_file, "w", encoding="utf-8") as f:
-            json.dump(
-                {"assignments": cluster_state.eventid_to_cluster},
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
 
         cluster_stats = cluster_mgr.get_stats()
 
