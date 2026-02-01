@@ -66,6 +66,7 @@
 - [Quick Start][quick-start]
   - [Prerequisites][prerequisites]
   - [Installation][installation]
+- [GitHub Codespaces][codespaces]
 - [API Usage][api-usage]
 - [Demo][demo-section]
   - [Run the Demo][run-demo]
@@ -205,6 +206,35 @@ curl http://localhost:8001/health
 ```
 
 ✅ Server running at `http://localhost:8001` • [Full Setup Guide](docs/installation/SETUP.md)
+
+<br>
+
+## GitHub Codespaces
+
+EverMemOS supports [GitHub Codespaces](https://github.com/features/codespaces) for cloud-based development. This eliminates the need to set up Docker, manage local network configurations, or worry about environment compatibility issues.
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/EverMind-AI/EverMemOS)
+
+### Requirements
+
+| Machine Type | Status | Notes |
+| ------------ | ------ | ----- |
+| 2-core (Free tier) | ❌ Not supported | Insufficient resources for infrastructure services |
+| 4-core | ✅ Minimum | Works but may be slow under load |
+| 8-core | ✅ Recommended | Good performance with all services |
+| 16-core+ | ✅ Optimal | Best for heavy development workloads |
+
+> **Note:** If your company provides GitHub Codespaces, hardware limitations typically won't be an issue since enterprise plans often include access to larger machine types.
+
+### Getting Started with Codespaces
+
+1. Click the "Open in GitHub Codespaces" button above
+2. Select a **4-core or larger** machine when prompted
+3. Wait for the container to build and services to start
+4. Update API keys in `.env` (LLM_API_KEY, VECTORIZE_API_KEY, etc.)
+5. Run `make run` to start the server
+
+All infrastructure services (MongoDB, Elasticsearch, Milvus, Redis) start automatically and are pre-configured to work together.
 
 <br>
 
@@ -612,6 +642,7 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) for code standards and Git w
 [quick-start]: #quick-start
 [prerequisites]: #prerequisites
 [installation]: #installation
+[codespaces]: #github-codespaces
 [run-demo]: #run-the-demo
 [full-demo-experience]: #full-demo-experience
 [api-usage]: #api-usage
