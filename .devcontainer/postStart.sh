@@ -2,7 +2,7 @@
 
 echo "=== Waiting for infrastructure services ==="
 
-# Function to wait for a service
+# Function to wait for a service using timeout and bash tcp check
 wait_for_service() {
     local name=$1
     local host=$2
@@ -11,7 +11,7 @@ wait_for_service() {
     local attempt=1
 
     echo -n "Waiting for $name ($host:$port)..."
-    while ! nc -z "$host" "$port" 2>/dev/null; do
+    while ! timeout 1 bash -c "echo > /dev/tcp/$host/$port" 2>/dev/null; do
         if [ $attempt -ge $max_attempts ]; then
             echo " timeout (service may still be starting)"
             return 1

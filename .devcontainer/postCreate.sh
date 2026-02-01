@@ -5,8 +5,8 @@ echo "=== EverMemOS Dev Container Setup ==="
 
 # Install system dependencies
 echo "Installing system dependencies..."
-sudo apt-get update
-sudo apt-get install -y libgl1 libgomp1 libglib2.0-0 ffmpeg vim wget curl zip unzip g++ build-essential
+apt-get update
+apt-get install -y libgl1 libgomp1 libglib2.0-0 ffmpeg vim wget curl zip unzip g++ build-essential
 
 # Install Python dependencies with uv
 echo "Installing Python dependencies..."
