@@ -1,25 +1,28 @@
-"""语言工具模块
+"""Language utilities module
 
-统一管理 Prompt 语言设置，所有需要获取默认语言的逻辑都应调用此模块的函数。
+Unified management of prompt language settings. All logic that needs to get the
+default language should call the functions in this module.
 """
 
 import os
 
-# 支持的语言列表
+# Supported language list
 SUPPORTED_LANGUAGES = ["en", "zh"]
 
-# 默认语言
+# Default language
 DEFAULT_LANGUAGE = "en"
 
 
 def get_prompt_language() -> str:
-    """获取当前的 Prompt 语言设置
+    """Get the current prompt language setting
 
-    从环境变量 MEMORY_LANGUAGE 获取语言设置，如果未设置或不支持则返回默认值 "en"。
-    语言设置应在启动时通过环境变量配置，运行时不可修改。
+    Gets the language setting from the MEMORY_LANGUAGE environment variable.
+    If not set or unsupported, returns the default value "en".
+    Language setting should be configured via environment variable at startup
+    and cannot be modified at runtime.
 
     Returns:
-        当前的语言设置，默认为 "en"
+        The current language setting, defaults to "en"
     """
     language = os.getenv("MEMORY_LANGUAGE", DEFAULT_LANGUAGE).lower()
     if language not in SUPPORTED_LANGUAGES:
@@ -28,13 +31,13 @@ def get_prompt_language() -> str:
 
 
 def is_supported_language(language: str) -> bool:
-    """检查语言是否支持
+    """Check if a language is supported
 
     Args:
-        language: 语言代码
+        language: Language code
 
     Returns:
-        是否支持该语言
+        Whether the language is supported
     """
     return language.lower() in SUPPORTED_LANGUAGES
 

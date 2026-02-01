@@ -1,13 +1,13 @@
 {
   "version": "1.0.0",
-  "description": "记忆系统项目路径配置文件",
+  "description": "Memory system project path configuration file",
   "last_updated": "2025-01-03",
-  
+
   "paths": {
     "root": "/Users/admin/Desktop/episodic_memory/memsys",
-    
+
     "data": {
-      "description": "原始数据存储路径",
+      "description": "Raw data storage paths",
       "base": "src/storage_layer/dynamic_memory/main/data",
       "group_chat": "src/storage_layer/dynamic_memory/main/data/group_chat",
       "private_chat": "src/storage_layer/dynamic_memory/main/data/private_chat",
@@ -15,7 +15,7 @@
     },
     
     "memory": {
-      "description": "记忆数据存储路径",
+      "description": "Memory data storage paths",
       "base": "memory_base/dynamic_memory_base/memory",
       "episode": "memory_base/dynamic_memory_base/memory/episode",
       "personal": "memory_base/dynamic_memory_base/memory/personal",
@@ -31,10 +31,10 @@
     },
     
     "temporary": {
-      "description": "临时文件、状态文件和日志文件的统一存储位置 - 仅在评估环境中可用",
+      "description": "Unified storage location for temporary, state, and log files - only available in evaluation environment",
       "base": "evaluation_memory_offline/temporary",
       "logs": {
-        "description": "所有日志文件",
+        "description": "All log files",
         "base": "evaluation_memory_offline/temporary/logs",
         "main_processing": "evaluation_memory_offline/temporary/logs/memory_processing.log",
         "api": "evaluation_memory_offline/temporary/logs/api.log",
@@ -49,34 +49,34 @@
         }
       },
       "states": {
-        "description": "状态和进度文件",
+        "description": "State and progress files",
         "base": "evaluation_memory_offline/temporary/states",
         "processing": "evaluation_memory_offline/temporary/states/processing",
         "progress": "evaluation_memory_offline/temporary/states/progress.json",
         "current_task": "evaluation_memory_offline/temporary/states/current_task.json"
       },
       "cache": {
-        "description": "缓存文件目录",
+        "description": "Cache file directory",
         "base": "evaluation_memory_offline/temporary/cache"
       }
     },
     
     "processing": {
-      "description": "处理状态和进度文件（已迁移到temporary） - 仅在评估环境中可用",
+      "description": "Processing state and progress files (migrated to temporary) - only available in evaluation environment",
       "states_dir": "evaluation_memory_offline/temporary/states/processing",
       "progress_status": "evaluation_memory_offline/temporary/states/progress.json",
       "current_task": "evaluation_memory_offline/temporary/states/current_task.json"
     },
     
     "logs": {
-      "description": "日志文件路径（已迁移到temporary） - 仅在评估环境中可用",
+      "description": "Log file paths (migrated to temporary) - only available in evaluation environment",
       "main_processing": "evaluation_memory_offline/temporary/logs/memory_processing.log",
       "display_api": "evaluation_memory_offline/temporary/logs/api.log",
       "evaluation": "evaluation_memory_offline/temporary/logs/evaluation.log"
     },
     
     "evaluation": {
-      "description": "评估系统相关路径",
+      "description": "Evaluation system related paths",
       "base": "evaluation",
       "reports": "evaluation/reports",
       "prompts": "evaluation/prompts",
@@ -89,7 +89,7 @@
     },
     
     "prompts": {
-      "description": "提示词模板路径",
+      "description": "Prompt template paths",
       "base": "src/storage_layer/dynamic_memory/main/prompt",
       "boundary_detection": "src/storage_layer/dynamic_memory/main/prompt/boundary_detection.txt",
 
@@ -101,7 +101,7 @@
     },
     
     "web_interface": {
-      "description": "Web界面相关路径",
+      "description": "Web interface related paths",
       "base": "display",
       "static_files": {
         "html": "display/index.html",
@@ -113,7 +113,7 @@
     },
     
     "scripts": {
-      "description": "运行脚本路径",
+      "description": "Execution script paths",
       "main_script": "main/main_script.py",
       "run_script": "main/run_script.sh",
       "clean_system": "main/clean_system.py",
@@ -122,7 +122,7 @@
     },
     
     "temp": {
-      "description": "临时文件和测试路径",
+      "description": "Temporary files and test paths",
       "test_memory": "/tmp/test_memory",
       "test_data_dirs": [
         "main/test_data/group_chats",
@@ -132,7 +132,7 @@
   },
   
   "default_settings": {
-    "description": "默认路径配置",
+    "description": "Default path configuration",
     "log_level": "INFO",
     "max_concurrent": 4,
     "backup_count": 5,
@@ -140,7 +140,7 @@
   },
   
   "file_patterns": {
-    "description": "文件名模式配置", 
+    "description": "File name pattern configuration", 
     "chat_data": "*.json",
     "memory_files": "*_memory.json",
     "state_files": "state_*.json",
