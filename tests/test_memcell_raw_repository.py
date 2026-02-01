@@ -59,7 +59,7 @@ async def test_basic_crud_operations():
     user_id = "test_user_001"
 
     try:
-        # First clean up any existing test data (使用硬删除清理测试数据)
+        # First clean up any existing test data (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up existing test data")
 
@@ -127,7 +127,7 @@ async def test_find_by_user_id():
     user_id = "test_user_002"
 
     try:
-        # First clean up (使用硬删除清理测试数据)
+        # First clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up existing test data")
 
@@ -166,7 +166,7 @@ async def test_find_by_user_id():
         assert len(skip_results) == 2
         logger.info("✅ Test skip and limit succeeded")
 
-        # Clean up (使用硬删除清理测试数据)
+        # Clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up test data successfully")
 
@@ -185,7 +185,7 @@ async def test_find_by_time_range():
     user_id = "test_user_003"
 
     try:
-        # First clean up (使用硬删除清理测试数据)
+        # First clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up existing test data")
 
@@ -282,7 +282,7 @@ async def test_find_by_time_range():
         assert len(page_results) == 5
         logger.info("✅ Test pagination succeeded")
 
-        # Clean up (使用硬删除清理测试数据)
+        # Clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up test data successfully")
 
@@ -301,7 +301,7 @@ async def test_find_by_user_and_time_range():
     user_id = "test_user_004"
 
     try:
-        # First clean up (使用硬删除清理测试数据)
+        # First clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up existing test data")
 
@@ -330,7 +330,7 @@ async def test_find_by_user_and_time_range():
         assert len(results) == 3
         logger.info("✅ Test user and time range query succeeded, found %d records", len(results))
 
-        # Clean up (使用硬删除清理测试数据)
+        # Clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up test data successfully")
 
@@ -350,7 +350,7 @@ async def test_find_by_group_id():
     group_id = "test_group_001"
 
     try:
-        # First clean up (使用硬删除清理测试数据)
+        # First clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up existing test data")
 
@@ -373,7 +373,7 @@ async def test_find_by_group_id():
         assert len(results) == 3
         logger.info("✅ Test querying by group_id succeeded, found %d records", len(results))
 
-        # Clean up (使用硬删除清理测试数据)
+        # Clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up test data successfully")
 
@@ -392,7 +392,7 @@ async def test_find_by_participants():
     user_id = "test_user_006"
 
     try:
-        # First clean up (使用硬删除清理测试数据)
+        # First clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up existing test data")
 
@@ -438,7 +438,7 @@ async def test_find_by_participants():
         assert len(results_all) == 1
         logger.info("✅ Test matching all participants succeeded, found %d records", len(results_all))
 
-        # Clean up (使用硬删除清理测试数据)
+        # Clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up test data successfully")
 
@@ -457,7 +457,7 @@ async def test_search_by_keywords():
     user_id = "test_user_007"
 
     try:
-        # First clean up (使用硬删除清理测试数据)
+        # First clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up existing test data")
 
@@ -503,7 +503,7 @@ async def test_search_by_keywords():
         assert len(results_all) == 1
         logger.info("✅ Test matching all keywords succeeded, found %d records", len(results_all))
 
-        # Clean up (使用硬删除清理测试数据)
+        # Clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up test data successfully")
 
@@ -522,7 +522,7 @@ async def test_batch_delete_operations():
     user_id = "test_user_008"
 
     try:
-        # First clean up (使用硬删除清理测试数据)
+        # First clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up existing test data")
 
@@ -587,7 +587,7 @@ async def test_statistics_and_aggregation():
     user_id = "test_user_009"
 
     try:
-        # First clean up (使用硬删除清理测试数据)
+        # First clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up existing test data")
 
@@ -644,7 +644,7 @@ async def test_statistics_and_aggregation():
         assert latest[0].summary == "Document memory"  # Latest
         logger.info("✅ Test getting user's latest records succeeded")
 
-        # Clean up (使用硬删除清理测试数据)
+        # Clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up test data successfully")
 
@@ -663,7 +663,7 @@ async def test_get_by_event_ids():
     user_id = "test_user_010"
 
     try:
-        # First clean up (使用硬删除清理测试数据)
+        # First clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up existing test data")
 
@@ -774,7 +774,7 @@ async def test_get_by_event_ids():
         assert first_memcell.user_id == original_memcell.user_id
         logger.info("✅ Verified returned data integrity succeeded")
 
-        # Clean up (使用硬删除清理测试数据)
+        # Clean up (using hard delete to clean up test data)
         await repo.hard_delete_by_user_id(user_id)
         logger.info("✅ Cleaned up test data successfully")
 
