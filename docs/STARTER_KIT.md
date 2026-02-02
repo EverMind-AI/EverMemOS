@@ -1,8 +1,8 @@
-# EverMemOS Hackathon Starter Kit
+# EverMemOS Competition Starter Kit
 
 [Home](../README.md) > [Docs](./README.md) > Starter Kit
 
-Welcome to the EverMemOS Hackathon! This starter kit will help you get up and running quickly so you can focus on building amazing AI memory applications.
+Welcome to the EverMemOS Competition! This starter kit will help you get up and running quickly so you can focus on building amazing AI memory applications.
 
 > **Join our [Discord](https://discord.gg/pfwwskxp)** to brainstorm ideas, find teammates, and get help from the community!
 
@@ -11,7 +11,7 @@ Welcome to the EverMemOS Hackathon! This starter kit will help you get up and ru
 ## Table of Contents
 
 - [Quick Start (5 Minutes)](#quick-start-5-minutes)
-- [Hackathon Tracks](#hackathon-tracks)
+- [Competition Tracks](#competition-tracks)
 - [How to Submit](#how-to-submit)
 - [Evaluation Criteria](#evaluation-criteria)
 - [API Cheatsheet](#api-cheatsheet)
@@ -63,11 +63,11 @@ curl -X GET "http://localhost:8001/api/v1/memories/search" \
   }'
 ```
 
-You're ready to hack!
+You're ready to build!
 
 ---
 
-## Hackathon Tracks
+## Competition Tracks
 
 ### Track 1: Agent + Memory
 
@@ -249,4 +249,4 @@ uv run python src/bootstrap.py src/run_memorize.py \
 
 ---
 
-Good luck and happy hacking!
+Good luck and happy building!
