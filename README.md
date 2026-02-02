@@ -35,16 +35,16 @@
 
 > [!IMPORTANT]
 >
-> ### Memory Genesis Hackathon 2026
+> ### Memory Genesis Competition 2026
 > 
-> Join our AI Memory Hackathon! Build innovative applications, plugins, or infrastructure improvements powered by EverMemOS.
+> Join our AI Memory Competition! Build innovative applications, plugins, or infrastructure improvements powered by EverMemOS.
 > 
 > **Tracks:**
 > - **Agent + Memory** - Build intelligent agents with long-term, evolving memories
 > - **Platform Plugins** - Integrate EverMemOS with VSCode, Chrome, Slack, Notion, LangChain, and more
 > - **OS Infrastructure** - Optimize core functionality and performance
 > 
-> **[Get Started with the Hackathon Starter Kit](docs/STARTER_KIT.md)** 
+> **[Get Started with the Competition Starter Kit](docs/STARTER_KIT.md)** 
 > 
 > Join our [Discord](https://discord.gg/gYep5nQRZJ) to find teammates and brainstorm ideas!
 > 

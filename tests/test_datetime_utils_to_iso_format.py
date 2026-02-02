@@ -1,5 +1,5 @@
 """
-测试 datetime_utils.to_iso_format 函数的 None 处理逻辑
+Test None handling logic of datetime_utils.to_iso_format function
 """
 
 import datetime
@@ -10,33 +10,33 @@ from common_utils.datetime_utils import to_iso_format, get_timezone
 
 
 class TestToIsoFormatNoneHandling:
-    """测试 to_iso_format 函数对 None 值的处理"""
+    """Test to_iso_format function's handling of None values"""
 
     def test_none_with_allow_none_true_returns_none(self):
-        """当 allow_none=True（默认）且传入 None 时，应返回 None"""
+        """When allow_none=True (default) and None is passed, should return None"""
         result = to_iso_format(None)
         assert result is None
 
     def test_none_with_allow_none_true_explicit_returns_none(self):
-        """当显式设置 allow_none=True 且传入 None 时，应返回 None"""
+        """When allow_none=True is explicitly set and None is passed, should return None"""
         result = to_iso_format(None, allow_none=True)
         assert result is None
 
     def test_none_with_allow_none_false_raises_value_error(self):
-        """当 allow_none=False 且传入 None 时，应抛出 ValueError"""
+        """When allow_none=False and None is passed, should raise ValueError"""
         with pytest.raises(ValueError) as exc_info:
             to_iso_format(None, allow_none=False)
 
-        # 验证错误信息
+        # Verify error message
         assert "time_value cannot be None" in str(exc_info.value)
         assert "allow_none=False" in str(exc_info.value)
 
 
 class TestToIsoFormatNormalCases:
-    """测试 to_iso_format 函数的正常输入情况（确保修改没有破坏原有功能）"""
+    """Test to_iso_format function with normal input cases (ensure changes don't break existing functionality)"""
 
     def test_datetime_input(self):
-        """测试 datetime 对象输入"""
+        """Test datetime object input"""
         tz = get_timezone()
         dt = datetime.datetime(2025, 12, 5, 10, 30, 0, tzinfo=tz)
         result = to_iso_format(dt)
@@ -46,7 +46,7 @@ class TestToIsoFormatNormalCases:
         assert "10:30:00" in result
 
     def test_datetime_input_with_allow_none_false(self):
-        """测试 datetime 对象输入且 allow_none=False（不应影响正常输入）"""
+        """Test datetime object input with allow_none=False (should not affect normal input)"""
         tz = get_timezone()
         dt = datetime.datetime(2025, 12, 5, 10, 30, 0, tzinfo=tz)
         result = to_iso_format(dt, allow_none=False)
@@ -55,8 +55,8 @@ class TestToIsoFormatNormalCases:
         assert "2025-12-05" in result
 
     def test_timestamp_seconds_input(self):
-        """测试秒级时间戳输入"""
-        # 2024-12-05 10:30:00 UTC 的时间戳
+        """Test timestamp input in seconds"""
+        # Timestamp for 2024-12-05 10:30:00 UTC
         timestamp = 1733394600
         result = to_iso_format(timestamp)
 
@@ -64,8 +64,8 @@ class TestToIsoFormatNormalCases:
         assert "2024-12-05" in result
 
     def test_timestamp_milliseconds_input(self):
-        """测试毫秒级时间戳输入"""
-        # 2024-12-05 10:30:00 UTC 的毫秒级时间戳
+        """Test timestamp input in milliseconds"""
+        # Millisecond timestamp for 2024-12-05 10:30:00 UTC
         timestamp_ms = 1733394600000
         result = to_iso_format(timestamp_ms)
 
@@ -73,31 +73,31 @@ class TestToIsoFormatNormalCases:
         assert "2024-12-05" in result
 
     def test_string_input_passthrough(self):
-        """测试字符串输入直接返回"""
+        """Test string input returns directly"""
         iso_str = "2025-12-05T10:30:00+00:00"
         result = to_iso_format(iso_str)
 
         assert result == iso_str
 
     def test_string_input_with_allow_none_false(self):
-        """测试字符串输入且 allow_none=False"""
+        """Test string input with allow_none=False"""
         iso_str = "2025-12-05T10:30:00+00:00"
         result = to_iso_format(iso_str, allow_none=False)
 
         assert result == iso_str
 
     def test_empty_string_returns_none(self):
-        """测试空字符串返回 None"""
+        """Test empty string returns None"""
         result = to_iso_format("")
         assert result is None
 
     def test_negative_timestamp_returns_none(self):
-        """测试负数时间戳返回 None"""
+        """Test negative timestamp returns None"""
         result = to_iso_format(-1)
         assert result is None
 
     def test_zero_timestamp_returns_none(self):
-        """测试零时间戳返回 None"""
+        """Test zero timestamp returns None"""
         result = to_iso_format(0)
         assert result is None
 
