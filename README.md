@@ -329,16 +329,16 @@ cat evaluation/results/locomo-evermemos/report.txt
 
 <br>
 
-<!-- ## Hackathon
+<!-- ## Competition
 
-Join our AI Memory Hackathon! Build innovative applications, plugins, or infrastructure improvements powered by EverMemOS.
+Join our AI Memory Competition! Build innovative applications, plugins, or infrastructure improvements powered by EverMemOS.
 
 **Tracks:**
 - **Agent + Memory** - Build intelligent agents with long-term, evolving memories
 - **Platform Plugins** - Integrate EverMemOS with VSCode, Chrome, Slack, Notion, LangChain, and more
 - **OS Infrastructure** - Optimize core functionality and performance
 
-👉 **[Get Started with the Hackathon Starter Kit](docs/STARTER_KIT.md)** 👈
+👉 **[Get Started with the Competition Starter Kit](docs/STARTER_KIT.md)** 👈
 
 Join our [Discord](https://discord.gg/pfwwskxp) to find teammates and brainstorm ideas!
 
