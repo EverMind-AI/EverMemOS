@@ -229,7 +229,7 @@ class EverMemOSAPIAdapter(OnlineAPIAdapter):
 
         if scope == "group":
             params["group_id"] = conversation_id
-            params["user_id"] = ""  # 空字符串过滤重复记忆
+            params["user_id"] = ""  # Empty string to filter duplicate memories
         else:
             params["user_id"] = user_id
 

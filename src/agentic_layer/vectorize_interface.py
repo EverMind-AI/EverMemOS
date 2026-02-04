@@ -1,6 +1,5 @@
 """
 Vectorize Service Interface
-向量化服务接口定义
 """
 
 from abc import ABC, abstractmethod

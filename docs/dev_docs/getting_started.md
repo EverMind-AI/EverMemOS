@@ -81,11 +81,11 @@ Edit the `.env` file and fill in the actual configuration values:
 
 #### LLM Configuration
 ```bash
-# LLM 配置
+# LLM configuration
 LLM_PROVIDER=openai
 LLM_MODEL=google/gemini-2.5-flash
 LLM_BASE_URL=https://openrouter.ai/api/v1
-LLM_API_KEY=sk-or-v1-你的API密钥
+LLM_API_KEY=sk-or-v1-your-api-key
 LLM_TEMPERATURE=0.3
 LLM_MAX_TOKENS=16384
 ```

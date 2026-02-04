@@ -701,7 +701,7 @@ class ProfileMemoryExtractor(MemoryExtractor):
                 f"({user_info['message_count']} messages)"
             )
 
-            # Build Part3 prompt（通过 PromptManager 获取）
+            # Build Part3 prompt (retrieved via PromptManager)
             prompt = get_prompt_by("CONVERSATION_PROFILE_PART3_EXTRACTION_PROMPT")
             prompt += f"\n\n**Existing User Profile:**\n"
             prompt += f"User ID: {user_id}\n"

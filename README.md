@@ -33,18 +33,18 @@
 
 <br>
 
-> [!NOTE]
+> [!IMPORTANT]
 >
-> ### Memory Genesis Hackathon 2026
+> ### Memory Genesis Competition 2026
 > 
-> Join our AI Memory Hackathon! Build innovative applications, plugins, or infrastructure improvements powered by EverMemOS.
+> Join our AI Memory Competition! Build innovative applications, plugins, or infrastructure improvements powered by EverMemOS.
 > 
 > **Tracks:**
 > - **Agent + Memory** - Build intelligent agents with long-term, evolving memories
 > - **Platform Plugins** - Integrate EverMemOS with VSCode, Chrome, Slack, Notion, LangChain, and more
 > - **OS Infrastructure** - Optimize core functionality and performance
 > 
-> **[Get Started with the Hackathon Starter Kit](docs/STARTER_KIT.md)** 
+> **[Get Started with the Competition Starter Kit](docs/STARTER_KIT.md)** 
 > 
 > Join our [Discord](https://discord.gg/gYep5nQRZJ) to find teammates and brainstorm ideas!
 > 
@@ -72,6 +72,7 @@
   - [Full Demo Experience][full-demo-experience]
 - [Evaluation][evaluation-section]
 - [Documentation][docs-section]
+- [GitHub Codespaces][codespaces]
 - [Questions][questions-section]
 - [Contributing][contributing]
 
@@ -329,218 +330,37 @@ cat evaluation/results/locomo-evermemos/report.txt
 
 <br>
 
-<!-- ## Hackathon
+## GitHub Codespaces
 
-Join our AI Memory Hackathon! Build innovative applications, plugins, or infrastructure improvements powered by EverMemOS.
+EverMemOS supports [GitHub Codespaces](https://github.com/features/codespaces) for cloud-based development. This eliminates the need to set up Docker, manage local network configurations, or worry about environment compatibility issues.
 
-**Tracks:**
-- **Agent + Memory** - Build intelligent agents with long-term, evolving memories
-- **Platform Plugins** - Integrate EverMemOS with VSCode, Chrome, Slack, Notion, LangChain, and more
-- **OS Infrastructure** - Optimize core functionality and performance
-
-👉 **[Get Started with the Hackathon Starter Kit](docs/STARTER_KIT.md)** 👈
-
-Join our [Discord](https://discord.gg/pfwwskxp) to find teammates and brainstorm ideas!
-
----
-
-## Quick Start
-
-### Prerequisites
-
-| Category | Requirements |
-| -------- | ------------ |
-| **Runtime** | Python 3.10+, [uv][uv] package manager |
-| **Services** | Docker 20.10+, Docker Compose 2.0+ |
-| **Hardware** | CPU ≥ 2 cores, RAM ≥ 4 GB |
-| **API Keys** | LLM API key, [DeepInfra][deepinfra] API key (for embedding/rerank) |
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/EverMind-AI/EverMemOS)
 
 ![divider][divider-light]
 ![divider][divider-dark]
 
+### Requirements
 
-### Installation
+| Machine Type | Status | Notes |
+| ------------ | ------ | ----- |
+| 2-core (Free tier) | ❌ Not supported | Insufficient resources for infrastructure services |
+| 4-core | ✅ Minimum | Works but may be slow under load |
+| 8-core | ✅ Recommended | Good performance with all services |
+| 16-core+ | ✅ Optimal | Best for heavy development workloads |
 
-① Clone the repository and cd into the project
-```bash
-git clone https://github.com/EverMind-AI/EverMemOS.git
+> **Note:** If your company provides GitHub Codespaces, hardware limitations typically won't be an issue since enterprise plans often include access to larger machine types.
 
-cd EverMemOS
-```
+### Getting Started with Codespaces
 
-② Start dependency services (MongoDB, Elasticsearch, Milvus and Redis)
-```bash
-docker-compose up -d
-```
+1. Click the "Open in GitHub Codespaces" button above
+2. Select a **4-core or larger** machine when prompted
+3. Wait for the container to build and services to start
+4. Update API keys in `.env` (LLM_API_KEY, VECTORIZE_API_KEY, etc.)
+5. Run `make run` to start the server
 
-③ Install uv and use uv to install dependencies
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-uv sync
-```
-
-④ Configure API Keys
-```bash
-cp env.template .env
-
-# Edit .env and set:
-#   - LLM_API_KEY (for memory extraction)
-#   - VECTORIZE_API_KEY (for embedding/rerank)
-```
-
-⑤ Start server
-```bash
-uv run python src/run.py --port 8001
-```
-
-⑥ Verify installation
-```bash
-curl http://localhost:8001/health
-# Expected response: {"status": "healthy", ...}
-```
-
-![divider][divider-light]
-![divider][divider-dark]
-
-### Run the Demo
-
-① Terminal 1: Start the API server
-```bash
-uv run python src/run.py --port 8001
-```
-
-② Terminal 2: Run the simple demo
-```bash
-uv run python src/bootstrap.py demo/simple_demo.py
-```
-
-The demo stores sample conversations, waits for indexing, and searches for relevant memories — showing the complete workflow in action.
-
-![divider][divider-light]
-![divider][divider-dark]
-
-### Full Demo Experience
-
-① Extract memories from sample data
-```bash
-uv run python src/bootstrap.py demo/extract_memory.py
-```
-
-② Start interactive chat with memory
-```
-uv run python src/bootstrap.py demo/chat_with_memory.py
-```
-
-See the [Demo Guide][demo-guide] for detailed instructions.
+All infrastructure services (MongoDB, Elasticsearch, Milvus, Redis) start automatically and are pre-configured to work together.
 
 <br>
-
-<div align="right">
-
-[![][back-to-top]][readme-top]
-
-</div>
-
-## API Usage
-
-#### Store a Memory
-
-```bash
-curl -X POST http://localhost:8001/api/v1/memories \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message_id": "msg_001",
-    "create_time": "2025-02-01T10:00:00+00:00",
-    "sender": "user_001",
-    "sender_name": "Alice",
-    "content": "I love playing basketball on weekends",
-    "group_id": "group_001",
-    "scene": "assistant"
-  }'
-```
-
-![divider][divider-light]
-![divider][divider-dark]
-
-#### Search Memories
-
-```bash
-curl -X GET http://localhost:8001/api/v1/memories/search \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "What sports does the user like?",
-    "user_id": "user_001",
-    "data_source": "episode",
-    "memory_scope": "personal",
-    "retrieval_mode": "rrf"
-  }'
-```
-
-See the [API Documentation][api-docs] for complete reference.
-
-<br>
-
-<div align="right">
-
-[![][back-to-top]][readme-top]
-
-</div>
-
-## Evaluation
-
-Run benchmarks to test EverMemOS performance:
-
-#### Quick smoke test
-```bash
-uv run python -m evaluation.cli --dataset locomo --system evermemos --smoke
-```
-
-
-#### Full evaluation
-```bash
-uv run python -m evaluation.cli --dataset locomo --system evermemos
-```
-
-#### View results
-```bash
-cat evaluation/results/locomo-evermemos/report.txt
-```
-
-![divider][divider-light]
-![divider][divider-dark]
-
-Supported datasets: `locomo`, `longmemeval`, `personamem`
-
-See the [Evaluation Guide][evaluation-guide] for details.
-
-<br>
-
-<div align="right">
-
-[![][back-to-top]][readme-top]
-
-</div>
-
-## Documentation
-
-| Guide | Description |
-| ----- | ----------- |
-| [Quick Start][getting-started] | Installation and configuration |
-| [Configuration Guide][config-guide] | Environment variables and services |
-| [API Usage Guide][api-usage-guide] | Endpoints and data formats |
-| [Development Guide][dev-guide] | Architecture and best practices |
-| [Memory API][api-docs] | Complete API reference |
-| [Demo Guide][demo-guide] | Interactive examples |
-| [Evaluation Guide][evaluation-guide] | Benchmark testing |
-
-<br>
-
-<div align="right">
-
-[![][back-to-top]][readme-top]
-
-</div> -->
 
 ## Questions
 
@@ -612,6 +432,7 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) for code standards and Git w
 [quick-start]: #quick-start
 [prerequisites]: #prerequisites
 [installation]: #installation
+[codespaces]: #github-codespaces
 [run-demo]: #run-the-demo
 [full-demo-experience]: #full-demo-experience
 [api-usage]: #api-usage
