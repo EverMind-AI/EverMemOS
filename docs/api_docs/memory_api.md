@@ -6,7 +6,7 @@
 
 The Memory API provides RESTful endpoints for storing, retrieving, searching, and managing conversational memories.
 
-**Base URL:** `http://localhost:8001/api/v1/memories`
+**Base URL:** `http://localhost:1995/api/v1/memories`
 
 ## API Endpoints
 
@@ -75,7 +75,7 @@ Providing a `group_id` enables better episodic memory extraction by giving the s
 ### Example
 
 ```bash
-curl -X POST "http://localhost:8001/api/v1/memories" \
+curl -X POST "http://localhost:1995/api/v1/memories" \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
@@ -151,7 +151,7 @@ Retrieve memories by type with optional filters.
 ### Example
 
 ```bash
-curl "http://localhost:8001/api/v1/memories?user_id=user_123&memory_type=episodic_memory&limit=20"
+curl "http://localhost:1995/api/v1/memories?user_id=user_123&memory_type=episodic_memory&limit=20"
 ```
 
 ### Response
@@ -237,7 +237,7 @@ Search memories using keyword, vector, or hybrid retrieval methods.
 ### Example
 
 ```bash
-curl -X GET "http://localhost:8001/api/v1/memories/search" \
+curl -X GET "http://localhost:1995/api/v1/memories/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "coffee preference",
@@ -316,7 +316,7 @@ Retrieve conversation metadata by group_id with fallback to default config.
 ### Example
 
 ```bash
-curl "http://localhost:8001/api/v1/memories/conversation-meta?group_id=group_123"
+curl "http://localhost:1995/api/v1/memories/conversation-meta?group_id=group_123"
 ```
 
 ### Response
@@ -466,7 +466,7 @@ At least one filter must be provided (not all `__all__`).
 
 ```bash
 # Delete all memories for a user in a group
-curl -X DELETE "http://localhost:8001/api/v1/memories" \
+curl -X DELETE "http://localhost:1995/api/v1/memories" \
   -H "Content-Type: application/json" \
   -d '{"user_id": "user_123", "group_id": "group_456"}'
 ```
@@ -495,7 +495,7 @@ For batch processing GroupChatFormat JSON files:
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat.json \
   --scene group_chat \
-  --api-url http://localhost:8001/api/v1/memories
+  --api-url http://localhost:1995/api/v1/memories
 
 # Validate format only
 uv run python src/bootstrap.py src/run_memorize.py \
