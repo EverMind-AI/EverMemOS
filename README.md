@@ -185,7 +185,7 @@ git clone https://github.com/EverMind-AI/EverMemOS.git
 cd EverMemOS
 
 # 2. Start Docker services
-docker-compose up -d
+docker compose up -d
 
 # 3. Install uv and dependencies
 curl -LsSf https://astral.sh/uv/install.sh | sh
