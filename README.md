@@ -481,7 +481,7 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) for code standards and Git w
 <!-- Q&A Badges -->
 [deepwiki-badge]: https://deepwiki.com/badge.svg
 [readmex-badge]: https://raw.githubusercontent.com/CodePhiliaX/resource-trusteeship/main/readmex.svg
-[wechat-badge]: https://img.shields.io/badge/WeChat-07C160?style=flat-square&logo=wechat&logoColor=white
+[wechat-badge]: https://img.shields.io/badge/WeChat-EverMemOS-07C160?style=flat&logo=wechat&logoColor=white
 
 <!-- Misc Badges -->
 [back-to-top]: https://img.shields.io/badge/-Back_to_top-gray?style=flat-square
@@ -513,7 +513,7 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) for code standards and Git w
 [x]: https://x.com/EverMindAI
 [linkedin]: https://www.linkedin.com/company/ai-evermind
 [reddit]: https://www.reddit.com/r/EverMindAI/
-[wechat]: #
+[wechat]: https://github.com/EverMind-AI/EverMemOS/discussions/67
 
 <!-- Q&A Links -->
 [deepwiki]: https://deepwiki.com/EverMind-AI/EverMemOS
