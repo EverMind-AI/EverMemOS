@@ -91,6 +91,7 @@ Welcome to EverMemOS! Join our community to help improve the project and collabo
 | [![X][x-badge]][x] | Follow updates on X |
 | [![LinkedIn][linkedin-badge]][linkedin] | Connect with us on LinkedIn |
 | [![Reddit][reddit-badge]][reddit] | Join the Reddit community |
+| [![WeChat][wechat-badge]][wechat] | Join the WeChat discussion group (for Chinese only) |
 
 
 <br>
@@ -471,11 +472,12 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) for code standards and Git w
 [lang-zh-badge]: https://img.shields.io/badge/简体中文-lightgrey?style=flat-square
 
 <!-- Community Badges -->
-[discord-badge]: https://img.shields.io/badge/Discord-EverMemOS-5865F2?style=flat&logo=discord&logoColor=white
-[hugging-face-badge]: https://img.shields.io/badge/Hugging_Face-EverMemOS-F5C842?style=flat&logo=huggingface&logoColor=white
-[x-badge]: https://img.shields.io/badge/X/Twitter-EverMemOS-000000?style=flat&logo=x&logoColor=white
-[linkedin-badge]: https://img.shields.io/badge/LinkedIn-EverMemOS-0A66C2?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyBmaWxsPSIjZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU%2BTGlua2VkSW48L3RpdGxlPjxwYXRoIGQ9Ik0yMC40NDcgMjAuNDUyaC0zLjU1NHYtNS41NjljMC0xLjMyOC0uMDI3LTMuMDM3LTEuODUyLTMuMDM3LTEuODUzIDAtMi4xMzYgMS40NDUtMi4xMzYgMi45Mzl2NS42NjdIOS4zNTFWOWgzLjQxNHYxLjU2MWguMDQ2Yy40NzctLjkgMS42MzctMS44NSAzLjM3LTEuODUgMy42MDEgMCA0LjI2NyAyLjM3IDQuMjY3IDUuNDU1djYuMjg2ek01LjMzNyA3LjQzM2MtMS4xNDQgMC0yLjA2My0uOTI2LTIuMDYzLTIuMDY1IDAtMS4xMzguOTItMi4wNjMgMi4wNjMtMi4wNjMgMS4xNCAwIDIuMDY0LjkyNSAyLjA2NCAyLjA2MyAwIDEuMTM5LS45MjUgMi4wNjUtMi4wNjQgMi4wNjV6bTEuNzgyIDEzLjAxOUgzLjU1NVY5aDMuNTY0djExLjQ1MnpNMjIuMjI1IDBIMS43NzFDLjc5MiAwIDAgLjc3NCAwIDEuNzI5djIwLjU0MkMwIDIzLjIyNy43OTIgMjQgMS43NzEgMjRoMjAuNDUxQzIzLjIgMjQgMjQgMjMuMjI3IDI0IDIyLjI3MVYxLjcyOUMyNCAuNzc0IDIzLjIgMCAyMi4yMjIgMGguMDAzeiIvPjwvc3ZnPg%3D%3D
-[reddit-badge]: https://img.shields.io/badge/Reddit-EverMemOS-FF4500?style=flat&logo=reddit&logoColor=white
+[discord-badge]: https://img.shields.io/badge/Discord-EverMind-5865F2?style=flat&logo=discord&logoColor=white
+[hugging-face-badge]: https://img.shields.io/badge/Hugging_Face-EverMind-F5C842?style=flat&logo=huggingface&logoColor=white
+[x-badge]: https://img.shields.io/badge/X/Twitter-EverMind-000000?style=flat&logo=x&logoColor=white
+[linkedin-badge]: https://img.shields.io/badge/LinkedIn-EverMind-0A66C2?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyBmaWxsPSIjZmZmIiByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU%2BTGlua2VkSW48L3RpdGxlPjxwYXRoIGQ9Ik0yMC40NDcgMjAuNDUyaC0zLjU1NHYtNS41NjljMC0xLjMyOC0uMDI3LTMuMDM3LTEuODUyLTMuMDM3LTEuODUzIDAtMi4xMzYgMS40NDUtMi4xMzYgMi45Mzl2NS42NjdIOS4zNTFWOWgzLjQxNHYxLjU2MWguMDQ2Yy40NzctLjkgMS42MzctMS44NSAzLjM3LTEuODUgMy42MDEgMCA0LjI2NyAyLjM3IDQuMjY3IDUuNDU1djYuMjg2ek01LjMzNyA3LjQzM2MtMS4xNDQgMC0yLjA2My0uOTI2LTIuMDYzLTIuMDY1IDAtMS4xMzguOTItMi4wNjMgMi4wNjMtMi4wNjMgMS4xNCAwIDIuMDY0LjkyNSAyLjA2NCAyLjA2MyAwIDEuMTM5LS45MjUgMi4wNjUtMi4wNjQgMi4wNjV6bTEuNzgyIDEzLjAxOUgzLjU1NVY5aDMuNTY0djExLjQ1MnpNMjIuMjI1IDBIMS43NzFDLjc5MiAwIDAgLjc3NCAwIDEuNzI5djIwLjU0MkMwIDIzLjIyNy43OTIgMjQgMS43NzEgMjRoMjAuNDUxQzIzLjIgMjQgMjQgMjMuMjI3IDI0IDIyLjI3MVYxLjcyOUMyNCAuNzc0IDIzLjIgMCAyMi4yMjIgMGguMDAzeiIvPjwvc3ZnPg%3D%3D
+[reddit-badge]: https://img.shields.io/badge/Reddit-EverMind-FF4500?style=flat&logo=reddit&logoColor=white
+[wechat-badge]: https://img.shields.io/badge/WeChat-EverMind-07C160?style=flat&logo=wechat&logoColor=white
 
 <!-- Q&A Badges -->
 [deepwiki-badge]: https://deepwiki.com/badge.svg
@@ -511,6 +513,7 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) for code standards and Git w
 [x]: https://x.com/EverMindAI
 [linkedin]: https://www.linkedin.com/company/ai-evermind
 [reddit]: https://www.reddit.com/r/EverMindAI/
+[wechat]: https://github.com/EverMind-AI/EverMemOS/discussions/67
 
 <!-- Q&A Links -->
 [deepwiki]: https://deepwiki.com/EverMind-AI/EverMemOS
