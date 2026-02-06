@@ -64,8 +64,15 @@ Suggested branch names:
 
 Commit style:
 
-- Use clear, imperative commit messages.
-- Gitmoji is welcome but optional.
+- Commit messages are validated by a `commit-msg` hook using Conventional Commits.
+- Required format: `<type>(<scope>)?: <description>` or `<type>!: <description>`.
+- Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+
+Examples:
+
+- `feat(api): add memory search pagination`
+- `fix(core): handle empty tenant id`
+- `refactor(di)!: simplify lifecycle bootstrap`
 
 ## Pull Request Expectations
 
