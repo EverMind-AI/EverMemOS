@@ -91,7 +91,7 @@ Welcome to EverMemOS! Join our community to help improve the project and collabo
 | [![X][x-badge]][x] | Follow updates on X |
 | [![LinkedIn][linkedin-badge]][linkedin] | Connect with us on LinkedIn |
 | [![Reddit][reddit-badge]][reddit] | Join the Reddit community |
-| [![WeChat][wechat-badge]][wechat] | Join the WeChat discussion group (for Chinese only) |
+| [![WeChat][wechat-badge]][wechat] | Join the WeChat discussion group |
 
 
 <br>
