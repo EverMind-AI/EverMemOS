@@ -20,7 +20,7 @@ async def main():
     """Super simple usage example - just 3 steps!"""
     
     # Create memory manager
-    memory = SimpleMemoryManager()
+    memory = SimpleMemoryManager(base_url="http://localhost:8001")
     
     memory.print_separator("🧠  MemSys Simple Demo")
     
