@@ -6,21 +6,17 @@ This module contains various functions to convert external request formats to in
 
 from __future__ import annotations
 
-import hashlib
-from typing import Any, Dict, List, Union, Optional
 from datetime import datetime
+import hashlib
+from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
 
-from api_specs.memory_models import MemoryType
-from api_specs.dtos import RetrieveMemRequest, FetchMemRequest, MemorizeRequest, RawData
+from api_specs.dtos import FetchMemRequest, MemorizeRequest, RawData, RetrieveMemRequest
+from api_specs.memory_models import MemoryType, RetrieveMethod
 from api_specs.memory_types import RawDataType
-from core.oxm.constants import MAGIC_ALL
-
-from typing import Dict, Any, Optional
 from common_utils.datetime_utils import from_iso_format
-from zoneinfo import ZoneInfo
 from core.observation.logger import get_logger
-from api_specs.memory_models import RetrieveMethod, MemoryType
+from core.oxm.constants import MAGIC_ALL
 
 logger = get_logger(__name__)
 
@@ -53,6 +49,97 @@ class DataFields:
     GROUP_ID = "group_id"
 
 
+def _strip_if_str(value: Any) -> Any:
+    """Normalize string input by trimming leading/trailing whitespace."""
+    if isinstance(value, str):
+        return value.strip()
+    return value
+
+
+def _parse_memory_type(value: Any) -> MemoryType:
+    """Parse input value into MemoryType with string normalization."""
+    if isinstance(value, MemoryType):
+        return value
+    return MemoryType(_strip_if_str(value))
+
+
+def _parse_retrieve_method(value: Any) -> RetrieveMethod:
+    """Parse input value into RetrieveMethod with a descriptive error."""
+    if isinstance(value, RetrieveMethod):
+        return value
+    normalized = _strip_if_str(value)
+    try:
+        return RetrieveMethod(normalized)
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid retrieve_method: {normalized}. "
+            f"Supported methods: {[m.value for m in RetrieveMethod]}"
+        ) from exc
+
+
+def _parse_int(value: Any, default: int) -> int:
+    """Parse integer values from query/body payloads."""
+    if value is None:
+        return default
+    normalized = _strip_if_str(value)
+    return int(normalized)
+
+
+def _parse_float(value: Any) -> Optional[float]:
+    """Parse optional float values from query/body payloads."""
+    if value is None:
+        return None
+    normalized = _strip_if_str(value)
+    return float(normalized)
+
+
+def _parse_bool(value: Any, default: bool) -> bool:
+    """Parse optional bool values from query/body payloads."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        return normalized in ("true", "1", "yes")
+    return bool(value)
+
+
+def _parse_memory_types(raw_memory_types: Any) -> List[MemoryType]:
+    """Parse memory_types payload into a normalized MemoryType list."""
+    if raw_memory_types is None:
+        raw_items: List[Any] = []
+    elif isinstance(raw_memory_types, str):
+        raw_items = [
+            mt.strip() for mt in raw_memory_types.split(",") if mt and mt.strip()
+        ]
+    elif isinstance(raw_memory_types, list):
+        raw_items = raw_memory_types
+    else:
+        raw_items = [raw_memory_types]
+
+    memory_types: List[MemoryType] = []
+    for raw_item in raw_items:
+        if isinstance(raw_item, MemoryType):
+            memory_types.append(raw_item)
+            continue
+        if not isinstance(raw_item, str):
+            continue
+
+        normalized = raw_item.strip()
+        if not normalized:
+            continue
+
+        try:
+            memory_types.append(MemoryType(normalized))
+        except ValueError:
+            logger.error(f"Invalid memory_type: {raw_item}, skipping")
+
+    if not memory_types:
+        return [MemoryType.EPISODIC_MEMORY]
+    return memory_types
+
+
 def convert_dict_to_fetch_mem_request(data: Dict[str, Any]) -> FetchMemRequest:
     """
     Convert dictionary to FetchMemRequest object
@@ -67,19 +154,13 @@ def convert_dict_to_fetch_mem_request(data: Dict[str, Any]) -> FetchMemRequest:
         ValueError: When required fields are missing or have incorrect types
     """
     try:
-        # Convert memory_type, use default if not provided
-        memory_type = MemoryType(
+        memory_type = _parse_memory_type(
             data.get("memory_type", MemoryType.EPISODIC_MEMORY.value)
         )
         logger.debug(f"version_range: {data.get('version_range', None)}")
 
-        # Convert limit and offset to integer type (all obtained from query_params are strings)
-        limit = data.get("limit", 10)
-        offset = data.get("offset", 0)
-        if isinstance(limit, str):
-            limit = int(limit)
-        if isinstance(offset, str):
-            offset = int(offset)
+        limit = _parse_int(data.get("limit"), default=10)
+        offset = _parse_int(data.get("offset"), default=0)
 
         # Build FetchMemRequest object
         return FetchMemRequest(
@@ -96,8 +177,8 @@ def convert_dict_to_fetch_mem_request(data: Dict[str, Any]) -> FetchMemRequest:
             start_time=data.get("start_time"),
             end_time=data.get("end_time"),
         )
-    except Exception as e:
-        raise ValueError(f"FetchMemRequest conversion failed: {e}")
+    except Exception as exc:
+        raise ValueError(f"FetchMemRequest conversion failed: {exc}") from exc
 
 
 def convert_dict_to_retrieve_mem_request(
@@ -117,59 +198,15 @@ def convert_dict_to_retrieve_mem_request(
         ValueError: When required fields are missing or have incorrect types
     """
     try:
-        # Validate required fields: user_id or group_id at least one is required
-        # if not data.get("user_id") and not data.get("group_id"):
-        #     raise ValueError("user_id or group_id at least one is required")
+        retrieve_method = _parse_retrieve_method(
+            data.get("retrieve_method", RetrieveMethod.KEYWORD.value)
+        )
+        logger.debug(f"[DEBUG] converted retrieve_method: {retrieve_method}")
 
-        # Handle retrieve_method, use default keyword if not provided
-
-        retrieve_method_str = data.get("retrieve_method", RetrieveMethod.KEYWORD.value)
-        logger.debug(f"[DEBUG] retrieve_method_str from data: {retrieve_method_str!r}")
-
-        # Convert string to RetrieveMethod enum
-        try:
-            retrieve_method = RetrieveMethod(retrieve_method_str)
-            logger.debug(f"[DEBUG] converted to: {retrieve_method}")
-        except ValueError:
-            raise ValueError(
-                f"Invalid retrieve_method: {retrieve_method_str}. "
-                f"Supported methods: {[m.value for m in RetrieveMethod]}"
-            )
-
-        # Convert top_k to integer type (all obtained from query_params are strings)
-        top_k = data.get("top_k", 10)
-        if isinstance(top_k, str):
-            top_k = int(top_k)
-
-        # Convert include_metadata to boolean type
-        include_metadata = data.get("include_metadata", True)
-        if isinstance(include_metadata, str):
-            include_metadata = include_metadata.lower() in ("true", "1", "yes")
-
-        # Convert radius to float type (if exists)
-        radius = data.get("radius", None)
-        if radius is not None and isinstance(radius, str):
-            radius = float(radius)
-
-        # Convert memory_types string list to MemoryType enum list
-        raw_memory_types = data.get("memory_types", [])
-        # Handle comma-separated string (from query_params)
-        if isinstance(raw_memory_types, str):
-            raw_memory_types = [
-                mt.strip() for mt in raw_memory_types.split(",") if mt.strip()
-            ]
-        memory_types = []
-        for mt in raw_memory_types:
-            if isinstance(mt, str):
-                try:
-                    memory_types.append(MemoryType(mt))
-                except ValueError:
-                    logger.error(f"Invalid memory_type: {mt}, skipping")
-            elif isinstance(mt, MemoryType):
-                memory_types.append(mt)
-        # Default to EPISODIC_MEMORY if empty
-        if not memory_types:
-            memory_types = [MemoryType.EPISODIC_MEMORY]
+        top_k = _parse_int(data.get("top_k"), default=10)
+        include_metadata = _parse_bool(data.get("include_metadata"), default=True)
+        radius = _parse_float(data.get("radius"))
+        memory_types = _parse_memory_types(data.get("memory_types", []))
 
         return RetrieveMemRequest(
             retrieve_method=retrieve_method,
@@ -187,8 +224,8 @@ def convert_dict_to_retrieve_mem_request(
             end_time=data.get("end_time", None),
             radius=radius,  # COSINE similarity threshold
         )
-    except Exception as e:
-        raise ValueError(f"RetrieveMemRequest conversion failed: {e}")
+    except Exception as exc:
+        raise ValueError(f"RetrieveMemRequest conversion failed: {exc}") from exc
 
 
 # =========================================
@@ -300,7 +337,7 @@ def build_raw_data_from_simple_message(
 
 
 async def convert_simple_message_to_memorize_request(
-    message_data: Dict[str, Any]
+    message_data: Dict[str, Any],
 ) -> MemorizeRequest:
     """
     Convert simple direct single message format directly to MemorizeRequest
