@@ -13,6 +13,7 @@ import json
 import logging
 import time
 from contextlib import suppress
+from typing import Any, Dict
 from fastapi import HTTPException, Request as FastAPIRequest
 
 from core.di.decorators import controller
@@ -89,6 +90,18 @@ class MemoryController(BaseController):
         logger.info(
             "MemoryController initialized with MemoryManager and ConversationMetaService"
         )
+
+    @staticmethod
+    async def _collect_request_params(
+        fastapi_request: FastAPIRequest,
+    ) -> Dict[str, Any]:
+        """Merge query parameters with optional JSON body parameters."""
+        params: Dict[str, Any] = dict(fastapi_request.query_params)
+        if body := await fastapi_request.body():
+            with suppress(json.JSONDecodeError, TypeError):
+                if isinstance(body_data := json.loads(body), dict):
+                    params.update(body_data)
+        return params
 
     @post(
         "",
@@ -174,12 +187,11 @@ class MemoryController(BaseController):
         space_id = get_space_id_for_metrics()
         # Default raw_data_type, will be updated after conversion
         raw_data_type = get_raw_data_type_label(None)
-        
+
         try:
             # 1. Get JSON body from request (simple direct format)
             message_data = await request.json()
             logger.info("Received memorize request (single message)")
- 
 
             # 2. Convert directly to MemorizeRequest (unified single-step conversion)
             logger.info(
@@ -191,7 +203,9 @@ class MemoryController(BaseController):
 
             # Update raw_data_type from request (for subsequent metrics)
             if memorize_request.raw_data_type:
-                raw_data_type = get_raw_data_type_label(memorize_request.raw_data_type.value)
+                raw_data_type = get_raw_data_type_label(
+                    memorize_request.raw_data_type.value
+                )
 
             record_memorize_message(
                 space_id=space_id,
@@ -385,14 +399,7 @@ class MemoryController(BaseController):
         """
         del request_body  # Used for OpenAPI documentation only
         try:
-            # Get params from query params first
-            params = dict(fastapi_request.query_params)
-
-            # Also try to get params from body (for GET + body requests)
-            if body := await fastapi_request.body():
-                with suppress(json.JSONDecodeError, TypeError):
-                    if isinstance(body_data := json.loads(body), dict):
-                        params.update(body_data)
+            params = await self._collect_request_params(fastapi_request)
 
             logger.info(
                 "Received fetch request: user_id=%s, memory_type=%s",
@@ -519,14 +526,7 @@ class MemoryController(BaseController):
         """
         del request_body  # Used for OpenAPI documentation only
         try:
-            # Get params from query params first
-            query_params = dict(fastapi_request.query_params)
-
-            # Also try to get params from body (for GET + body requests like Elasticsearch)
-            if body := await fastapi_request.body():
-                with suppress(json.JSONDecodeError, TypeError):
-                    if isinstance(body_data := json.loads(body), dict):
-                        query_params.update(body_data)
+            query_params = await self._collect_request_params(fastapi_request)
 
             query_text = query_params.get("query")
             logger.info(
@@ -627,14 +627,7 @@ class MemoryController(BaseController):
         """
         del request_body  # Used for OpenAPI documentation only
         try:
-            # Get params from query params first
-            params = dict(fastapi_request.query_params)
-
-            # Also try to get params from body (for GET + body requests)
-            if body := await fastapi_request.body():
-                with suppress(json.JSONDecodeError, TypeError):
-                    if isinstance(body_data := json.loads(body), dict):
-                        params.update(body_data)
+            params = await self._collect_request_params(fastapi_request)
 
             group_id = params.get("group_id")
 
@@ -1065,14 +1058,7 @@ class MemoryController(BaseController):
         try:
             from core.oxm.constants import MAGIC_ALL
 
-            # Get params from query params first (for compatibility)
-            params = dict(fastapi_request.query_params)
-
-            # Try to get params from body (preferred method)
-            if body := await fastapi_request.body():
-                with suppress(json.JSONDecodeError, TypeError):
-                    if isinstance(body_data := json.loads(body), dict):
-                        params.update(body_data)
+            params = await self._collect_request_params(fastapi_request)
 
             # Extract and validate parameters using DeleteMemoriesRequestDTO
             try:
