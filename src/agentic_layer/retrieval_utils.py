@@ -20,6 +20,38 @@ from .vectorize_service import get_vectorize_service
 logger = logging.getLogger(__name__)
 
 
+def _safe_cosine_similarity(
+    query_vec: np.ndarray, query_norm: float, candidate: Any
+) -> Optional[float]:
+    """Compute cosine similarity for a candidate without raising."""
+    if query_norm <= 0:
+        return None
+
+    try:
+        candidate_extend = getattr(candidate, "extend", None)
+        if not isinstance(candidate_extend, dict):
+            return None
+
+        doc_vec = np.asarray(candidate_extend.get("embedding", []), dtype=float)
+        if doc_vec.size == 0:
+            return None
+
+        if doc_vec.shape != query_vec.shape:
+            return None
+
+        doc_norm = np.linalg.norm(doc_vec)
+        if doc_norm <= 0:
+            return None
+
+        similarity = float(np.dot(query_vec, doc_vec) / (query_norm * doc_norm))
+        if np.isnan(similarity) or np.isinf(similarity):
+            return None
+
+        return similarity
+    except (TypeError, ValueError):
+        return None
+
+
 def build_bm25_index(candidates):
     """Build BM25 index (supports Chinese and English)"""
     try:
@@ -170,25 +202,23 @@ async def lightweight_retrieval(
     emb_results = []
     try:
         vectorize_service = get_vectorize_service()
-        query_vec = await vectorize_service.get_embedding(query)
+        query_vec = np.asarray(
+            await vectorize_service.get_embedding(query), dtype=float
+        )
         query_norm = np.linalg.norm(query_vec)
 
         if query_norm > 0:
             scores = []
             for mem in candidates:
-                try:
-                    doc_vec = np.array(mem.extend.get("embedding", []))
-                    if len(doc_vec) > 0:
-                        doc_norm = np.linalg.norm(doc_vec)
-                        if doc_norm > 0:
-                            sim = np.dot(query_vec, doc_vec) / (query_norm * doc_norm)
-                            scores.append((mem, float(sim)))
-                except:
-                    continue
+                sim = _safe_cosine_similarity(query_vec, query_norm, mem)
+                if sim is not None:
+                    scores.append((mem, sim))
 
             emb_results = sorted(scores, key=lambda x: x[1], reverse=True)[:emb_top_n]
     except Exception as e:
-        pass
+        logger.warning(
+            "Embedding retrieval failed in lightweight_retrieval, falling back: %s", e
+        )
 
     metadata["emb_count"] = len(emb_results)
 
