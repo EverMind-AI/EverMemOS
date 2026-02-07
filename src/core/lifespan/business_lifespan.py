@@ -16,6 +16,22 @@ from .lifespan_interface import LifespanProvider
 logger = get_logger(__name__)
 
 
+def get_vectorize_service():
+    """Lazy import wrapper for vectorize service getter."""
+    from agentic_layer.vectorize_service import (
+        get_vectorize_service as _get_vectorize_service,
+    )
+
+    return _get_vectorize_service()
+
+
+def get_rerank_service():
+    """Lazy import wrapper for rerank service getter."""
+    from agentic_layer.rerank_service import get_rerank_service as _get_rerank_service
+
+    return _get_rerank_service()
+
+
 @component(name="business_lifespan_provider")
 class BusinessLifespanProvider(LifespanProvider):
     """Business lifecycle provider"""
@@ -72,11 +88,30 @@ class BusinessLifespanProvider(LifespanProvider):
         """
         logger.info("Shutting down business logic...")
 
+        await self._close_agentic_services()
+
         # Clean up business-related attributes in app.state
         if hasattr(app.state, 'graphs'):
             delattr(app.state, 'graphs')
 
         logger.info("Business application shutdown completed")
+
+    async def _close_agentic_services(self) -> None:
+        """Close shared agentic services to release external client sessions."""
+        service_getters = (
+            ("vectorize", get_vectorize_service),
+            ("rerank", get_rerank_service),
+        )
+        for service_name, service_getter in service_getters:
+            try:
+                service = service_getter()
+                close = getattr(service, "close", None)
+                if callable(close):
+                    await close()
+            except Exception as exc:
+                logger.warning(
+                    "Failed to close %s service during shutdown: %s", service_name, exc
+                )
 
     def _register_controllers(self, app: FastAPI) -> list:
         """Register all controllers"""
