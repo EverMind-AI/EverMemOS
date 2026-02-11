@@ -167,8 +167,8 @@ PYTHONASYNCIODEBUG=1
 Start the main application service, providing REST API endpoints:
 
 ```bash
-# Basic startup (using default port 8001)
-uv run python src/run.py --port 8001
+# Basic startup (using default port 1995)
+uv run python src/run.py --port 1995
 
 # Start with specified log level
 LOG_LEVEL=DEBUG uv run python src/run.py
@@ -185,7 +185,7 @@ uv run python src/run.py --env-file .env.production
 
 #### Startup Parameter Description
 - `--host`: Server listening address (default: 0.0.0.0)
-- `--port`: Server port (default: 8001)
+- `--port`: Server port (default: 1995)
 - `--env-file`: Environment variable file path (default: .env)
 - `--mock`: Enable Mock mode (for testing and development)
 
@@ -195,7 +195,7 @@ uv run python src/run.py --env-file .env.production
 📝 Memory System Main Application
 🌟 Startup Parameters:
   📡 Host: 0.0.0.0
-  🔌 Port: 8001
+  🔌 Port: 1995
   📄 Env File: .env
   🎭 Mock Mode: False
   🔧 LongJob Mode: Disabled
@@ -206,7 +206,7 @@ uv run python src/run.py --env-file .env.production
 INFO:     Started server process [12345]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Uvicorn running on http://0.0.0.0:1995 (Press CTRL+C to quit)
 ```
 
 ### 2. Verify Service Startup
@@ -215,10 +215,10 @@ After the service starts, you can verify it by:
 
 ```bash
 # Access API documentation
-curl http://localhost:8001/docs
+curl http://localhost:1995/docs
 
 # Or open in browser
-open http://localhost:8001/docs
+open http://localhost:1995/docs
 ```
 
 ### 3. Start Long Job Consumer (Optional)
@@ -361,7 +361,7 @@ MOCK_MODE=true
 # Local services
 MONGODB_HOST=localhost
 REDIS_HOST=localhost
-ES_HOSTS=http://localhost:9200
+ES_HOSTS=http://localhost:19200
 MILVUS_HOST=localhost
 ```
 
@@ -446,7 +446,7 @@ sudo systemctl start redis
 #### Issue: Port already in use
 ```bash
 # Check port usage
-lsof -i :8001
+lsof -i :1995
 
 # Start with different port
 uv run python src/run.py --port 8080
@@ -487,7 +487,7 @@ Now you have successfully set up and launched the Intelligent Memory System! Nex
 
 1. **Read Development Guide**: Check [development_guide.md](development_guide.md) to learn about project architecture and best practices
 2. **Explore Bootstrap**: Check [bootstrap_usage.md](bootstrap_usage.md) for in-depth understanding of script runner
-3. **View API Documentation**: Visit http://localhost:8001/docs to learn about available API endpoints
+3. **View API Documentation**: Visit http://localhost:1995/docs to learn about available API endpoints
 4. **Run Example Code**: Try running example scripts in the `demo/` directory
 
 ## 📞 Get Help

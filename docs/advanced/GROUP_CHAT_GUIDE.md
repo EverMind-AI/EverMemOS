@@ -244,7 +244,7 @@ Create a JSON file following the GroupChatFormat specification.
 uv run python src/bootstrap.py src/run_memorize.py \
   --input your_group_chat.json \
   --scene group_chat \
-  --api-url http://localhost:8001/api/v1/memories
+  --api-url http://localhost:1995/api/v1/memories
 ```
 
 **Parameters:**
@@ -258,7 +258,7 @@ uv run python src/bootstrap.py src/run_memorize.py \
 Check that memories were extracted:
 
 ```bash
-curl -X GET "http://localhost:8001/api/v1/memories/search" \
+curl -X GET "http://localhost:1995/api/v1/memories/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "What was discussed?",
@@ -280,7 +280,7 @@ The primary way to retrieve group-specific memories:
 import requests
 
 response = requests.get(
-    "http://localhost:8001/api/v1/memories/search",
+    "http://localhost:1995/api/v1/memories/search",
     json={
         "query": "What decisions were made about the API?",
         "group_id": "team_001",  # Filter to this group only
@@ -330,7 +330,7 @@ EverMemOS can generate contextual summaries within a group because it understand
 
 ```python
 response = requests.get(
-    "http://localhost:8001/api/v1/memories/search",
+    "http://localhost:1995/api/v1/memories/search",
     json={
         "query": "Summarize the key decisions and action items",
         "group_id": "team_001",

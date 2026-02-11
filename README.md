@@ -199,14 +199,14 @@ cp env.template .env
 #   - VECTORIZE_API_KEY (for embedding/rerank)
 
 # 5. Start server
-uv run python src/run.py --port 8001
+uv run python src/run.py
 
 # 6. Verify installation
-curl http://localhost:8001/health
+curl http://localhost:1995/health
 # Expected response: {"status": "healthy", ...}
 ```
 
-✅ Server running at `http://localhost:8001` • [Full Setup Guide](docs/installation/SETUP.md)
+✅ Server running at `http://localhost:1995` • [Full Setup Guide](docs/installation/SETUP.md)
 
 <br>
 
@@ -217,7 +217,7 @@ Store and retrieve memories with simple Python code:
 ```python
 import requests
 
-API_BASE = "http://localhost:8001/api/v1"
+API_BASE = "http://localhost:1995/api/v1"
 
 # 1. Store a conversation memory
 requests.post(f"{API_BASE}/memories", json={
@@ -250,7 +250,7 @@ for memory_group in result.get("memories", []):
 
 ```bash
 # Terminal 1: Start the API server
-uv run python src/run.py --port 8001
+uv run python src/run.py
 
 # Terminal 2: Run the simple demo
 uv run python src/bootstrap.py demo/simple_demo.py
@@ -506,7 +506,7 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) for code standards and Git w
 
 <!-- Language Links -->
 [lang-en-readme]: README.md
-[lang-zh-readme]: README_zh.md
+[lang-zh-readme]: README.md
 
 <!-- Community Links -->
 [discord]: https://discord.gg/gYep5nQRZJ

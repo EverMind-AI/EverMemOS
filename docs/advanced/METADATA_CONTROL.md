@@ -129,7 +129,7 @@ This guide explains when and how to control metadata for optimal results.
 ```python
 # Save default config (no group_id)
 requests.post(
-    "http://localhost:8001/api/v1/memories/conversation-meta",
+    "http://localhost:1995/api/v1/memories/conversation-meta",
     json={
         "scene": "group_chat",
         "name": "Default Work Config",
@@ -195,7 +195,7 @@ When storing a single message, you can include group and sender metadata:
 import requests
 
 response = requests.post(
-    "http://localhost:8001/api/v1/memories",
+    "http://localhost:1995/api/v1/memories",
     json={
         "message_id": "msg_001",
         "create_time": "2025-02-01T10:00:00+00:00",
@@ -216,7 +216,7 @@ Filter search results by user or group:
 ```python
 # Search within a specific group
 response = requests.get(
-    "http://localhost:8001/api/v1/memories/search",
+    "http://localhost:1995/api/v1/memories/search",
     json={
         "query": "What programming languages are preferred?",
         "group_id": "team_engineering",
@@ -235,13 +235,13 @@ response = requests.get(
 ```python
 # Get specific group's metadata
 response = requests.get(
-    "http://localhost:8001/api/v1/memories/conversation-meta",
+    "http://localhost:1995/api/v1/memories/conversation-meta",
     json={"group_id": "team_engineering"}
 )
 
 # Get default config
 response = requests.get(
-    "http://localhost:8001/api/v1/memories/conversation-meta",
+    "http://localhost:1995/api/v1/memories/conversation-meta",
     json={}
 )
 ```
@@ -250,7 +250,7 @@ response = requests.get(
 
 ```python
 response = requests.post(
-    "http://localhost:8001/api/v1/memories/conversation-meta",
+    "http://localhost:1995/api/v1/memories/conversation-meta",
     json={
         "group_id": "team_engineering",
         "scene": "group_chat",
@@ -275,7 +275,7 @@ Update only specific fields without replacing the entire record:
 
 ```python
 response = requests.patch(
-    "http://localhost:8001/api/v1/memories/conversation-meta",
+    "http://localhost:1995/api/v1/memories/conversation-meta",
     json={
         "group_id": "team_engineering",
         "name": "Backend Engineering Team",  # Only update name
@@ -297,7 +297,7 @@ response = requests.patch(
 ```python
 # Delete all memories for a specific user in a group
 response = requests.delete(
-    "http://localhost:8001/api/v1/memories",
+    "http://localhost:1995/api/v1/memories",
     json={
         "user_id": "user_123",
         "group_id": "team_engineering"

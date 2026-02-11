@@ -22,7 +22,7 @@ Store memories via HTTP API (must specify scene):
 ```bash
 python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat.json \
-  --api-url http://localhost:8001/api/v1/memories \
+  --api-url http://localhost:1995/api/v1/memories \
   --scene assistant
 ```
 
@@ -31,7 +31,7 @@ python src/bootstrap.py src/run_memorize.py \
 ```bash
 python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat.json \
-  --api-url http://localhost:8001/api/v1/memories \
+  --api-url http://localhost:1995/api/v1/memories \
   --scene companion
 ```
 
@@ -131,7 +131,7 @@ The script executes the following steps:
 ======================================================================
 📄 Input File: /path/to/group_chat.json
 🔍 Validation Mode: No
-🌐 API Address: http://localhost:8001/api/v1/memories
+🌐 API Address: http://localhost:1995/api/v1/memories
 ======================================================================
 ======================================================================
 Validating Input File Format
@@ -160,10 +160,10 @@ Starting to Call memorize API Item by Item
 Group Name: Smart Sales Assistant Project Team
 Group ID: group_sales_ai_2025
 Number of Messages: 8
-API Address: http://localhost:8001/api/v1/memories
+API Address: http://localhost:1995/api/v1/memories
 
 --- Saving Conversation Metadata (conversation-meta) ---
-Saving conversation metadata to: http://localhost:8001/api/v1/conversation-meta
+Saving conversation metadata to: http://localhost:1995/api/v1/conversation-meta
 Scene: assistant, Group ID: group_sales_ai_2025
   ✓ Conversation metadata saved successfully
   Scene: assistant

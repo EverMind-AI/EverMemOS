@@ -152,7 +152,7 @@ Both APIs use the same simple direct single message format:
 #### cURL
 
 ```bash
-curl -X POST http://localhost:8001/api/v1/memories \
+curl -X POST http://localhost:1995/api/v1/memories \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
@@ -174,7 +174,7 @@ import asyncio
 async def store_memory():
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            "http://localhost:8001/api/v1/memories",
+            "http://localhost:1995/api/v1/memories",
             json={
                 "message_id": "msg_001",
                 "create_time": "2025-02-01T10:00:00+00:00",
@@ -193,7 +193,7 @@ asyncio.run(store_memory())
 #### JavaScript
 
 ```javascript
-fetch('http://localhost:8001/api/v1/memories', {
+fetch('http://localhost:1995/api/v1/memories', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
@@ -215,7 +215,7 @@ fetch('http://localhost:8001/api/v1/memories', {
 **Using V1 Memory API:**
 
 ```javascript
-fetch('http://localhost:8001/api/v1/memories', {
+fetch('http://localhost:1995/api/v1/memories', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
@@ -310,7 +310,7 @@ Run using the Bootstrap script with V1 API:
 ```bash
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat.json \
-  --api-url http://localhost:8001/api/v1/memories
+  --api-url http://localhost:1995/api/v1/memories
 ```
 
 **Using V1 Memory API (Storage only):**
@@ -318,7 +318,7 @@ uv run python src/bootstrap.py src/run_memorize.py \
 ```bash
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat.json \
-  --api-url http://localhost:8001/api/v1/memories
+  --api-url http://localhost:1995/api/v1/memories
 ```
 
 ### Command Line Arguments
@@ -339,12 +339,12 @@ uv run python src/bootstrap.py src/run_memorize.py \
 # Basic usage
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat.json \
-  --api-url http://localhost:8001/api/v1/memories
+  --api-url http://localhost:1995/api/v1/memories
 
 # Using relative path
 uv run python src/bootstrap.py src/run_memorize.py \
   --input ../my_data/chat_history.json \
-  --api-url http://localhost:8001/api/v1/memories
+  --api-url http://localhost:1995/api/v1/memories
 
 # Specifying remote server
 uv run python src/bootstrap.py src/run_memorize.py \
@@ -358,12 +358,12 @@ uv run python src/bootstrap.py src/run_memorize.py \
 # Basic usage
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat.json \
-  --api-url http://localhost:8001/api/v1/memories
+  --api-url http://localhost:1995/api/v1/memories
 
 # Using relative path
 uv run python src/bootstrap.py src/run_memorize.py \
   --input ../my_data/chat_history.json \
-  --api-url http://localhost:8001/api/v1/memories
+  --api-url http://localhost:1995/api/v1/memories
 ```
 
 #### 2. Validate File Format
@@ -400,7 +400,7 @@ uv run python src/bootstrap.py src/run_memorize.py \
 ======================================================================
 📄 Input File: /path/to/data/group_chat.json
 🔍 Validation Mode: No
-🌐 API Address: http://localhost:8001/api/v1/memories
+🌐 API Address: http://localhost:1995/api/v1/memories
 ======================================================================
 
 ======================================================================
@@ -424,7 +424,7 @@ Starting to Call Memorize API for Each Message
 Group Name: Project Discussion Group
 Group ID: group_001
 Message Count: 20
-API Address: http://localhost:8001/api/v1/memories
+API Address: http://localhost:1995/api/v1/memories
 
 --- Processing Message 1/20 ---
   ✓ Successfully saved 2 memories
@@ -510,7 +510,7 @@ Ensure MemSys service is running:
 uv run python src/run.py
 ```
 
-After service starts, visit http://localhost:8001/docs to verify API documentation is accessible.
+After service starts, visit http://localhost:1995/docs to verify API documentation is accessible.
 
 #### 4. Store Memories
 
@@ -519,7 +519,7 @@ After service starts, visit http://localhost:8001/docs to verify API documentati
 ```bash
 uv run python src/bootstrap.py src/run_memorize.py \
   --input my_chat_data.json \
-  --api-url http://localhost:8001/api/v1/memories
+  --api-url http://localhost:1995/api/v1/memories
 ```
 
 **Option B: Using V1 Memory API**
@@ -527,7 +527,7 @@ uv run python src/bootstrap.py src/run_memorize.py \
 ```bash
 uv run python src/bootstrap.py src/run_memorize.py \
   --input my_chat_data.json \
-  --api-url http://localhost:8001/api/v1/memories
+  --api-url http://localhost:1995/api/v1/memories
 ```
 
 #### 5. Verify Storage Results

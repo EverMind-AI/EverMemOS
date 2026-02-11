@@ -4,7 +4,7 @@
 
 Welcome to the EverMemOS Competition! This starter kit will help you get up and running quickly so you can focus on building amazing AI memory applications.
 
-> **Join our [Discord](https://discord.gg/pfwwskxp)** to brainstorm ideas, find teammates, and get help from the community!
+> **Join our [Discord](https://discord.gg/gYep5nQRZJ)** to brainstorm ideas, find teammates, and get help from the community!
 
 ---
 
@@ -35,13 +35,13 @@ cd EverMemOS
 docker compose up -d
 
 # Verify services are running
-curl http://localhost:8001/health
+curl http://localhost:1995/health
 ```
 
 ### 2. Store Your First Memory
 
 ```bash
-curl -X POST "http://localhost:8001/api/v1/memories" \
+curl -X POST "http://localhost:1995/api/v1/memories" \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
@@ -54,7 +54,7 @@ curl -X POST "http://localhost:8001/api/v1/memories" \
 ### 3. Search Memories
 
 ```bash
-curl -X GET "http://localhost:8001/api/v1/memories/search" \
+curl -X GET "http://localhost:1995/api/v1/memories/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "What does the user love?",
@@ -209,7 +209,7 @@ Load sample data:
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat_en.json \
   --scene group_chat \
-  --api-url http://localhost:8001/api/v1/memories
+  --api-url http://localhost:1995/api/v1/memories
 ```
 
 ---
@@ -235,7 +235,7 @@ uv run python src/bootstrap.py src/run_memorize.py \
 
 ### External
 - [Paper](https://arxiv.org/abs/2601.02163) - Research paper
-- [Discord](https://discord.gg/pfwwskxp) - Community support
+- [Discord](https://discord.gg/gYep5nQRZJ) - Community support
 
 ---
 

@@ -24,7 +24,7 @@ Before using these examples, ensure you have:
 1. **Completed installation** - See [Setup Guide](../installation/SETUP.md)
 2. **Started the API server**:
    ```bash
-   uv run python src/run.py --port 8001
+   uv run python src/run.py --port 1995
    ```
 3. **Configured .env** with required API keys
 
@@ -45,7 +45,7 @@ The fastest way to experience EverMemOS! Just 2 steps to see memory storage and 
 
 ```bash
 # Terminal 1: Start the API server
-uv run python src/run.py --port 8001
+uv run python src/run.py --port 1995
 
 # Terminal 2: Run the simple demo
 uv run python src/bootstrap.py demo/simple_demo.py
@@ -82,7 +82,7 @@ Experience the complete EverMemOS workflow: memory extraction from conversations
 
 ```bash
 # Terminal 1: Start the API server (required)
-uv run python src/run.py --port 8001
+uv run python src/run.py --port 1995
 ```
 
 > 💡 **Tip**: Keep the API server running throughout. All following operations should be performed in another terminal.
@@ -102,7 +102,7 @@ uv run python src/bootstrap.py demo/extract_memory.py
 
 1. Calls `demo.tools.clear_all_data.clear_all_memories()` so the demo starts from an empty MongoDB/Elasticsearch/Milvus/Redis state. Ensure the dependency stack launched by `docker-compose` is running before executing the script, otherwise the wipe step will fail.
 
-2. Loads `data/assistant_chat_zh.json`, appends `scene="assistant"` to each message, and streams every entry to `http://localhost:8001/api/v1/memories`.
+2. Loads `data/assistant_chat_zh.json`, appends `scene="assistant"` to each message, and streams every entry to `http://localhost:1995/api/v1/memories`.
 
 3. Update the `base_url`, `data_file`, or `profile_scene` constants in `demo/extract_memory.py` if you host the API on another endpoint or want to ingest a different scenario.
 
@@ -225,7 +225,7 @@ Use the Memory API to integrate EverMemOS into your application.
 **Start the API Server:**
 
 ```bash
-uv run python src/run.py --port 8001
+uv run python src/run.py --port 1995
 ```
 
 > 💡 **Tip**: Keep the API server running throughout. All following API calls should be performed in another terminal.
@@ -239,7 +239,7 @@ Use the `/api/v1/memories` endpoint to store individual messages:
 **Minimal Example (Required Fields Only):**
 
 ```bash
-curl -X POST http://localhost:8001/api/v1/memories \
+curl -X POST http://localhost:1995/api/v1/memories \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
@@ -252,7 +252,7 @@ curl -X POST http://localhost:8001/api/v1/memories \
 **With Optional Fields:**
 
 ```bash
-curl -X POST http://localhost:8001/api/v1/memories \
+curl -X POST http://localhost:1995/api/v1/memories \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
@@ -303,7 +303,7 @@ Fast retrieval for latency-sensitive scenarios.
 **Example 1: Personal Memory**
 
 ```bash
-curl -X GET http://localhost:8001/api/v1/memories/search \
+curl -X GET http://localhost:1995/api/v1/memories/search \
   -H "Content-Type: application/json" \
   -d '{
     "query": "What sports does the user like?",
@@ -316,7 +316,7 @@ curl -X GET http://localhost:8001/api/v1/memories/search \
 **Example 2: Group Memory**
 
 ```bash
-curl -X GET http://localhost:8001/api/v1/memories/search \
+curl -X GET http://localhost:1995/api/v1/memories/search \
   -H "Content-Type: application/json" \
   -d '{
     "query": "Discuss project progress",
@@ -342,13 +342,13 @@ See the dedicated [Batch Operations Guide](BATCH_OPERATIONS.md) for complete inf
 # Batch store group chat messages (Chinese data)
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat_zh.json \
-  --api-url http://localhost:8001/api/v1/memories \
+  --api-url http://localhost:1995/api/v1/memories \
   --scene group_chat
 
 # Or use English data
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat_en.json \
-  --api-url http://localhost:8001/api/v1/memories \
+  --api-url http://localhost:1995/api/v1/memories \
   --scene group_chat
 
 # Validate file format
@@ -378,7 +378,7 @@ Use EverMemOS in your Python applications:
 import requests
 
 class EverMemOSClient:
-    def __init__(self, base_url="http://localhost:8001"):
+    def __init__(self, base_url="http://localhost:1995"):
         self.base_url = base_url
 
     def store_memory(self, message):

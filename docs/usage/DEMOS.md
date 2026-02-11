@@ -40,7 +40,7 @@ The fastest way to experience EverMemOS! Perfect for first-time users.
 
 ```bash
 # Terminal 1: Start the API server
-uv run python src/run.py --port 8001
+uv run python src/run.py --port 1995
 
 # Terminal 2: Run the simple demo
 uv run python src/bootstrap.py demo/simple_demo.py
@@ -122,7 +122,7 @@ Experience the complete EverMemOS workflow: memory extraction from conversations
 
 ```bash
 # Terminal 1: Start the API server (keep running)
-uv run python src/run.py --port 8001
+uv run python src/run.py --port 1995
 ```
 
 **2. Configure Environment:**
@@ -156,7 +156,7 @@ uv run python src/bootstrap.py demo/extract_memory.py
 
 3. **Processes each message** through the Memory API
    - Appends `scene="assistant"` to indicate one-on-one conversation
-   - Streams entries to `http://localhost:8001/api/v1/memories`
+   - Streams entries to `http://localhost:1995/api/v1/memories`
 
 4. **Creates memories in databases**
    - MemCells extracted from conversations
@@ -170,7 +170,7 @@ Edit `demo/extract_memory.py` to customize:
 
 ```python
 # API endpoint
-base_url = "http://localhost:8001"
+base_url = "http://localhost:1995"
 
 # Data file
 data_file = "data/assistant_chat_zh.json"  # or assistant_chat_en.json
@@ -319,7 +319,7 @@ You can use your own conversation data with the demos:
 ### Demo Parameters
 
 **Extraction Script:**
-- `base_url` - API server endpoint (default: http://localhost:8001)
+- `base_url` - API server endpoint (default: http://localhost:1995)
 - `data_file` - Path to conversation data file
 - `profile_scene` - Scene type: "assistant" or "group_chat"
 
@@ -337,7 +337,7 @@ You can use your own conversation data with the demos:
 **Problem**: Demo scripts fail to run
 
 **Solutions:**
-- Verify API server is running: `curl http://localhost:8001/health`
+- Verify API server is running: `curl http://localhost:1995/health`
 - Check .env file has required API keys
 - Ensure Docker services are running: `docker-compose ps`
 - Verify Python version: `python --version` (should be 3.10+)

@@ -211,7 +211,7 @@ After changing ports, update your `.env` file accordingly:
 
 ```bash
 MONGODB_URI=mongodb://admin:memsys123@localhost:27018
-ELASTICSEARCH_URL=http://localhost:9200
+ELASTICSEARCH_URL=http://localhost:19200
 ```
 
 ---

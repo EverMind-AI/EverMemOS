@@ -184,10 +184,10 @@ python src/bootstrap.py src/devops_scripts/data_fix/es_sync_docs.py \
 **A:** 可以通过以下方式验证：
 ```bash
 # 检查文档数量
-curl -X GET "localhost:9200/episodic-memory/_count"
+curl -X GET "localhost:19200/episodic-memory/_count"
 
 # 查询最近的文档
-curl -X GET "localhost:9200/episodic-memory/_search?size=10&sort=created_at:desc"
+curl -X GET "localhost:19200/episodic-memory/_search?size=10&sort=created_at:desc"
 ```
 
 ### Q4: 重建索引会影响查询吗？

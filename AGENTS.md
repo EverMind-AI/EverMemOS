@@ -344,7 +344,7 @@ GOOGLE_API_KEY=
 MONGODB_URI=mongodb://localhost:27017
 REDIS_URL=redis://localhost:6379
 MILVUS_HOST=localhost
-ELASTICSEARCH_URL=http://localhost:9200
+ELASTICSEARCH_URL=http://localhost:19200
 ```
 
 ## Development Guidelines

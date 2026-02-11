@@ -204,7 +204,7 @@ Default choice → Use RRF
 ### Lightweight - Keyword
 
 ```bash
-curl -X GET http://localhost:8001/api/v1/memories/search \
+curl -X GET http://localhost:1995/api/v1/memories/search \
   -H "Content-Type: application/json" \
   -d '{
     "query": "soccer",
@@ -218,7 +218,7 @@ curl -X GET http://localhost:8001/api/v1/memories/search \
 ### Lightweight - Vector
 
 ```bash
-curl -X GET http://localhost:8001/api/v1/memories/search \
+curl -X GET http://localhost:1995/api/v1/memories/search \
   -H "Content-Type: application/json" \
   -d '{
     "query": "What sports does the user like?",
@@ -232,7 +232,7 @@ curl -X GET http://localhost:8001/api/v1/memories/search \
 ### Lightweight - RRF (Recommended)
 
 ```bash
-curl -X GET http://localhost:8001/api/v1/memories/search \
+curl -X GET http://localhost:1995/api/v1/memories/search \
   -H "Content-Type: application/json" \
   -d '{
     "query": "Tell me about the user hobbies",
@@ -246,7 +246,7 @@ curl -X GET http://localhost:8001/api/v1/memories/search \
 ### Agentic Retrieval
 
 ```bash
-curl -X GET http://localhost:8001/api/v1/memories/search \
+curl -X GET http://localhost:1995/api/v1/memories/search \
   -H "Content-Type: application/json" \
   -d '{
     "query": "What is my work-life balance like?",

@@ -95,7 +95,7 @@ Vector database, used for semantic retrieval.
 ## 5. Other Configuration
 
 ### API Server
-- `API_BASE_URL`: Base URL for V1 API, used for client connections (default `http://localhost:8001`)
+- `API_BASE_URL`: Base URL for V1 API, used for client connections (default `http://localhost:1995`)
 
 ### Environment & Logging
 - `LOG_LEVEL`: Log level (`INFO`, `DEBUG`, `WARNING`, `ERROR`)

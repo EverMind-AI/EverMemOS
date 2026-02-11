@@ -269,7 +269,6 @@ MONGODB_URI=mongodb://admin:memsys123@localhost:27017
 - [Group Chat Format Specification](../data_format/group_chat/group_chat_format.md)
 - [API Documentation](../docs/api_docs/memory_api.md)
 - [Data Documentation](../data/README.md)
-- [Internationalization Guide](../docs/dev_docs/chat_i18n_usage.md)
 
 ## 📖 Demo Data Overview
 

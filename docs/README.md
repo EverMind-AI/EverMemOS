@@ -60,8 +60,6 @@ Welcome to the EverMemOS documentation! This page serves as a comprehensive inde
 ## Contributing
 
 - **[Contributing Guide](../CONTRIBUTING.md)** - How to contribute to EverMemOS
-- **[Bug Report Template](../.github/ISSUE_TEMPLATE/bug_report.md)** - Report bugs
-- **[Feature Request Template](../.github/ISSUE_TEMPLATE/feature_request.md)** - Suggest new features
 
 ## Additional Resources
 

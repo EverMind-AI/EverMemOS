@@ -49,13 +49,13 @@ For complete format specifications, see [Group Chat Format Specification](../../
 # Store group chat messages (Chinese data)
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat_zh.json \
-  --api-url http://localhost:8001/api/v1/memories \
+  --api-url http://localhost:1995/api/v1/memories \
   --scene group_chat
 
 # Store group chat messages (English data)
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/group_chat_en.json \
-  --api-url http://localhost:8001/api/v1/memories \
+  --api-url http://localhost:1995/api/v1/memories \
   --scene group_chat
 
 # Validate file format without storing
@@ -70,7 +70,7 @@ uv run python src/bootstrap.py src/run_memorize.py \
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `--input` | Yes | Path to the conversation data file (JSON format) |
-| `--api-url` | No | API endpoint (default: http://localhost:8001/api/v1/memories) |
+| `--api-url` | No | API endpoint (default: http://localhost:1995/api/v1/memories) |
 | `--scene` | Yes | Scene type: `assistant` or `group_chat` |
 | `--validate-only` | No | Validate format without sending to API |
 
@@ -324,8 +324,8 @@ uv run python src/bootstrap.py src/run_memorize.py \
 **Problem**: Script reports API errors when storing
 
 **Solutions:**
-- Verify API server is running: `curl http://localhost:8001/health`
-- Check API URL is correct (default: http://localhost:8001/api/v1/memories)
+- Verify API server is running: `curl http://localhost:1995/health`
+- Check API URL is correct (default: http://localhost:1995/api/v1/memories)
 - Ensure .env has required API keys (LLM_API_KEY, VECTORIZE_API_KEY)
 - Review error messages for specific issues
 
