@@ -103,35 +103,6 @@ Welcome to EverMemOS! Join our community to help improve the project and collabo
 
 <br>
 
-<!-- ## Why EverMemOS
-
-### How EverMemOS works
-![image](https://github.com/user-attachments/assets/2a2a4f15-9185-47b3-9182-9c28145e18a4)
-
-EverMemOS enables AI to not only remember what happened, but understand the meaning behind memories and use them to guide decisions. Achieving **93% reasoning accuracy** on the LoCoMo benchmark, EverMemOS provides long-term memory capabilities for conversational AI agents through structured extraction, intelligent retrieval, and progressive profile building.
-
-![divider][divider-light]
-![divider][divider-dark]
-
-
-### EverMemOS benchmark
-
-![image](https://github.com/user-attachments/assets/9583e4de-8f3b-4681-ab5f-10ee82327da8)
-
-* 🎯 93% Accuracy - Best-in-class performance on LoCoMo benchmark
-* 🚀 Production Ready - Enterprise-grade with Milvus vector DB, Elasticsearch, MongoDB, and Redis
-* 🔧 Easy Integration - Simple REST API, works with any LLM
-* 📊 Multi-Modal Memory - Episodes, facts, preferences, relations
-* 🔍 Smart Retrieval - BM25, embeddings, or agentic search
-
-<br>
-
-<div align="right">
-
-[![][back-to-top]][readme-top]
-
-</div> -->
-
 ## Introduction
 
 > 💬 **More than memory — it's foresight.**
@@ -159,7 +130,7 @@ EverMemOS enables AI to not only remember what happened, but understand the mean
 - 🔍 **Smart Retrieval** - BM25, embeddings, or agentic search
 
 <p align="center">
-  <img src="figs/benchmark.png" alt="EverMemOS Benchmark Results" width="800"/>
+  <img src="https://github.com/user-attachments/assets/a6ff7523-db24-40f5-96ab-aa94f41b2392" alt="EverMemOS Benchmark Results" width="800"/>
   <br>
   <em>EverMemOS outperforms existing memory systems across all major benchmarks</em>
 </p>
