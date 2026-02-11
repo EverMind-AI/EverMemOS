@@ -87,11 +87,11 @@ Welcome to EverMemOS! Join our community to help improve the project and collabo
 | Community | Purpose |
 | :-------- | :------ |
 | [![Discord][discord-badge]][discord] | Join our Discord community |
-| [![Hugging Face Space][hugging-face-badge]][hugging-face] | Join our Hugging Face community to explore our spaces and models |
+| [![WeChat][wechat-badge]][wechat] | Join the WeChat discussion group |
 | [![X][x-badge]][x] | Follow updates on X |
 | [![LinkedIn][linkedin-badge]][linkedin] | Connect with us on LinkedIn |
+| [![Hugging Face Space][hugging-face-badge]][hugging-face] | Join our Hugging Face community to explore our spaces and models |
 | [![Reddit][reddit-badge]][reddit] | Join the Reddit community |
-| [![WeChat][wechat-badge]][wechat] | Join the WeChat discussion group |
 
 
 <br>
