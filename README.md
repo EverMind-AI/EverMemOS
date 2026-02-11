@@ -13,7 +13,7 @@
 [![License][license-badge]][license]
 
 
-<p><strong>Share EverMemOS Repository</strong></p>
+<!-- <p><strong>Share EverMemOS Repository</strong></p>
 
 [![][share-x-shield]][share-x-link]
 [![][share-linkedin-shield]][share-linkedin-link]
@@ -21,7 +21,7 @@
 [![][share-telegram-shield]][share-telegram-link]
 [![][share-whatsapp-shield]][share-whatsapp-link]
 [![][share-mastodon-shield]][share-mastodon-link]
-[![][share-weibo-shield]][share-weibo-link]
+[![][share-weibo-shield]][share-weibo-link] -->
 
 
 [Documentation][documentation] •
