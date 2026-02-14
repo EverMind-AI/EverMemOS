@@ -33,45 +33,29 @@ cd EverMemOS
 
 # Start all services with Docker
 docker compose up -d
-```
 
-### 2. Install uv and Dependencies
-
-```bash
 # Install uv package manager
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install dependencies
 uv sync
-```
 
-### 3. Configure API Keys
-
-```bash
 # Copy environment template
 cp env.template .env
 
 # Edit .env and set:
 #   - LLM_API_KEY (for memory extraction)
 #   - VECTORIZE_API_KEY (for embedding/rerank)
-```
 
-### 4. Start Server
-
-```bash
 # Start the EverMemOS server
 uv run python src/run.py
-```
 
-### 5. Verify Installation
-
-```bash
 # Verify services are running
 curl http://localhost:1995/health
 # Expected response: {"status": "healthy", ...}
 ```
 
-### 6. Store Your First Memory
+### 2. Store Your First Memory
 
 ```bash
 curl -X POST "http://localhost:1995/api/v1/memories" \
@@ -84,7 +68,7 @@ curl -X POST "http://localhost:1995/api/v1/memories" \
   }'
 ```
 
-### 7. Search Memories
+### 3. Search Memories
 
 ```bash
 curl -X GET "http://localhost:1995/api/v1/memories/search" \
