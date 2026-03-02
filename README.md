@@ -33,13 +33,13 @@
 
 <br>
 
-![Image](https://github.com/user-attachments/assets/e19514c4-4f2f-48da-aa58-e96215405772)
+[![Image](https://github.com/user-attachments/assets/e19514c4-4f2f-48da-aa58-e96215405772)](https://luma.com/n88icl03)
 
 > [!IMPORTANT]
 >
 > ### Memory Genesis Competition 2026
 > 
-> Join our AI Memory Competition! Build innovative applications, plugins, or infrastructure improvements powered by EverMemOS.
+> Join our AI [Memory Competition](https://luma.com/n88icl03)! Build innovative applications, plugins, or infrastructure improvements powered by EverMemOS.
 > 
 > **Tracks:**
 > - **Agent + Memory** - Build intelligent agents with long-term, evolving memories
@@ -118,12 +118,12 @@ Claw is putting the pieces of his memory together. Imagine a 24/7 agent with con
 
 <br>
 
-![Image](https://github.com/user-attachments/assets/0a0b83f1-8b49-466a-b34e-f32e928c8b8f)
+[![Image](https://github.com/user-attachments/assets/0a0b83f1-8b49-466a-b34e-f32e928c8b8f)](https://github.com/TEN-framework/ten-framework/tree/main/ai_agents/agents/examples/voice-assistant-with-EverMemOS)
 
 **Live2D Character with Memory**
 
 Add long-term memory to your anime character that can talk to you in real-time powered by [TEN Framework](https://github.com/TEN-framework/ten-framework).
-See the [Live2D Character with Memory Example](https://github.com/TEN-framework/ten-framework/tree/main/examples/live2d_character_with_memory) for more details.
+See the [Live2D Character with Memory Example](https://github.com/TEN-framework/ten-framework/tree/main/ai_agents/agents/examples/voice-assistant-with-EverMemOS) for more details.
 
 
 ![divider][divider-light]
@@ -145,7 +145,7 @@ See the [live demo]() for more details.
 <br>
 
 
-![Image](https://github.com/user-attachments/assets/672ecda7-33b4-4802-9805-9e4551cb1a7f)
+[![Image](https://github.com/user-attachments/assets/672ecda7-33b4-4802-9805-9e4551cb1a7f)](https://github.com/EverMind-AI/evermem_got_demo)
 
 **Game of Thrones Memories**
 
@@ -157,7 +157,7 @@ See the [code](https://github.com/EverMind-AI/evermem_got_demo) for more details
 
 <br>
 
-![Image](https://github.com/user-attachments/assets/1b26be2f-7de2-4618-ac62-8be9d2d73f63)
+[![Image](https://github.com/user-attachments/assets/1b26be2f-7de2-4618-ac62-8be9d2d73f63)](https://github.com/EverMind-AI/evermem-claude-code)
 
 **EverMemOS Claude Code Plugin**
 
@@ -169,7 +169,7 @@ See the [code](https://github.com/EverMind-AI/evermem-claude-code) for more deta
 
 <br>
 
-![Image](https://github.com/user-attachments/assets/06412c1d-8e61-4675-9aef-e8c005e00928)
+[![Image](https://github.com/user-attachments/assets/06412c1d-8e61-4675-9aef-e8c005e00928)](https://main.d2j21qxnymu6wl.amplifyapp.com/graph.html)
 
 **Visualize Memories with Graphs**
 
