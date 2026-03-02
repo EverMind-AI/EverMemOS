@@ -95,13 +95,6 @@ Welcome to EverMemOS! Join our community to help improve the project and collabo
 | [![Hugging Face Space][hugging-face-badge]][hugging-face] | Join our Hugging Face community to explore our spaces and models |
 | [![Reddit][reddit-badge]][reddit] | Join the Reddit community | -->
 
-<!-- <br>
-
-<a id="star-us"></a>
-## 🌟 Star and stay tuned with us 
-
-![star us gif](https://github.com/user-attachments/assets/0c512570-945a-483a-9f47-8e067bd34484) -->
-
 <br>
 
 ## Usecases
@@ -544,7 +537,7 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) for code standards and Git w
 [demo-section]: #demo
 
 <!-- Dividers -->
-[divider-light]: https://github.com/user-attachments/assets/2e2bbcc6-e6d8-4227-83c6-0620fc96f761
+[divider-light]: https://github.com/user-attachments/assets/2e2bbcc6-e6d8-4227-83c6-0620fc96f761#gh-light-mode-only
 [divider-dark]: https://github.com/user-attachments/assets/d57fad08-4f49-4a1c-bdfc-f659a5d86150#gh-dark-mode-only
 
 [banner-gif]: https://github.com/user-attachments/assets/dfdf2572-f1dd-4b92-a65a-f314619a3922
