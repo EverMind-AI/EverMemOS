@@ -53,9 +53,6 @@
 
 <br>
 
-![divider][divider-light]
-![divider][divider-dark]
-
 <!-- <details>
 <summary><kbd>Table of Contents</kbd></summary>
 
