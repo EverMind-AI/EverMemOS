@@ -33,6 +33,8 @@
 
 <br>
 
+![Image](https://github.com/user-attachments/assets/e19514c4-4f2f-48da-aa58-e96215405772)
+
 > [!IMPORTANT]
 >
 > ### Memory Genesis Competition 2026
@@ -46,7 +48,7 @@
 > 
 > **[Get Started with the Competition Starter Kit](docs/STARTER_KIT.md)** 
 > 
-> Join our [Discord](https://discord.gg/gYep5nQRZJ) to find teammates and brainstorm ideas!
+> Join our [Discord](https://discord.gg/gYep5nQRZJ) to ask anything you want. AMA session is open to everyone and occurs biweekly.
 > 
 
 <br>
@@ -104,13 +106,76 @@ Welcome to EverMemOS! Join our community to help improve the project and collabo
 
 ## Exampels
 
-![example gif](https://github.com/user-attachments/assets/13b87b33-403c-4e5a-acfb-095cc7b55d08)
+![Image](https://github.com/user-attachments/assets/4f96111f-3870-4b49-961c-98f75f62ece7)
+
+**OpenClaw Long-Term Memory Plugin(coming this week)**
 
 Claw is putting the pieces of his memory together. Imagine a 24/7 agent with continuous learning memory that you can carry with you wherever you go next.
 
 
-<!-- ![divider][divider-light]
-![divider][divider-dark] -->
+![divider][divider-light]
+![divider][divider-dark]
+
+<br>
+
+![Image](https://github.com/user-attachments/assets/0a0b83f1-8b49-466a-b34e-f32e928c8b8f)
+
+**Live2D Character with Memory**
+
+Add long-term memory to your anime character that can talk to you in real-time powered by [TEN Framework](https://github.com/TEN-framework/ten-framework).
+See the [Live2D Character with Memory Example](https://github.com/TEN-framework/ten-framework/tree/main/examples/live2d_character_with_memory) for more details.
+
+
+![divider][divider-light]
+![divider][divider-dark]
+
+<br>
+
+![Image](https://github.com/user-attachments/assets/f3480aea-9603-4d18-9599-8e3bd95ce5c0)
+
+**Computer-Use with Memory**
+
+Use computer-use to launch screenshot to do analysis all in your memory.
+See the [live demo]() for more details.
+
+
+![divider][divider-light]
+![divider][divider-dark]
+
+<br>
+
+
+![Image](https://github.com/user-attachments/assets/672ecda7-33b4-4802-9805-9e4551cb1a7f)
+
+**Game of Thrones Memories**
+
+A demonstration of AI memory infrastructure through an interactive Q&A experience with "A Game of Thrones" 
+
+![divider][divider-light]
+![divider][divider-dark]
+
+<br>
+
+![Image](https://github.com/user-attachments/assets/1b26be2f-7de2-4618-ac62-8be9d2d73f63)
+
+**EverMemOS Claude Code Plugin**
+
+Persistent memory for Claude Code. Automatically saves and recalls context from past coding sessions.
+
+![divider][divider-light]
+![divider][divider-dark]
+
+<br>
+
+![Image](https://github.com/user-attachments/assets/06412c1d-8e61-4675-9aef-e8c005e00928)
+
+**Visualize Memories with Graphs**
+
+Memory Graph view that visualizes your stored entities and how they relate
+
+
+![divider][divider-light]
+![divider][divider-dark]
 
 <br>
 
