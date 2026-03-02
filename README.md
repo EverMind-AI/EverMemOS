@@ -104,7 +104,7 @@ Welcome to EverMemOS! Join our community to help improve the project and collabo
 
 <br>
 
-## Exampels
+## Usecases
 
 ![Image](https://github.com/user-attachments/assets/4f96111f-3870-4b49-961c-98f75f62ece7)
 
@@ -150,6 +150,7 @@ See the [live demo]() for more details.
 **Game of Thrones Memories**
 
 A demonstration of AI memory infrastructure through an interactive Q&A experience with "A Game of Thrones" 
+See the [code](https://github.com/EverMind-AI/evermem_got_demo) for more details.
 
 ![divider][divider-light]
 ![divider][divider-dark]
@@ -161,6 +162,7 @@ A demonstration of AI memory infrastructure through an interactive Q&A experienc
 **EverMemOS Claude Code Plugin**
 
 Persistent memory for Claude Code. Automatically saves and recalls context from past coding sessions.
+See the [code](https://github.com/EverMind-AI/evermem-claude-code) for more details.
 
 ![divider][divider-light]
 ![divider][divider-dark]
@@ -171,13 +173,9 @@ Persistent memory for Claude Code. Automatically saves and recalls context from 
 
 **Visualize Memories with Graphs**
 
-Memory Graph view that visualizes your stored entities and how they relate
+Memory Graph view that visualizes your stored entities and how they relate, this is a pure frontend demo which hasn't been plugged with the backend yet, we are working on it.
+See the [live demo](https://main.d2j21qxnymu6wl.amplifyapp.com/graph.html).
 
-
-![divider][divider-light]
-![divider][divider-dark]
-
-<br>
 
 
 <!-- ## Introduction
@@ -213,6 +211,11 @@ Memory Graph view that visualizes your stored entities and how they relate
 </p> -->
 
 <br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
 
 ## Quick Start
 
@@ -257,6 +260,11 @@ curl http://localhost:1995/health
 ✅ Server running at `http://localhost:1995` • [Full Setup Guide](docs/installation/SETUP.md)
 
 <br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
 
 ## Basic Usage
 
@@ -291,6 +299,11 @@ for memory_group in result.get("memories", []):
 📖 [More Examples](docs/usage/USAGE_EXAMPLES.md) • 📚 [API Reference](docs/api_docs/memory_api.md) • 🎯 [Interactive Demos](docs/usage/DEMOS.md)
 
 <br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
 
 ## Demo
 
@@ -319,6 +332,11 @@ uv run python src/bootstrap.py demo/chat_with_memory.py
 See the [Demo Guide](docs/usage/DEMOS.md) for details.
 
 <br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
 
 ## Advanced Techniques
 
@@ -328,6 +346,11 @@ See the [Demo Guide](docs/usage/DEMOS.md) for details.
 - **[Batch Operations](docs/usage/BATCH_OPERATIONS.md)** - Process multiple messages efficiently
 
 <br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
 
 ## Documentation
 
@@ -342,6 +365,11 @@ See the [Demo Guide](docs/usage/DEMOS.md) for details.
 | [Evaluation Guide][evaluation-guide] | Benchmark testing |
 
 <br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
 
 ## Evaluation & Benchmarking
 
@@ -378,6 +406,11 @@ cat evaluation/results/locomo-evermemos/report.txt
 📊 [Full Evaluation Guide](evaluation/README.md) • 📈 [Complete Results](https://huggingface.co/datasets/EverMind-AI/EverMemOS_Eval_Results)
 
 <br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
 
 ## GitHub Codespaces
 
@@ -410,6 +443,11 @@ EverMemOS supports [GitHub Codespaces](https://github.com/features/codespaces) f
 All infrastructure services (MongoDB, Elasticsearch, Milvus, Redis) start automatically and are pre-configured to work together.
 
 <br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
 
 ## Questions
 
