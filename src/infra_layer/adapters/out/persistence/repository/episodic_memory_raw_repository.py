@@ -318,6 +318,42 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemory]):
             logger.error("❌ Failed to delete episodic memories by user ID: %s", e)
             return 0
 
+    async def delete_by_parent_id(
+        self, parent_id: str, session: Optional[AsyncClientSession] = None
+    ) -> int:
+        """
+        Delete all episodic memories by parent ID (e.g. memcell event_id).
+
+        Used for deduplication: when re-processing the same source, delete old
+        records before inserting new ones.
+
+        Args:
+            parent_id: Parent memory ID
+            session: Optional MongoDB session for transaction support
+
+        Returns:
+            Number of deleted records
+        """
+        try:
+            result = await self.model.find(
+                {"parent_id": parent_id}
+            ).delete(session=session)
+            count = result.deleted_count if result else 0
+            if count > 0:
+                logger.info(
+                    "✅ Deleted %d episodic memories by parent_id=%s",
+                    count,
+                    parent_id,
+                )
+            return count
+        except Exception as e:
+            logger.error(
+                "❌ Failed to delete episodic memories by parent_id=%s: %s",
+                parent_id,
+                e,
+            )
+            return 0
+
     async def find_by_filter_paginated(
         self,
         query_filter: Optional[Dict[str, Any]] = None,
