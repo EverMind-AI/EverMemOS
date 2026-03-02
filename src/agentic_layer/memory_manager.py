@@ -94,6 +94,20 @@ ES_REPO_MAP = {
     MemoryType.EPISODIC_MEMORY: EpisodicMemoryEsRepository,
 }
 
+# MemoryType -> Milvus Repository mapping
+MILVUS_REPO_MAP = {
+    MemoryType.FORESIGHT: ForesightMilvusRepository,
+    MemoryType.EVENT_LOG: EventLogMilvusRepository,
+    MemoryType.EPISODIC_MEMORY: EpisodicMemoryMilvusRepository,
+}
+
+
+def _memory_types_label(memory_types: List) -> str:
+    """Return a comma-joined string of memory type values for metrics/logging."""
+    if not memory_types:
+        return 'unknown'
+    return ','.join(mt.value for mt in memory_types)
+
 
 @dataclass
 class EventLogCandidate:
@@ -298,11 +312,7 @@ class MemoryManager:
     ) -> RetrieveMemResponse:
         """Keyword-based memory retrieval"""
         start_time = time.perf_counter()
-        memory_type = (
-            retrieve_mem_request.memory_types[0].value
-            if retrieve_mem_request.memory_types
-            else 'unknown'
-        )
+        memory_type = _memory_types_label(retrieve_mem_request.memory_types)
 
         try:
             hits = await self.get_keyword_search_results(
@@ -339,11 +349,7 @@ class MemoryManager:
     ) -> List[Dict[str, Any]]:
         """Keyword search with stage-level metrics"""
         stage_start = time.perf_counter()
-        memory_type = (
-            retrieve_mem_request.memory_types[0].value
-            if retrieve_mem_request.memory_types
-            else 'unknown'
-        )
+        memory_type = _memory_types_label(retrieve_mem_request.memory_types)
 
         try:
             # Get parameters from Request
@@ -375,32 +381,36 @@ class MemoryManager:
             if end_time is not None:
                 date_range["lte"] = end_time
 
-            mem_type = memory_types[0]
+            # Iterate over ALL memory types and merge results
+            all_results = []
+            for mem_type in memory_types:
+                repo_class = ES_REPO_MAP.get(mem_type)
+                if not repo_class:
+                    logger.info(
+                        f"Memory type {mem_type} is not searchable via ES, skipping"
+                    )
+                    continue
 
-            repo_class = ES_REPO_MAP.get(mem_type)
-            if not repo_class:
-                logger.warning(f"Unsupported memory_type: {mem_type}")
-                return []
+                es_repo = get_bean_by_type(repo_class)
+                logger.debug(f"Using {repo_class.__name__} for {mem_type}")
 
-            es_repo = get_bean_by_type(repo_class)
-            logger.debug(f"Using {repo_class.__name__} for {mem_type}")
+                results = await es_repo.multi_search(
+                    query=query_words,
+                    user_id=user_id,
+                    group_id=group_id,
+                    size=top_k,
+                    from_=0,
+                    date_range=date_range,
+                )
 
-            results = await es_repo.multi_search(
-                query=query_words,
-                user_id=user_id,
-                group_id=group_id,
-                size=top_k,
-                from_=0,
-                date_range=date_range,
-            )
-
-            # Mark memory_type, search_source, and unified score
-            if results:
-                for r in results:
-                    r['memory_type'] = mem_type.value
-                    r['_search_source'] = RetrieveMethod.KEYWORD.value
-                    r['id'] = r.get('_id', '')  # Unify ES '_id' to 'id'
-                    r['score'] = r.get('_score', 0.0)  # Unified score field
+                # Mark memory_type, search_source, and unified score
+                if results:
+                    for r in results:
+                        r['memory_type'] = mem_type.value
+                        r['_search_source'] = RetrieveMethod.KEYWORD.value
+                        r['id'] = r.get('_id', '')  # Unify ES '_id' to 'id'
+                        r['score'] = r.get('_score', 0.0)  # Unified score field
+                    all_results.extend(results)
 
             # Record stage metrics
             record_retrieve_stage(
@@ -410,7 +420,7 @@ class MemoryManager:
                 duration_seconds=time.perf_counter() - stage_start,
             )
 
-            return results or []
+            return all_results
         except Exception as e:
             record_retrieve_stage(
                 retrieve_method=retrieve_method,
@@ -433,11 +443,7 @@ class MemoryManager:
     ) -> RetrieveMemResponse:
         """Vector-based memory retrieval"""
         start_time = time.perf_counter()
-        memory_type = (
-            retrieve_mem_request.memory_types[0].value
-            if retrieve_mem_request.memory_types
-            else 'unknown'
-        )
+        memory_type = _memory_types_label(retrieve_mem_request.memory_types)
 
         try:
             hits = await self.get_vector_search_results(
@@ -473,11 +479,8 @@ class MemoryManager:
         retrieve_method: str = RetrieveMethod.VECTOR.value,
     ) -> List[Dict[str, Any]]:
         """Vector search with stage-level metrics (embedding + milvus_search)"""
-        memory_type = (
-            retrieve_mem_request.memory_types[0].value
-            if retrieve_mem_request.memory_types
-            else 'unknown'
-        )
+        memory_type = _memory_types_label(retrieve_mem_request.memory_types)
+        milvus_start = time.perf_counter()
 
         try:
             # Get parameters from Request
@@ -497,7 +500,7 @@ class MemoryManager:
             top_k = retrieve_mem_request.top_k
             start_time = retrieve_mem_request.start_time
             end_time = retrieve_mem_request.end_time
-            mem_type = retrieve_mem_request.memory_types[0]
+            memory_types = retrieve_mem_request.memory_types
 
             logger.debug(
                 f"retrieve_mem_vector called with query: {query}, user_id: {user_id}, group_id: {group_id}, top_k: {top_k}"
@@ -506,7 +509,7 @@ class MemoryManager:
             # Get vectorization service
             vectorize_service = get_vectorize_service()
 
-            # Convert query text to vector (embedding stage)
+            # Convert query text to vector ONCE (embedding stage)
             logger.debug(f"Starting to vectorize query text: {query}")
             embedding_start = time.perf_counter()
             query_vector = await vectorize_service.get_embedding(query)
@@ -521,21 +524,9 @@ class MemoryManager:
                 f"Query text vectorization completed, vector dimension: {len(query_vector_list)}"
             )
 
-            # Select Milvus repository based on memory type
-            match mem_type:
-                case MemoryType.FORESIGHT:
-                    milvus_repo = get_bean_by_type(ForesightMilvusRepository)
-                case MemoryType.EVENT_LOG:
-                    milvus_repo = get_bean_by_type(EventLogMilvusRepository)
-                case MemoryType.EPISODIC_MEMORY:
-                    milvus_repo = get_bean_by_type(EpisodicMemoryMilvusRepository)
-                case _:
-                    raise ValueError(f"Unsupported memory type: {mem_type}")
-
             # Handle time range filter conditions
             start_time_dt = None
             end_time_dt = None
-            current_time_dt = None
 
             if start_time is not None:
                 start_time_dt = (
@@ -553,42 +544,63 @@ class MemoryManager:
                 else:
                     end_time_dt = end_time
 
-            # Handle foresight time range (only valid for foresight)
-            if mem_type == MemoryType.FORESIGHT:
-                if retrieve_mem_request.start_time:
-                    start_time_dt = from_iso_format(retrieve_mem_request.start_time)
-                if retrieve_mem_request.end_time:
-                    end_time_dt = from_iso_format(retrieve_mem_request.end_time)
-                if retrieve_mem_request.current_time:
-                    current_time_dt = from_iso_format(retrieve_mem_request.current_time)
-
-            # Call Milvus vector search (pass different parameters based on memory type)
+            # Iterate over ALL memory types and merge results
+            all_results = []
             milvus_start = time.perf_counter()
-            if mem_type == MemoryType.FORESIGHT:
-                # Foresight: supports time range and validity filtering, supports radius parameter
-                search_results = await milvus_repo.vector_search(
-                    query_vector=query_vector_list,
-                    user_id=user_id,
-                    group_id=group_id,
-                    start_time=start_time_dt,
-                    end_time=end_time_dt,
-                    current_time=current_time_dt,
-                    limit=top_k,
-                    score_threshold=0.0,
-                    radius=retrieve_mem_request.radius,
-                )
-            else:
-                # Episodic memory and event log: use timestamp filtering, supports radius parameter
-                search_results = await milvus_repo.vector_search(
-                    query_vector=query_vector_list,
-                    user_id=user_id,
-                    group_id=group_id,
-                    start_time=start_time_dt,
-                    end_time=end_time_dt,
-                    limit=top_k,
-                    score_threshold=0.0,
-                    radius=retrieve_mem_request.radius,
-                )
+            for mem_type in memory_types:
+                milvus_repo_class = MILVUS_REPO_MAP.get(mem_type)
+                if not milvus_repo_class:
+                    logger.info(
+                        f"Memory type {mem_type} is not searchable via Milvus, skipping"
+                    )
+                    continue
+
+                milvus_repo = get_bean_by_type(milvus_repo_class)
+
+                # Call Milvus vector search (pass different parameters based on memory type)
+                if mem_type == MemoryType.FORESIGHT:
+                    # Handle foresight-specific time range
+                    foresight_start_dt = start_time_dt
+                    foresight_end_dt = end_time_dt
+                    current_time_dt = None
+                    if retrieve_mem_request.start_time:
+                        foresight_start_dt = from_iso_format(retrieve_mem_request.start_time)
+                    if retrieve_mem_request.end_time:
+                        foresight_end_dt = from_iso_format(retrieve_mem_request.end_time)
+                    if retrieve_mem_request.current_time:
+                        current_time_dt = from_iso_format(retrieve_mem_request.current_time)
+
+                    # Foresight: supports time range and validity filtering, supports radius parameter
+                    search_results = await milvus_repo.vector_search(
+                        query_vector=query_vector_list,
+                        user_id=user_id,
+                        group_id=group_id,
+                        start_time=foresight_start_dt,
+                        end_time=foresight_end_dt,
+                        current_time=current_time_dt,
+                        limit=top_k,
+                        score_threshold=0.0,
+                        radius=retrieve_mem_request.radius,
+                    )
+                else:
+                    # Episodic memory and event log: use timestamp filtering, supports radius parameter
+                    search_results = await milvus_repo.vector_search(
+                        query_vector=query_vector_list,
+                        user_id=user_id,
+                        group_id=group_id,
+                        start_time=start_time_dt,
+                        end_time=end_time_dt,
+                        limit=top_k,
+                        score_threshold=0.0,
+                        radius=retrieve_mem_request.radius,
+                    )
+
+                for r in search_results:
+                    r['memory_type'] = mem_type.value
+                    r['_search_source'] = RetrieveMethod.VECTOR.value
+                    # Milvus already uses 'score', no need to rename
+                all_results.extend(search_results)
+
             record_retrieve_stage(
                 retrieve_method=retrieve_method,
                 stage='milvus_search',
@@ -596,12 +608,7 @@ class MemoryManager:
                 duration_seconds=time.perf_counter() - milvus_start,
             )
 
-            for r in search_results:
-                r['memory_type'] = mem_type.value
-                r['_search_source'] = RetrieveMethod.VECTOR.value
-                # Milvus already uses 'score', no need to rename
-
-            return search_results
+            return all_results
         except Exception as e:
             record_retrieve_stage(
                 retrieve_method=retrieve_method,
@@ -624,11 +631,7 @@ class MemoryManager:
     ) -> RetrieveMemResponse:
         """Hybrid memory retrieval: keyword + vector + rerank"""
         start_time = time.perf_counter()
-        memory_type = (
-            retrieve_mem_request.memory_types[0].value
-            if retrieve_mem_request.memory_types
-            else 'unknown'
-        )
+        memory_type = _memory_types_label(retrieve_mem_request.memory_types)
 
         try:
             hits = await self._search_hybrid(
@@ -699,9 +702,7 @@ class MemoryManager:
         retrieve_method: str = RetrieveMethod.HYBRID.value,
     ) -> List[Dict]:
         """Core hybrid search: keyword + vector + rerank, returns flat list"""
-        memory_type = (
-            request.memory_types[0].value if request.memory_types else 'unknown'
-        )
+        memory_type = _memory_types_label(request.memory_types)
         # Run keyword and vector search concurrently
         kw_results, vec_results = await asyncio.gather(
             self.get_keyword_search_results(request, retrieve_method=retrieve_method),
@@ -722,9 +723,7 @@ class MemoryManager:
         retrieve_method: str = RetrieveMethod.RRF.value,
     ) -> List[Dict]:
         """Core RRF search: keyword + vector + RRF fusion, returns flat list"""
-        memory_type = (
-            request.memory_types[0].value if request.memory_types else 'unknown'
-        )
+        memory_type = _memory_types_label(request.memory_types)
 
         # Run keyword and vector search concurrently
         kw, vec = await asyncio.gather(
@@ -766,7 +765,7 @@ class MemoryManager:
         """Convert flat hits list to grouped RetrieveMemResponse"""
         user_id = req.user_id if req else ""
         source_type = req.retrieve_method.value
-        memory_type = req.memory_types[0].value
+        memory_type = _memory_types_label(req.memory_types)
 
         if not hits:
             return RetrieveMemResponse(
@@ -808,11 +807,7 @@ class MemoryManager:
     ) -> RetrieveMemResponse:
         """RRF-based memory retrieval: keyword + vector + RRF fusion"""
         start_time = time.perf_counter()
-        memory_type = (
-            retrieve_mem_request.memory_types[0].value
-            if retrieve_mem_request.memory_types
-            else 'unknown'
-        )
+        memory_type = _memory_types_label(retrieve_mem_request.memory_types)
 
         try:
             hits = await self._search_rrf(
@@ -855,7 +850,7 @@ class MemoryManager:
         req = retrieve_mem_request  # alias
         top_k = req.top_k
         config = AgenticConfig()
-        memory_type = req.memory_types[0].value if req.memory_types else 'unknown'
+        memory_type = _memory_types_label(req.memory_types)
 
         try:
             llm_provider = LLMProvider(
