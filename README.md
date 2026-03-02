@@ -33,7 +33,7 @@
 
 <br>
 
-[![Image](https://github.com/user-attachments/assets/e19514c4-4f2f-48da-aa58-e96215405772)](https://luma.com/n88icl03)
+[![Image](https://github.com/user-attachments/assets/739a0939-ab1d-4659-81c4-0842466afde9)](https://luma.com/n88icl03)
 
 > [!IMPORTANT]
 >
@@ -96,7 +96,7 @@ Welcome to EverMemOS! Join our community to help improve the project and collabo
 
 ## Usecases
 
-![Image](https://github.com/user-attachments/assets/4f96111f-3870-4b49-961c-98f75f62ece7)
+![Image](https://github.com/user-attachments/assets/0c3eb2c5-3a15-4d09-8dee-c38f96422168)
 
 **OpenClaw Long-Term Memory Plugin(coming this week)**
 
@@ -108,7 +108,7 @@ Claw is putting the pieces of his memory together. Imagine a 24/7 agent with con
 
 <br>
 
-[![Image](https://github.com/user-attachments/assets/0a0b83f1-8b49-466a-b34e-f32e928c8b8f)](https://github.com/TEN-framework/ten-framework/tree/main/ai_agents/agents/examples/voice-assistant-with-EverMemOS)
+[![Image](https://github.com/user-attachments/assets/a80bdab3-e5d0-43b9-9e8d-0a9605012a26)](https://github.com/TEN-framework/ten-framework/tree/main/ai_agents/agents/examples/voice-assistant-with-EverMemOS)
 
 **Live2D Character with Memory**
 
@@ -121,7 +121,7 @@ See the [Live2D Character with Memory Example](https://github.com/TEN-framework/
 
 <br>
 
-![Image](https://github.com/user-attachments/assets/f3480aea-9603-4d18-9599-8e3bd95ce5c0)
+![Image](https://github.com/user-attachments/assets/0d306b4c-bcd7-4e9e-a244-22fa3cb7b727)
 
 **Computer-Use with Memory**
 
@@ -135,7 +135,7 @@ See the [live demo]() for more details.
 <br>
 
 
-[![Image](https://github.com/user-attachments/assets/672ecda7-33b4-4802-9805-9e4551cb1a7f)](https://github.com/EverMind-AI/evermem_got_demo)
+[![Image](https://github.com/user-attachments/assets/d1efe507-4eb7-4867-8996-457497333449)](https://github.com/EverMind-AI/evermem_got_demo)
 
 **Game of Thrones Memories**
 
@@ -147,7 +147,7 @@ See the [code](https://github.com/EverMind-AI/evermem_got_demo) for more details
 
 <br>
 
-[![Image](https://github.com/user-attachments/assets/1b26be2f-7de2-4618-ac62-8be9d2d73f63)](https://github.com/EverMind-AI/evermem-claude-code)
+[![Image](https://github.com/user-attachments/assets/b40b2241-b0e6-4fc9-9a35-92139f3a2d81)](https://github.com/EverMind-AI/evermem-claude-code)
 
 **EverMemOS Claude Code Plugin**
 
@@ -159,7 +159,7 @@ See the [code](https://github.com/EverMind-AI/evermem-claude-code) for more deta
 
 <br>
 
-[![Image](https://github.com/user-attachments/assets/06412c1d-8e61-4675-9aef-e8c005e00928)](https://main.d2j21qxnymu6wl.amplifyapp.com/graph.html)
+[![Image](https://github.com/user-attachments/assets/6586e647-dd5f-4f9f-9b26-66f930e8241c)](https://main.d2j21qxnymu6wl.amplifyapp.com/graph.html)
 
 **Visualize Memories with Graphs**
 
@@ -537,7 +537,7 @@ Read our [Contribution Guidelines](CONTRIBUTING.md) for code standards and Git w
 [divider-light]: https://github.com/user-attachments/assets/2e2bbcc6-e6d8-4227-83c6-0620fc96f761#gh-light-mode-only
 [divider-dark]: https://github.com/user-attachments/assets/d57fad08-4f49-4a1c-bdfc-f659a5d86150#gh-dark-mode-only
 
-[banner-gif]: https://github.com/user-attachments/assets/dfdf2572-f1dd-4b92-a65a-f314619a3922
+[banner-gif]: https://github.com/user-attachments/assets/3f22c9a8-a8db-4061-accf-f04c055aa01b
 
 <!-- Header Badges -->
 [arxiv-badge]: https://img.shields.io/badge/arXiv-EverMemOS_Paper-F5C842?labelColor=gray&style=flat-square&logo=arxiv&logoColor=white
