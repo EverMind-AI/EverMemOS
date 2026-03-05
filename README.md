@@ -121,12 +121,12 @@ See the [Live2D Character with Memory Example](https://github.com/TEN-framework/
 
 <br>
 
-![Image](https://github.com/user-attachments/assets/0d306b4c-bcd7-4e9e-a244-22fa3cb7b727)
+[![Image](https://github.com/user-attachments/assets/0d306b4c-bcd7-4e9e-a244-22fa3cb7b727)](https://screenshot-analysis-vercel.vercel.app/)
 
 **Computer-Use with Memory**
 
 Use computer-use to launch screenshot to do analysis all in your memory.
-See the [live demo]() for more details.
+See the [live demo](https://screenshot-analysis-vercel.vercel.app/) for more details.
 
 
 ![divider][divider-light]
