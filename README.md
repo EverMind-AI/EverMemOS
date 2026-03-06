@@ -100,7 +100,7 @@ Welcome to EverMemOS! Join our community to help improve the project and collabo
 
 **OpenClaw Long-Term Memory Plugin**
 
-Claw is putting the pieces of his memory together. Imagine a 24/7 agent with continuous learning memory that you can carry with you wherever you go next.
+Claw is putting the pieces of his memory together. Imagine a 24/7 agent with continuous learning memory that you can carry with you wherever you go next. Check out the [agent_memory](https://github.com/EverMind-AI/EverMemOS/tree/agent_memory) branch for more details.
 
 
 ![divider][divider-light]
