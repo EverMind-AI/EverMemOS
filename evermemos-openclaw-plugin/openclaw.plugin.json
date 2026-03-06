@@ -1,0 +1,49 @@
+{
+  "id": "evermemos-openclaw-plugin",
+  "name": "EverMemOS OpenClaw Plugin",
+  "description": "Long-term memory via EverMemOS",
+  "version": "0.0.1",
+  "kind": "memory",
+  "main": "./index.js",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "baseUrl": {
+        "type": "string",
+        "description": "EverMemOS server base URL",
+        "default": "http://localhost:1995"
+      },
+      "userId": {
+        "type": "string",
+        "description": "Identity used for memory ownership and as message sender",
+        "default": "evermemos-user"
+      },
+      "groupId": {
+        "type": "string",
+        "description": "Group id",
+        "default": "evermemos-group"
+      },
+      "topK": {
+        "type": "integer",
+        "description": "Maximum number of memory entries to retrieve",
+        "default": 5
+      },
+      "memoryTypes": {
+        "type": "array",
+        "description": "EverMemOS memory types to search",
+        "items": {
+          "type": "string",
+          "enum": ["episodic_memory", "profile", "agent_skill", "agent_case"]
+        },
+        "default": ["episodic_memory", "profile", "agent_skill", "agent_case"]
+      },
+      "retrieveMethod": {
+        "type": "string",
+        "description": "Retrieval strategy used by EverMemOS",
+        "enum": ["keyword", "vector", "hybrid", "rrf", "agentic"],
+        "default": "hybrid"
+      }
+    }
+  }
+}

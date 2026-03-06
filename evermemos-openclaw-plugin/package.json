@@ -1,0 +1,19 @@
+{
+  "name": "evermemos-openclaw-plugin",
+  "version": "0.0.1",
+  "description": "Long-term memory via EverMemOS",
+  "type": "module",
+  "main": "./index.js",
+  "keywords": [
+    "evermemos",
+    "memory",
+    "openclaw"
+  ],
+  "author": "EverMind",
+  "license": "Apache-2.0",
+  "openclaw": {
+    "extensions": [
+      "./index.js"
+    ]
+  }
+}
