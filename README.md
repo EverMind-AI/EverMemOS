@@ -1,4 +1,4 @@
-# EverMemOS OpenClaw Plugin
+# EverMemOS OpenClaw Agent Memory and Plugin
 
 ![OpenClaw EverMemOS](https://github.com/user-attachments/assets/0e06da2b-0236-430f-89b4-980b8b6a855f)
 
