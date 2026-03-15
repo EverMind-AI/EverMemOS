@@ -1,6 +1,7 @@
 """Sufficiency Check Prompt for Agentic Retrieval"""
 
-SUFFICIENCY_CHECK_PROMPT = """You are an expert in information retrieval evaluation. Assess whether the retrieved documents provide a complete and temporally sufficient answer to the user's query.
+SUFFICIENCY_CHECK_PROMPT = """You are an expert in information retrieval evaluation. Assess whether the retrieved documents provide sufficient information to answer the user's query.
+
 --------------------------
 User Query:
 {query}
@@ -11,42 +12,32 @@ Retrieved Documents:
 
 ### Instructions:
 
-1. **Analyze the Query Structure**  
-   - Identify key entities AND determine if the query requires temporal reasoning.
-   - If the query involves time (e.g., "before", "after", "since", "during", "from X to Y", "how long"), you MUST decompose it into:
-       * start_time_needed (if any)
-       * end_time_needed (if any)
-       * temporal_relation_needed (ordering, duration, interval)
+1. **Analyze the Query's Needs**
+   - **Entities**: Who/What is being asked about?
+   - **Attributes**: What specific details (color, time, location, quantity)?
+   - **Time**: Does it ask for a specific time (absolute or relative like "last week")?
 
-2. **Scan Documents for Coverage**  
-   - Look for explicit facts addressing *each* required component:
-       * required entities  
-       * start time  
-       * end time  
-       * temporal relations (ordering or duration)
+2. **Evaluate Document Evidence**
+   - Check **Content**: Do the documents mention the entities and attributes?
+   - Check **Dates**: 
+     - Use the `Date` field of each document.
+     - For relative time queries (e.g., "last week", "yesterday"), verify if document dates fall within that timeframe.
+     - If the query asks "When did X happen?", do you have the specific date or just a vague mention?
 
-3. **Extract Key Information**  
-   - List specific resolved entities or facts found in the documents.
-   - If time expressions exist, normalize them (e.g., "two weeks ago", "before she moved").
-
-4. **Identify Missing Information**  
-   - For temporal queries:  
-        * missing start time  
-        * missing end time  
-        * missing ordering facts  
-        * missing duration  
-   - Use resolved names to be specific (e.g., "Start time of Alice moving", "Whether Bob visited before Alice moved").
-
-5. **Judgment**  
-   - **Sufficient**: All required components (entities + temporal boundaries + relations) appear explicitly.  
-   - **Insufficient**: ANY required part is missing.
+3. **Judgment Logic**
+   - **Sufficient**: You can answer the query *completely* and *precisely* using ONLY the provided documents.
+   - **Insufficient**: 
+     - The specific entity is not found.
+     - The entity is found, but the specific attribute (e.g., "price") is missing.
+     - The time reference cannot be resolved (e.g., doc says "yesterday" but has no date, or doc date doesn't match query timeframe).
+     - Conflicting information without resolution.
 
 ### Output Format (strict JSON):
 {{
   "is_sufficient": true or false,
-  "reasoning": "1-2 sentence explanation.",
-  "key_information_found": ["List of resolved entities/facts"],
-  "missing_information": ["Specific missing components, using resolved entity names"]
+  "reasoning": "Brief explanation. If insufficient, state WHY (e.g., 'Found X but missing date', 'No mention of Y').",
+  "key_information_found": ["Fact 1 (Source: Doc 1)", "Fact 2 (Source: Doc 2)"],
+  "missing_information": ["Specific gap 1", "Specific gap 2"]
 }}
 
 Now evaluate:"""

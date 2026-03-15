@@ -112,6 +112,9 @@ async def locomo_response(
     context: str,
     question: str,
     experiment_config: ExperimentConfig,
+    prompt_template: str = ANSWER_PROMPT,
+    options_text: str = "",
+    profile_text: str = "",
 ) -> str:
     """Generate answer (using LLMProvider).
 
@@ -124,23 +127,47 @@ async def locomo_response(
     Returns:
         Generated answer
     """
-    prompt = ANSWER_PROMPT.format(context=context, question=question)
+    prompt = prompt_template.format(
+        context=context,
+        question=question,
+        options=options_text,
+        profile=profile_text,
+    )
 
     for i in range(experiment_config.max_retries):
         try:
-            result = await llm_provider.generate(prompt=prompt, temperature=0)
+            result = await llm_provider.generate(
+                prompt=prompt,
+                temperature=0,
+                max_tokens=32768,
+            )
 
-            # Safe parse FINAL ANSWER (avoid index out of range)
-            if "FINAL ANSWER:" in result:
-                parts = result.split("FINAL ANSWER:")
+            # ------------------------------------------------------------------
+            # Parse FINAL ANSWER from LLM output
+            # Uses rsplit to take the LAST occurrence (handles cases where
+            # "FINAL ANSWER" appears in reasoning before the actual answer)
+            # Supports multiple formats:
+            # 1. "## STEP 7: FINAL ANSWER\n答案" (Prompt format)
+            # 2. "FINAL ANSWER:\n答案" or "FINAL ANSWER: 答案" (Standard format)
+            # 3. "FINAL ANSWER" without colon (Minimal format)
+            # ------------------------------------------------------------------
+            result = result.strip()
+
+            if "## STEP 7: FINAL ANSWER" in result:
+                parts = result.rsplit("## STEP 7: FINAL ANSWER", 1)
                 if len(parts) > 1:
                     result = parts[1].strip()
-                else:
-                    # Split failed, use original result
-                    result = result.strip()
-            else:
-                # No FINAL ANSWER marker, use original result
-                result = result.strip()
+            elif "FINAL ANSWER:" in result:
+                parts = result.rsplit("FINAL ANSWER:", 1)
+                if len(parts) > 1:
+                    result = parts[1].strip()
+            elif "FINAL ANSWER" in result:
+                parts = result.rsplit("FINAL ANSWER", 1)
+                if len(parts) > 1:
+                    candidate = parts[1].strip()
+                    if candidate.startswith(":"):
+                        candidate = candidate[1:].strip()
+                    result = candidate
 
             if result == "":
                 continue

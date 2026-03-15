@@ -19,11 +19,9 @@ _ADAPTER_MODULES = {
     "memos": "evaluation.src.adapters.memos_adapter",
     "memu": "evaluation.src.adapters.memu_adapter",
     "zep": "evaluation.src.adapters.zep_adapter",
-    "evermemos_api": "evaluation.src.adapters.evermemos_api_adapter",
-    "memobase": "evaluation.src.adapters.memobase_adapter",
-    "supermemory": "evaluation.src.adapters.supermemory_adapter",
-    
     # Future systems:
+    # "memobase": "evaluation.src.adapters.memobase_adapter",
+    # "supermemory": "evaluation.src.adapters.supermemory_adapter",
     # "nemori": "evaluation.src.adapters.nemori_adapter",
 }
 

@@ -24,19 +24,19 @@ REFINED_QUERY_PROMPT = """You are an expert at query reformulation for informati
 **Examples**:
 
 Example 1:
-Original Query: "What does Alice like?"
-Missing Info: ["Alice's specific interests or hobbies"]
-Refined Query: "What are Alice's hobbies and interests?"
+Original Query: "What happened at the conference?"
+Missing Info: ["specific sessions attended", "key takeaways"]
+Refined Query: "Which sessions were attended at the conference and what were the main takeaways?"
 
 Example 2:
-Original Query: "Tell me about the meeting"
-Missing Info: ["meeting date", "location", "participants"]
-Refined Query: "When and where was the meeting held, and who attended?"
+Original Query: "Tell me about the deadline"
+Missing Info: ["deadline date", "deliverables", "responsible team"]
+Refined Query: "When is the deadline, what needs to be delivered, and who is responsible?"
 
 Example 3:
-Original Query: "Bob's project"
-Missing Info: ["project name", "status", "purpose"]
-Refined Query: "What is the name, current status, and purpose of Bob's project?"
+Original Query: "The new policy"
+Missing Info: ["policy details", "effective date", "affected departments"]
+Refined Query: "What are the details of the new policy, when does it take effect, and which departments are affected?"
 
 Now generate the refined query (output only the refined query, no additional text):
 Original Query: {original_query}

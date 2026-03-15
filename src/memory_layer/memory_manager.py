@@ -333,7 +333,7 @@ class MemoryManager:
 
         extractor = EventLogExtractor(llm_provider=self.llm_provider)
         return await extractor.extract_event_log(
-            memcell=memcell,
+            episode_text=memcell.episode,
             timestamp=memcell.timestamp,
             user_id=uid,
             ori_event_id_list=[],

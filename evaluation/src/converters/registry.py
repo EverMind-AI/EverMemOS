@@ -13,6 +13,7 @@ _CONVERTER_REGISTRY: Dict[str, Type[BaseConverter]] = {}
 _CONVERTER_MODULES = {
     "longmemeval": "evaluation.src.converters.longmemeval_converter",
     "personamem": "evaluation.src.converters.personamem_converter",
+    "personamemv2": "evaluation.src.converters.personamemv2_converter",
     # Future converters
 }
 

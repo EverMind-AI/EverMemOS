@@ -146,10 +146,18 @@ async def run_answer_stage(
                 
                 # Detect multiple-choice and enhance question if needed
                 query = qa.question
-                if "all_options" in qa.metadata:
-                    options = qa.metadata["all_options"]
-                    options_text = "\n".join([f"{key} {value}" for key, value in options.items()])
-                    
+                options = qa.metadata.get("all_options")
+                dataset_name = qa.metadata.get("dataset_name", "")
+                use_personamem_mcq = (
+                    options
+                    and dataset_name in {"personamem", "personamemv2"}
+                )
+
+                if options and not use_personamem_mcq:
+                    options_text = "\n".join(
+                        [f"{key} {value}" for key, value in options.items()]
+                    )
+
                     # Integrate options and requirements into question
                     query = f"""{qa.question}
 
@@ -158,6 +166,34 @@ OPTIONS:
 
 IMPORTANT: This is a multiple-choice question. You MUST analyze the context and select the BEST option. In your FINAL ANSWER, return ONLY the option letter like (a), (b), (c), or (d), nothing else."""
                 
+                # Optional profile dependency classification (PersonaMem datasets only)
+                use_profile_classifier = (
+                    adapter.config.get("answer", {}).get("use_profile_classifier", False)
+                    if hasattr(adapter, "config")
+                    else False
+                )
+                profile_dependency = None
+                if (
+                    use_profile_classifier
+                    and use_personamem_mcq
+                    and hasattr(adapter, "classify_profile_dependency")
+                ):
+                    classification_payload = {
+                        "user_query": qa.question,
+                        "correct_answer": qa.metadata.get("correct_answer_text")
+                        or qa.metadata.get("answer_text")
+                        or qa.answer,
+                        "incorrect_answers": qa.metadata.get("incorrect_answers", []),
+                        "preference": qa.metadata.get("preference", ""),
+                        "pref_type": qa.metadata.get("pref_type", ""),
+                        "related_conversation_snippet": qa.metadata.get(
+                            "related_conversation_snippet", ""
+                        ),
+                    }
+                    profile_dependency = await adapter.classify_profile_dependency(
+                        classification_payload
+                    )
+
                 # Call adapter's answer method with timeout and retry
                 max_retries = 3
                 timeout_seconds = 120.0  # 3 minutes timeout per attempt
@@ -170,6 +206,9 @@ IMPORTANT: This is a multiple-choice question. You MUST analyze the context and 
                                 query=query,
                                 context=context,
                                 conversation_id=search_result.conversation_id,
+                                options=options,
+                                dataset_name=dataset_name,
+                                question_date=qa.metadata.get("question_date"),
                             ),
                             timeout=timeout_seconds
                         )
@@ -190,6 +229,10 @@ IMPORTANT: This is a multiple-choice question. You MUST analyze the context and 
                 answer = "Error: Failed to generate answer"
                 failed += 1
             
+            result_metadata = dict(qa.metadata)
+            if profile_dependency:
+                result_metadata["profile_dependency"] = profile_dependency
+
             result = AnswerResult(
                 question_id=qa.question_id,
                 question=qa.question,
@@ -198,7 +241,7 @@ IMPORTANT: This is a multiple-choice question. You MUST analyze the context and 
                 category=qa.category,
                 conversation_id=search_result.conversation_id,
                 formatted_context=context,  # Save actual context used
-                metadata=qa.metadata,  # Pass metadata (contains all_options for multiple-choice)
+                metadata=result_metadata,  # Pass metadata (contains all_options for multiple-choice)
             )
             
             # Save result

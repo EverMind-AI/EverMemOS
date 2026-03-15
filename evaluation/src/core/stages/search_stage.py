@@ -65,10 +65,8 @@ async def run_search_stage(
     # Build conversation_id to conversation mapping (for online API cache rebuild)
     conv_id_to_conv = {conv.conversation_id: conv for conv in conversations}
     
-    # Search-stage concurrency can be configured separately via system config:
-    #   search.num_workers (fallback to adapter.num_workers, then 20)
-    search_cfg = adapter.config.get("search", {})
-    num_workers = int(search_cfg.get("num_workers", getattr(adapter, "num_workers", 20)))
+    # Get concurrency limit from adapter config (fallback to 20 if not specified)
+    num_workers = getattr(adapter, 'num_workers', 20)
     semaphore = asyncio.Semaphore(num_workers)
     print(f"Search concurrency: {num_workers} workers")
     
@@ -90,13 +88,17 @@ async def run_search_stage(
             
             # Search with timeout and retry (similar to answer_stage.py)
             max_retries = 3
-            timeout_seconds = 300.0  # Increased from 120s for complex agentic retrieval
+            timeout_seconds = 120.0  # 2 minutes timeout per attempt
             result = None
             
             for attempt in range(max_retries):
                 try:
                     result = await asyncio.wait_for(
-                        adapter.search(qa.question, conv_id, index, conversation=conversation),
+                        adapter.search(
+                            qa.question, conv_id, index,
+                            conversation=conversation,
+                            question_date=qa.metadata.get("question_date"),
+                        ),
                         timeout=timeout_seconds
                     )
                     break  # Success, exit retry loop

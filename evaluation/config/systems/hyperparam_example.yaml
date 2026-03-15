@@ -1,0 +1,75 @@
+# Hyperparameter Tuning Example Configuration
+#
+# This is a template for hyperparameter experiments.
+# Copy and modify this file to test different parameter settings.
+#
+# Common hyperparameters to tune:
+# - scene_top_k: Number of scenes to select (5, 10, 15, 20)
+# - level1_emb_candidates: Embedding candidate count for scene selection
+# - level1_bm25_candidates: BM25 candidate count for scene selection
+# - response_top_k: Final results count
+# - cluster_similarity_threshold: Scene clustering threshold
+#
+# Usage:
+#   python run.py --config config/systems/hyperparam_example.yaml --dataset locomo
+
+name: "hyperparam_example"
+version: "1.0"
+description: "Hyperparameter Tuning Template - Adjust values to optimize performance"
+
+adapter: "evermemos"
+
+# LLM configuration
+llm:
+  provider: "openai"
+  model: "openai/gpt-4.1-mini"
+  api_key: "${LLM_API_KEY}"
+  base_url: "${LLM_BASE_URL}"
+  temperature: 0.3
+  max_tokens: 16384
+
+# Add stage configuration
+add:
+  enable_clustering: true
+  enable_foresight_extraction: false
+  enable_profile_extraction: false
+  enable_scene_retrieval: true
+  
+  # Clustering hyperparameters
+  cluster_similarity_threshold: 0.70        # Range: 0.5 - 0.9
+  cluster_max_time_gap_days: 7.0            # Range: 1 - 30
+
+# Search configuration - Key hyperparameters to tune
+search:
+  mode: "agentic"                            # agentic (default) | lightweight (BM25-only)
+  
+  # Level 1: Scene Selection Parameters
+  level1_emb_candidates: 50                 # Range: 20 - 100
+  level1_bm25_candidates: 50                # Range: 20 - 100
+  level1_rrf_k: 40                          # RRF fusion constant, range: 20 - 60
+  
+  # KEY HYPERPARAMETER: Number of scenes to select
+  scene_top_k: 10                           # Test values: 5, 10, 15, 20
+  
+  # Level 2: Retrieval within scenes
+  use_reranker: true
+  response_top_k: 10                        # Final results count
+  
+  # Set false to isolate scene_top_k impact
+  use_multi_query: false
+
+# Answer generation
+answer:
+  max_context_length: 8000
+  include_timestamps: true
+
+# Reranker settings
+rerank_batch_size: 32
+rerank_max_concurrent: 2
+rerank_timeout: 60
+
+# Dataset-specific overrides
+dataset_overrides:
+  locomo:
+    add:
+      num_conv: 10

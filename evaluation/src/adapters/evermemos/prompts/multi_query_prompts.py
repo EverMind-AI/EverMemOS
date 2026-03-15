@@ -1,13 +1,7 @@
 """Multi-Query Generation Prompt for Agentic Retrieval"""
 
-MULTI_QUERY_GENERATION_PROMPT = """You are an expert at query reformulation for long-term conversational retrieval.
-Your goal is to generate multiple complementary search queries that recover BOTH:
-- the starting point of a time interval
-- the ending point of a time interval
-- all temporally-linked events in between
-
-You MUST explicitly expand temporal references (e.g., "last week", "before moving", 
-"when they first met") into alternative expressions.
+MULTI_QUERY_GENERATION_PROMPT = """You are an expert at query reformulation for conversational memory retrieval.
+Your goal is to generate 2-3 complementary queries to find the MISSING information.
 
 --------------------------
 Original Query:
@@ -19,45 +13,51 @@ Key Information Found:
 Missing Information:
 {missing_info}
 
-Retrieved Documents:
+Retrieved Documents (Context):
 {retrieved_docs}
 --------------------------
 
-### Temporal Reasoning Strategy (MANDATORY)
-When the question involves time or order:
-1. **Boundary Decomposition**  
-   Generate queries that separately target:
-   - the earliest relevant event ("start boundary")
-   - the latest relevant event ("end boundary")
+### Strategy Selection (Choose based on WHY info is missing):
 
-2. **Temporal Expression Expansion**  
-   Rewrite relative time expressions into multiple equivalent forms:
-   - absolute dates (if deducible)
-   - session numbers
-   - “before/after X”
-   - duration phrasing (“two weeks earlier”, “shortly after”)
+**[A] Pivot / Entity Association (If entity is missing)**
+- If the specific entity is not found, search for related entities or broader categories.
+- Example: "manager's feedback" not found → try "performance review", "work evaluation".
 
-3. **Interval Reconstruction**  
-   Include a declarative query that resembles a hypothetical answer containing BOTH
-   the start and end time anchors.
+**[B] Temporal Calculation (If time is missing/unclear)**
+- Use `Date` from Retrieved Documents to anchor relative times.
+- Example: doc dated 2024-03-15 mentions "last month" → search for "February 2024".
+- Search for the *event* to find its timestamp: "When did the deadline change?"
 
-### Standard Query Requirements
-1. Generate 2-3 diverse queries.
-2. Query 1 MUST be a specific **Question**.
-3. Query 2 MUST be a **Declarative Statement or Hypothetical Answer (HyDE)**.
-4. Query diversity MUST include different temporal forms (before/after/during).
-5. MUST use Key Info to resolve pronouns IF provided.
-6. No invented facts.  
-7. Keep queries < 25 words, same language as original.
+**[C] Concept Expansion (If vocabulary mismatch)**
+- Synonyms: "residence" → "living", "staying at", "moved to".
+- General/Specific: "Italian cuisine" ↔ "pasta", "pizza", "restaurant".
+
+**[D] Constraint Relaxation (If too specific)**
+- If "quarterly sales report from Q3" fails, try "sales report", "Q3 results".
+- Remove one constraint at a time.
+
+### Query Style Requirements (Use DIFFERENT styles):
+
+1. **Keyword Combo** (2-5 words): Key entities only. High recall.
+   - e.g., "project deadline", "vacation plans summer"
+2. **Natural Question** (5-10 words): Rephrased question.
+   - e.g., "When was the meeting scheduled?", "What was discussed about the budget?"
+3. **Hypothetical Statement** (HyDE, 5-10 words): A likely sentence in the memory.
+   - e.g., "We decided to postpone the launch", "The client requested changes"
+
+### Requirements:
+- Generate 2-3 queries.
+- **CRITICAL**: Use the strategies above to target the *Missing Information*.
+- Keep queries SHORT and SEARCHABLE.
 
 ### Output Format (STRICT JSON):
 {{
   "queries": [
-    "Refined query 1",
-    "Refined query 2",
-    "Refined query 3 (optional)"
+    "Query 1",
+    "Query 2",
+    "Query 3"
   ],
-  "reasoning": "Brief explanation of how temporal boundaries and expressions were expanded."
+  "reasoning": "Strategy used for each query (e.g., Q1: Pivot, Q2: Temporal)"
 }}
 
 Now generate:

@@ -12,8 +12,8 @@ import re
 
 from memory_layer.prompts import get_prompt_by
 from memory_layer.llm.llm_provider import LLMProvider
-from common_utils.datetime_utils import get_now_with_timezone, from_iso_format
-from api_specs.memory_types import EventLog, MemoryType, MemCell
+from common_utils.datetime_utils import get_now_with_timezone
+from api_specs.memory_types import EventLog, MemoryType
 
 from core.observation.logger import get_logger
 
@@ -152,7 +152,7 @@ class EventLogExtractor:
 
     async def _extract_event_log(
         self,
-        input_text: str,
+        episode_text: str,
         timestamp: Any,
         user_id: str = "",
         ori_event_id_list: Optional[List[str]] = None,
@@ -177,7 +177,7 @@ class EventLogExtractor:
         time_str = self._format_timestamp(dt)
 
         # 2. Build prompt (using instance variable self.event_log_prompt)
-        prompt = self.event_log_prompt.replace("{{INPUT_TEXT}}", input_text)
+        prompt = self.event_log_prompt.replace("{{EPISODE_TEXT}}", episode_text)
         prompt = prompt.replace("{{TIME}}", time_str)
 
         # 3. Call LLM to generate event log
@@ -243,7 +243,7 @@ class EventLogExtractor:
 
     async def extract_event_log(
         self,
-        memcell: MemCell,
+        episode_text: str,
         timestamp: Any,
         user_id: str = "",
         ori_event_id_list: Optional[List[str]] = None,
@@ -252,23 +252,10 @@ class EventLogExtractor:
         """
         Extract event log
         """
-        input_text = ""
-        for data in memcell.original_data:
-            speaker = data.get('speaker_name') or data.get('sender', 'Unknown')
-            content = data['content']
-            msg_ts = data.get('timestamp')
-            ts_str = from_iso_format(msg_ts)
-            input_text += f"[{ts_str}] {speaker}: {content}\n"
-
-        # Episode Mode
-        # if memcell.episode:
-        #    input_text = memcell.episode
-        #    timestamp = memcell.timestamp
-
         for retry in range(5):
             try:
                 return await self._extract_event_log(
-                    input_text,
+                    episode_text,
                     timestamp,
                     user_id=user_id,
                     ori_event_id_list=ori_event_id_list,

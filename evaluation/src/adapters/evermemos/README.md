@@ -1,6 +1,7 @@
 # LoCoMo Evaluation Pipeline
 
 <p align="center">
+  <a href="README.md">English</a> | <a href="README_zh.md">简体中文</a>
 </p>
 
 LoCoMo (Long-Context Modeling) evaluation system for testing memory system performance in long conversation scenarios, including retrieval and question-answering capabilities.

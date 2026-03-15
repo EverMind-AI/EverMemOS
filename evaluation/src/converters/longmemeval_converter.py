@@ -72,13 +72,17 @@ def convert_lmeval_s_to_locomo_style(lmeval_data: list) -> list:
                     evidence.append(f"D{idx}:{i}")
         
         # Build QA
-        data_dict["qa"].append({
+        qa_item = {
             "question_id": data["question_id"],
             "question": data["question"],
             "answer": data["answer"],
             "evidence": evidence,
             "category": data["question_type"]
-        })
+        }
+        # Preserve question_date for temporal reasoning (e.g., "2023/05/30 (Tue) 23:40")
+        if "question_date" in data:
+            qa_item["question_date"] = data["question_date"]
+        data_dict["qa"].append(qa_item)
         
         # Build conversation
         data_dict["conversation"]["speaker_a"] = f"user_{data['question_id']}"

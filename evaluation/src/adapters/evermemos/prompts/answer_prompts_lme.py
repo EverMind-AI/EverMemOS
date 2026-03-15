@@ -1,5 +1,18 @@
-ANSWER_PROMPT = """
+"""
+LongMemEval-specific answer prompts with time-awareness support.
+
+This module provides prompts optimized for LongMemEval dataset, which includes
+temporal-reasoning questions that require knowing the "current time" (question_date).
+"""
+
+# Time-aware prompt for LongMemEval
+# Includes {current_time} placeholder for temporal reasoning
+ANSWER_PROMPT_LME = """
 You are an intelligent memory assistant tasked with retrieving accurate information from episodic memories.
+
+# CURRENT TIME CONTEXT:
+**The current date and time is: {current_time}**
+Use this as the reference point for ALL relative time calculations (e.g., "last week", "3 days ago", "how many weeks ago").
 
 # CONTEXT:
 You have access to episodic memories from conversations between two speakers. These memories contain
@@ -17,6 +30,7 @@ It is CRITICAL that you move beyond simple fact extraction and perform logical i
 3. PRESERVE frequencies exactly - "every Tuesday and Thursday" not "twice a week"
 4. MAINTAIN all proper nouns and entities as they appear
 5. EXPLICITLY state confidence levels for inferences (High/Medium/Low)
+6. **FOR TEMPORAL QUESTIONS**: Use the CURRENT TIME above as your reference point. Calculate time differences precisely.
 
 # RESPONSE FORMAT (You MUST follow this structure):
 
@@ -39,10 +53,11 @@ It is CRITICAL that you move beyond simple fact extraction and perform logical i
 - Inferences: [Connect the dots. Label confidence: (Confidence: High/Medium/Low)]
 
 ## STEP 4: TIME REFERENCE CALCULATION
-[If applicable, convert relative time references using the timestamps]
-- Original reference: [e.g., "last year" from May 2022]
-- Calculation: [Show logic]
-- Actual time: [e.g., "2021"]
+[CRITICAL for temporal reasoning questions]
+- Current time (reference point): {current_time}
+- Event timestamp from memories: [extracted timestamp]
+- Time difference calculation: [Show step-by-step: e.g., "From Jan 15 to Feb 1 = 17 days = ~2.4 weeks"]
+- Final result: [e.g., "approximately 2 weeks ago"]
 
 ## STEP 5: CONTRADICTION & GAP ANALYSIS
 [Check for conflicts and missing details]
@@ -56,6 +71,7 @@ It is CRITICAL that you move beyond simple fact extraction and perform logical i
 - [ ] All frequencies specific?
 - [ ] All dates/times precise?
 - [ ] All proper nouns preserved?
+- [ ] Time calculations verified against current time?
 
 ## STEP 7: FINAL ANSWER
 [Provide the concise answer with ALL specific details preserved. Do not include the internal checklist in this section, just the final synthesized answer.]
@@ -68,3 +84,19 @@ Question: {question}
 
 Now, follow the Chain-of-Thought process above to answer the question:
 """
+
+
+def get_lme_prompt_template(current_time: str) -> str:
+    """
+    Return LME prompt template with only {current_time} filled in.
+
+    Leaves {context} and {question} placeholders intact for locomo_response() to fill.
+
+    Args:
+        current_time: The question_date from LongMemEval dataset (e.g., "2023/05/30 (Tue) 23:40")
+
+    Returns:
+        Partially formatted prompt template (still contains {context} and {question})
+    """
+    return ANSWER_PROMPT_LME.replace("{current_time}", current_time)
+

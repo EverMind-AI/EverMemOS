@@ -1,0 +1,63 @@
+# Ablation Study Example Configuration
+#
+# This is a template for ablation experiments that isolate specific components.
+# Copy and modify this file to create your own ablation experiments.
+#
+# Example ablation studies:
+# - Disable reranker: Tests retrieval quality without reranking
+# - Disable multi-query: Tests Round 1 sufficiency without Round 2 expansion
+# - Disable scene clustering: Tests flat retrieval vs scene-based retrieval
+# - Use lightweight mode: Tests BM25-only baseline
+#
+# Usage:
+#   uv run python -m evaluation.cli --dataset locomo --system ablation_example
+
+name: "ablation_example"
+version: "1.0"
+description: "Ablation Study Template - Customize to test specific components"
+
+adapter: "evermemos"
+
+# LLM configuration
+llm:
+  provider: "openai"
+  model: "openai/gpt-4.1-mini"
+  api_key: "${LLM_API_KEY}"
+  base_url: "${LLM_BASE_URL:https://openrouter.ai/api/v1}"
+  temperature: 0.3
+  max_tokens: 16384
+
+# Add stage configuration
+add:
+  # Toggle components to isolate their contribution
+  enable_clustering: true
+  enable_foresight_extraction: false
+  enable_profile_extraction: false
+  enable_scene_retrieval: true
+
+  cluster_similarity_threshold: 0.70
+  cluster_max_time_gap_days: 7.0
+
+# Search configuration
+search:
+  # Available modes: "agentic" (default) | "lightweight" (BM25-only)
+  mode: "agentic"
+
+  # Feature toggles for ablation
+  use_reranker: true                     # Set false to disable reranking
+  use_multi_query: false                 # Set false to disable Round 2 expansion
+
+  # Basic retrieval settings
+  response_top_k: 10
+  scene_top_k: 10
+
+# Answer generation
+answer:
+  max_context_length: 8000
+  include_timestamps: true
+
+# Dataset-specific overrides
+dataset_overrides:
+  locomo:
+    add:
+      num_conv: 10

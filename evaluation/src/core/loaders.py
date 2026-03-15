@@ -101,7 +101,9 @@ def load_locomo_dataset(data_path: str, dataset_name: str = "locomo", max_conten
         
         # Convert QA pairs
         for qa_idx, qa_item in enumerate(qa_data):
-            qa_pair = _convert_locomo_qa_pair(qa_item, conv_id, qa_idx)
+            qa_pair = _convert_locomo_qa_pair(
+                qa_item, conv_id, qa_idx, dataset_name=dataset_name
+            )
             qa_pairs.append(qa_pair)
     
     return Dataset(
@@ -255,14 +257,36 @@ def _convert_locomo_conversation(conversation_data: dict, conv_id: str, max_cont
     )
 
 
-def _convert_locomo_qa_pair(qa_item: dict, conv_id: str, qa_idx: int) -> QAPair:
+def _convert_locomo_qa_pair(
+    qa_item: dict, conv_id: str, qa_idx: int, dataset_name: str = ""
+) -> QAPair:
     """Convert LoCoMo QA pair."""
     # Extract additional fields to metadata
     metadata = {"conversation_id": conv_id}
+    if dataset_name:
+        metadata["dataset_name"] = dataset_name
     
     # If has all_options (PersonaMem multiple choice), save to metadata
     if "all_options" in qa_item:
         metadata["all_options"] = qa_item["all_options"]
+
+    extra_keys = [
+        "answer_text",
+        "correct_answer_text",
+        "incorrect_answers",
+        "preference",
+        "pref_type",
+        "related_conversation_snippet",
+        "topic",
+        "topic_query",
+        "topic_preference",
+        "persona_id",
+        "conversation_scenario",
+        "question_date",
+    ]
+    for key in extra_keys:
+        if key in qa_item:
+            metadata[key] = qa_item[key]
     
     # Prefer question_id from data if exists, otherwise generate unique ID
     question_id = qa_item.get("question_id")

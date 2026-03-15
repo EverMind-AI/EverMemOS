@@ -118,12 +118,6 @@ async def main():
         default=None,
         help="Output directory. Default: results/{dataset}-{system}[-{run_name}]",
     )
-    parser.add_argument(
-        "--clean-groups",
-        action="store_true",
-        help="Before Add stage, clear database data for the groups (group_id=conversation_id) involved in this run. "
-             "Useful for debugging to avoid polluted data.",
-    )
 
     args = parser.parse_args()
 
@@ -228,8 +222,6 @@ async def main():
     # Add dataset_name to system_config for adapter initialization
     # (Used to determine num_workers based on adapter + dataset combination)
     system_config["dataset_name"] = args.dataset
-    # Pass CLI switch down to adapter via config (adapters can opt-in)
-    system_config["clean_groups"] = bool(args.clean_groups)
 
     # Create adapter (pass output_dir for persistence)
     adapter = create_adapter(

@@ -14,9 +14,20 @@ llm:
   base_url: "${LLM_BASE_URL:https://openrouter.ai/api/v1}"
 
 search:
-  mode: "agentic"  # agentic | lightweight
-  # When mode="lightweight", the search method defaults to "bm25_only".
-  # Uncomment and set the following to override:
-  # lightweight_search_mode: "hybrid"   # BM25 + Embedding + RRF fusion
-  # lightweight_search_mode: "emb_only" # Only Embedding search
+  mode: "agentic"  # agentic (default, 93% on LoCoMo) | lightweight (BM25-only, fastest)
+
+# Dataset-specific overrides
+dataset_overrides:
+  personamemv2:
+    add:
+      enable_profile_extraction: true
+      enable_clustering: true
+      profile_extraction_mode: "scene"
+      profile_scenario: "assistant"
+      profile_min_confidence: 0.6
+      profile_min_memcells: 1
+      profile_life_max_items: 25
+    answer:
+      use_profile_in_answer: true
+      use_profile_classifier: true
 

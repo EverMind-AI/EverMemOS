@@ -17,6 +17,16 @@ from evaluation.src.adapters.evermemos.prompts.sufficiency_check_prompts import 
 from evaluation.src.adapters.evermemos.prompts.refined_query_prompts import REFINED_QUERY_PROMPT
 from evaluation.src.adapters.evermemos.prompts.multi_query_prompts import MULTI_QUERY_GENERATION_PROMPT
 
+# LongMemEval-specific prompts (with time-awareness)
+from evaluation.src.adapters.evermemos.prompts.sufficiency_check_prompts_lme import (
+    SUFFICIENCY_CHECK_PROMPT_LME,
+    format_lme_sufficiency_prompt
+)
+from evaluation.src.adapters.evermemos.prompts.multi_query_prompts_lme import (
+    MULTI_QUERY_GENERATION_PROMPT_LME,
+    format_lme_multi_query_prompt
+)
+
 
 def format_documents_for_llm(
     results: List[Tuple[dict, float]],
@@ -43,6 +53,7 @@ def format_documents_for_llm(
         if use_episode:
             # Use Episode Memory format (full narrative)
             episode = doc.get("episode", "N/A")
+            timestamp = doc.get("timestamp", "N/A")
             
             # Limit episode length to avoid overly long prompts
             if len(episode) > 500:
@@ -51,6 +62,7 @@ def format_documents_for_llm(
             doc_text = (
                 f"Document {i}:\n"
                 f"  Title: {subject}\n"
+                f"  Date: {timestamp}\n"
                 f"  Content: {episode}\n"
             )
             formatted_docs.append(doc_text)
@@ -174,7 +186,8 @@ async def check_sufficiency(
     results: List[Tuple[dict, float]],
     llm_provider,
     llm_config: dict,
-    max_docs: int = 10
+    max_docs: int = 10,
+    question_date: Optional[str] = None  # LongMemEval: question time for temporal reasoning
 ) -> Tuple[bool, str, List[str], List[str]]:
     """
     Check if retrieval results are sufficient.
@@ -185,6 +198,7 @@ async def check_sufficiency(
         llm_provider: LLM Provider (Memory Layer)
         llm_config: LLM configuration dict
         max_docs: Maximum number of documents to evaluate
+        question_date: Optional question timestamp (for LongMemEval temporal reasoning)
     
     Returns:
         (is_sufficient, reasoning, missing_information, key_information_found)
@@ -197,11 +211,19 @@ async def check_sufficiency(
             use_episode=True
         )
         
-        # Use prompt template
-        prompt = SUFFICIENCY_CHECK_PROMPT.format(
-            query=query,
-            retrieved_docs=retrieved_docs
-        )
+        # Use LME-specific prompt if question_date is provided (LongMemEval temporal reasoning)
+        if question_date:
+            prompt = format_lme_sufficiency_prompt(
+                query=query,
+                retrieved_docs=retrieved_docs,
+                current_time=question_date
+            )
+        else:
+            # Use standard prompt for Locomo and other datasets
+            prompt = SUFFICIENCY_CHECK_PROMPT.format(
+                query=query,
+                retrieved_docs=retrieved_docs
+            )
         
         # Call LLM (using LLMProvider)
         result_text = await llm_provider.generate(
@@ -360,7 +382,8 @@ async def generate_multi_queries(
     llm_config: dict,
     key_info: Optional[List[str]] = None,
     max_docs: int = 5,
-    num_queries: int = 3
+    num_queries: int = 3,
+    question_date: Optional[str] = None  # LongMemEval: question time for temporal reasoning
 ) -> Tuple[List[str], str]:
     """
     Generate multiple complementary queries for multi-query retrieval.
@@ -374,6 +397,7 @@ async def generate_multi_queries(
         key_info: List of key information found (for better query refinement)
         max_docs: Maximum number of documents to use (default 5)
         num_queries: Expected number of queries to generate (default 3, may be fewer)
+        question_date: Optional question timestamp (for LongMemEval temporal reasoning)
     
     Returns:
         (queries_list, reasoning)
@@ -390,13 +414,23 @@ async def generate_multi_queries(
         missing_info_str = ", ".join(missing_info) if missing_info else "N/A"
         key_info_str = ", ".join(key_info) if key_info else "N/A"
         
-        # Use prompt template
-        prompt = MULTI_QUERY_GENERATION_PROMPT.format(
-            original_query=original_query,
-            retrieved_docs=retrieved_docs,
-            missing_info=missing_info_str,
-            key_info=key_info_str
-        )
+        # Use LME-specific prompt if question_date is provided (LongMemEval temporal reasoning)
+        if question_date:
+            prompt = format_lme_multi_query_prompt(
+                original_query=original_query,
+                retrieved_docs=retrieved_docs,
+                missing_info=missing_info_str,
+                key_info=key_info_str,
+                current_time=question_date
+            )
+        else:
+            # Use standard prompt for Locomo and other datasets
+            prompt = MULTI_QUERY_GENERATION_PROMPT.format(
+                original_query=original_query,
+                retrieved_docs=retrieved_docs,
+                missing_info=missing_info_str,
+                key_info=key_info_str
+            )
         
         # Call LLM (using LLMProvider)
         result_text = await llm_provider.generate(

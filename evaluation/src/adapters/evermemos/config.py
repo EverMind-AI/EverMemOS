@@ -5,76 +5,78 @@ load_dotenv()
 
 
 class ExperimentConfig:
+    # ========== Basic Configuration ==========
     experiment_name: str = "locomo_evaluation"
     datase_path: str = "data/locomo10.json"
-    use_emb: bool = True
-    use_reranker: bool = True
-    use_agentic_retrieval: bool = True
-    use_multi_query: bool = True
     num_conv: int = 10
 
-    # MemCell extraction feature switches
+    # ========== MemCell Extraction ==========
     enable_foresight_extraction: bool = False
     enable_clustering: bool = True
     enable_profile_extraction: bool = False
 
-    # Clustering configuration
-    cluster_similarity_threshold: float = 0.65
+    # Clustering
+    cluster_similarity_threshold: float = 0.70
     cluster_max_time_gap_days: float = 7.0
 
-    # Profile configuration
-    profile_scenario: str = "assistant"  # group_chat or assistant
+    # Profile
+    profile_scenario: str = "assistant"
     profile_min_confidence: float = 0.6
     profile_min_memcells: int = 1
+    profile_extraction_mode: str = "conversation"  # "conversation" | "scene"
+    profile_life_max_items: int = 25
 
-    # Retrieval mode: 'agentic' or 'lightweight'
-    # - agentic: Multi-round retrieval with LLM guidance, high quality but slower
-    # - lightweight: Fast retrieval without LLM, faster but slightly lower quality
-    retrieval_mode: str = "agentic"  # 'agentic' | 'lightweight'
+    # ========== Retrieval Mode ==========
+    # "agentic" (default): 两级场景检索 + Multi-Query (93% on LoCoMo)
+    #   Level 1: RRF (Embedding + BM25) → MaxSim → Top-K Scenes
+    #   Level 2: Rerank → Sufficiency Check → Multi-Query (全库搜索)
+    # "lightweight": 纯 BM25 检索 (无 LLM 调用, 最快)
+    retrieval_mode: str = "agentic"
 
-    # Retrieval configuration
-    use_hybrid_search: bool = True  # Use hybrid retrieval (Embedding + BM25 + RRF)
-    emb_recall_top_n: int = 40
-    reranker_top_n: int = 20
+    # ========== Agentic Retrieval ==========
+    use_emb: bool = True            # 是否使用 Embedding (影响索引构建)
+    use_reranker: bool = True       # 是否使用 Reranker
+    use_multi_query: bool = True    # 不充分时是否启用 Multi-Query 扩展
 
-    # Lightweight retrieval parameters (only effective when retrieval_mode='lightweight')
-    # lightweight_search_mode: controls which search method to use in lightweight mode
-    # - "bm25_only": Only use BM25 search (fast, lexical matching)
-    # - "hybrid": BM25 + Embedding + RRF fusion (balanced)
-    # - "emb_only": Only use Embedding search (semantic matching)
-    lightweight_search_mode: str = "bm25_only"  # 'bm25_only' | 'hybrid' | 'emb_only'
+    # 最终返回数量
+    response_top_k: int = 10
+    round2_response_top_k: int = 10
+
+    # 充分性检查
+    sufficiency_max_docs: int = 10
+
+    # Multi-Query (Round 2) 参数
+    multi_query_num: int = 3            # 生成的扩展查询数量
+    hybrid_emb_candidates: int = 50     # 每个查询的 Embedding 候选数
+    hybrid_bm25_candidates: int = 50    # 每个查询的 BM25 候选数
+    hybrid_rrf_k: int = 40              # RRF 融合常数
+
+    # ========== Scene Selection (Level 1) ==========
+    enable_scene_retrieval: bool = True
+    scene_top_k: int = 10               # 选择的场景数
+    level1_emb_candidates: int = 50     # Level 1 Embedding 候选数
+    level1_bm25_candidates: int = 50    # Level 1 BM25 候选数
+    level1_rrf_k: int = 40              # Level 1 RRF 融合常数
+
+    # ========== Lightweight Retrieval (BM25-only) ==========
     lightweight_bm25_top_n: int = 50
-    lightweight_emb_top_n: int = 50
     lightweight_final_top_n: int = 20
 
-    # Hybrid search parameters (only effective when use_hybrid_search=True)
-    hybrid_emb_candidates: int = 50
-    hybrid_bm25_candidates: int = 50
-    hybrid_rrf_k: int = 40
-
-    # Multi-query retrieval parameters (only effective when use_multi_query=True)
-    multi_query_num: int = 3
-    multi_query_top_n: int = 50
-
-    # Reranker optimization parameters (high performance configuration)
-    reranker_batch_size: int = 20
+    # ========== Reranker ==========
+    reranker_batch_size: int = 32
     reranker_max_retries: int = 3
-    reranker_retry_delay: float = 0.8  # Retry interval with exponential backoff
+    reranker_retry_delay: float = 3.0
     reranker_timeout: float = 60.0
-    reranker_fallback_threshold: float = (
-        0.3  # Fall back to original ranking when success rate below threshold
-    )
-    reranker_concurrent_batches: int = 5
+    reranker_fallback_threshold: float = 0.3
+    reranker_concurrent_batches: int = 2
 
     reranker_instruction: str = (
         "Determine if the passage contains specific facts, entities (names, dates, locations), "
         "or details that directly answer the question."
     )
 
-    # Stage4 parameter: select top-k from event_ids to build context
-    response_top_k: int = 10
-    
-    llm_service: str = "openai"  # openai, vllm
+    # ========== LLM ==========
+    llm_service: str = "openai"
     llm_config: dict = {
         "openai": {
             "llm_provider": "openai",
@@ -96,3 +98,9 @@ class ExperimentConfig:
 
     max_retries: int = 5
     max_concurrent_requests: int = 10
+
+    # ========== Answer ==========
+    use_profile_in_answer: bool = False
+    use_episode_in_answer: bool = True
+    use_profile_classifier: bool = False
+

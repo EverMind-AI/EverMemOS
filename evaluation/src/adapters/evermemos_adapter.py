@@ -33,6 +33,16 @@ from evaluation.src.adapters.evermemos import (
     stage3_memory_retrivel,
     stage4_response,
 )
+from evaluation.src.adapters.evermemos.prompts.answer_prompts_personamem import (
+    PERSONAMEM_MCQ_PROMPT,
+)
+from evaluation.src.adapters.evermemos.prompts.answer_prompts_lme import (
+    get_lme_prompt_template,
+)
+from evaluation.src.adapters.evermemos.prompts.profile.profile_cls_prompt import (
+    CLASSIFICATION_SYSTEM_PROMPT,
+    CLASSIFICATION_USER_PROMPT_TEMPLATE,
+)
 
 # Import Memory Layer components
 from memory_layer.llm.llm_provider import LLMProvider
@@ -127,6 +137,183 @@ class EverMemOSAdapter(BaseAdapter):
                 missing_indexes.append(i)
 
         return missing_indexes
+
+    def _load_profile_text(self, conversation_id: str) -> str:
+        conv_index = self._extract_conv_index(conversation_id)
+        profile_file = self.output_dir / "profiles" / f"profile_conv_{conv_index}.json"
+        if not profile_file.exists():
+            return ""
+
+        try:
+            with open(profile_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            profiles = data.get("profiles", [])
+        except Exception as e:
+            print(f"Warning: Failed to load profile file {profile_file}: {e}")
+            return ""
+
+        return self._format_profiles(profiles)
+
+    def _format_profiles(self, profiles: List[Dict[str, Any]]) -> str:
+        if not profiles:
+            return ""
+
+        def _format_value_list(items: Any) -> List[str]:
+            values = []
+            if not isinstance(items, list):
+                return values
+            for item in items:
+                if isinstance(item, dict):
+                    value = (
+                        item.get("value")
+                        or item.get("skill")
+                        or item.get("trait")
+                        or item.get("description")
+                    )
+                    if value:
+                        values.append(str(value))
+                elif isinstance(item, str):
+                    values.append(item)
+            return values
+
+        lines: List[str] = []
+        for profile in profiles:
+            if not isinstance(profile, dict):
+                continue
+
+            user_id = profile.get("user_id")
+            if user_id:
+                lines.append(f"User: {user_id}")
+
+            explicit_info = profile.get("explicit_info") or []
+            implicit_traits = profile.get("implicit_traits") or []
+
+            if explicit_info or implicit_traits:
+                if explicit_info:
+                    lines.append("[Explicit Info]")
+                    for item in explicit_info:
+                        if not isinstance(item, dict):
+                            continue
+                        desc = item.get("description", "").strip()
+                        category = item.get("category", "").strip()
+                        if category and desc:
+                            lines.append(f"- {category}: {desc}")
+                        elif desc:
+                            lines.append(f"- {desc}")
+                if implicit_traits:
+                    if lines:
+                        lines.append("")
+                    lines.append("[Implicit Traits]")
+                    for item in implicit_traits:
+                        if not isinstance(item, dict):
+                            continue
+                        trait = item.get("trait", "").strip()
+                        desc = item.get("description", "").strip()
+                        if trait and desc:
+                            lines.append(f"- {trait}: {desc}")
+                        elif trait:
+                            lines.append(f"- {trait}")
+                if lines and lines[-1] != "":
+                    lines.append("")
+                continue
+
+            # Fallback for non-life profiles
+            fallback_sections = [
+                ("interests", "Interests"),
+                ("personality", "Personality"),
+                ("tendency", "Tendency"),
+                ("hard_skills", "Hard Skills"),
+                ("soft_skills", "Soft Skills"),
+            ]
+            for key, label in fallback_sections:
+                values = _format_value_list(profile.get(key))
+                if values:
+                    lines.append(f"[{label}]")
+                    for value in values:
+                        lines.append(f"- {value}")
+                    lines.append("")
+
+        return "\n".join(line.rstrip() for line in lines).strip()
+
+    @staticmethod
+    def _format_options(options: Dict[str, str]) -> str:
+        if not options:
+            return ""
+        sorted_items = sorted(options.items(), key=lambda x: x[0])
+        return "\n".join([f"{key} {value}" for key, value in sorted_items])
+
+    def _parse_classification_response(self, response: str) -> Dict[str, Any]:
+        if not response:
+            return {
+                "classification": "no_profile",
+                "reasoning": "Empty response from classifier",
+                "key_evidence": "",
+            }
+
+        start_idx = response.find("{")
+        end_idx = response.rfind("}")
+        if start_idx == -1 or end_idx == -1 or end_idx <= start_idx:
+            return {
+                "classification": "no_profile",
+                "reasoning": "Classifier response missing JSON",
+                "key_evidence": response[:200],
+            }
+
+        try:
+            parsed = json.loads(response[start_idx : end_idx + 1])
+        except json.JSONDecodeError:
+            return {
+                "classification": "no_profile",
+                "reasoning": "Failed to parse classifier JSON",
+                "key_evidence": response[start_idx : end_idx + 1][:200],
+            }
+
+        return {
+            "classification": parsed.get("classification", "no_profile"),
+            "reasoning": parsed.get("reasoning", ""),
+            "key_evidence": parsed.get("key_evidence", ""),
+        }
+
+    async def classify_profile_dependency(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        user_query = payload.get("user_query", "")
+        correct_answer = payload.get("correct_answer", "")
+        incorrect_answers = payload.get("incorrect_answers", [])
+        preference = payload.get("preference", "")
+        pref_type = payload.get("pref_type", "")
+        related_snippet = payload.get("related_conversation_snippet", "")
+
+        if not user_query or not correct_answer:
+            return {
+                "classification": "no_profile",
+                "reasoning": "Missing user_query or correct_answer",
+                "key_evidence": "",
+            }
+
+        prompt = (
+            CLASSIFICATION_SYSTEM_PROMPT
+            + "\n\n"
+            + CLASSIFICATION_USER_PROMPT_TEMPLATE.format(
+                user_query=user_query,
+                correct_answer=correct_answer,
+                incorrect_answers=incorrect_answers,
+                preference=preference,
+                pref_type=pref_type,
+                related_conversation_snippet=related_snippet,
+            )
+        )
+
+        try:
+            response = await self.llm_provider.generate(
+                prompt=prompt, temperature=0.0, max_tokens=800
+            )
+        except Exception as e:
+            return {
+                "classification": "no_profile",
+                "reasoning": f"Classifier failed: {e}",
+                "key_evidence": "",
+            }
+
+        return self._parse_classification_response(response)
 
     async def add(
         self,
@@ -422,6 +609,45 @@ class EverMemOSAdapter(BaseAdapter):
                     "✅ All Embedding indexes exist, skipping build", style="green"
                 )
 
+        # Build scene index from cluster data (for agentic retrieval mode)
+        if exp_config.enable_scene_retrieval and exp_config.enable_clustering:
+            scenes_dir = output_dir / "scenes"
+            scenes_dir.mkdir(parents=True, exist_ok=True)
+            console.print(
+                f"\n🔨 Building Scene index from cluster data...",
+                style="yellow",
+            )
+            stage2_index_building.build_scene_index(
+                config=exp_config,
+                data_dir=memcells_dir,
+                cluster_dir=memcells_dir / "clusters",
+                scene_save_dir=scenes_dir,
+            )
+            console.print("✅ Scene index building completed", style="green")
+
+        # Build scene-based profiles (PersonaMem-style, time-ordered by scene)
+        if (
+            exp_config.enable_profile_extraction
+            and exp_config.enable_clustering
+            and getattr(exp_config, "profile_extraction_mode", "conversation") == "scene"
+        ):
+            console.print(f"\n{'='*60}", style="bold cyan")
+            console.print(f"Stage 2.5: Scene Profile Extraction", style="bold cyan")
+            console.print(f"{'='*60}", style="bold cyan")
+
+            scene_profile_dir = output_dir / "scene_profiles"
+            profile_output_dir = output_dir / "profiles"
+            scene_profile_dir.mkdir(parents=True, exist_ok=True)
+            profile_output_dir.mkdir(parents=True, exist_ok=True)
+
+            await stage2_index_building.build_scene_profiles(
+                config=exp_config,
+                data_dir=memcells_dir,
+                cluster_dir=memcells_dir / "clusters",
+                scene_profile_dir=scene_profile_dir,
+                profile_output_dir=profile_output_dir,
+            )
+
         # ========== Plan A: Return index metadata (lazy loading) ==========
         # Don't load indexes into memory, only return paths and metadata
         index_metadata = {
@@ -429,6 +655,7 @@ class EverMemOSAdapter(BaseAdapter):
             "memcells_dir": str(memcells_dir),
             "bm25_index_dir": str(bm25_index_dir),
             "emb_index_dir": str(emb_index_dir),
+            "scenes_dir": str(output_dir / "scenes"),
             "conversation_ids": [conv.conversation_id for conv in conversations],
             "use_hybrid_search": use_hybrid,
             "total_conversations": len(conversations),
@@ -496,18 +723,32 @@ class EverMemOSAdapter(BaseAdapter):
         llm_config = exp_config.llm_config.get(exp_config.llm_service, {})
 
         if retrieval_mode == "agentic":
-            # Agentic retrieval
-            top_results, metadata = await stage3_memory_retrivel.agentic_retrieval(
+            # 默认 Agentic 两级场景检索 (93% on LoCoMo)
+            from evaluation.src.adapters.evermemos import scene_retrieval
+
+            # Load fact_to_doc_idx from BM25 index (needed for BM25 MaxSim aggregation)
+            fact_to_doc_idx = bm25_index_data.get("fact_to_doc_idx")
+
+            # Load or build scene_index for this conversation
+            scene_index_data = self._load_or_build_scene_index(
+                conv_index=conv_index,
+                index=index,
+                exp_config=exp_config,
+            )
+            top_results, metadata = await scene_retrieval.agentic_retrieval(
                 query=query,
+                scene_index=scene_index_data,
+                emb_index=emb_index,
+                docs=docs,
                 config=exp_config,
+                bm25=bm25,
                 llm_provider=self.llm_provider,
                 llm_config=llm_config,
-                emb_index=emb_index,
-                bm25=bm25,
-                docs=docs,
+                fact_to_doc_idx=fact_to_doc_idx,
+                question_date=kwargs.get("question_date"),
             )
         elif retrieval_mode == "lightweight":
-            # Lightweight retrieval
+            # Lightweight BM25-only retrieval (fastest, no LLM calls)
             top_results, metadata = await stage3_memory_retrivel.lightweight_retrieval(
                 query=query,
                 emb_index=emb_index,
@@ -516,25 +757,24 @@ class EverMemOSAdapter(BaseAdapter):
                 config=exp_config,
             )
         else:
-            # Default to hybrid retrieval
-            top_results = await stage3_memory_retrivel.hybrid_search_with_rrf(
-                query=query,
-                emb_index=emb_index,
-                bm25=bm25,
-                docs=docs,
-                top_n=20,
-                emb_candidates=search_config.get("hybrid_emb_candidates", 100),
-                bm25_candidates=search_config.get("hybrid_bm25_candidates", 100),
-                rrf_k=search_config.get("hybrid_rrf_k", 60),
+            raise ValueError(
+                f"Unsupported retrieval mode: '{retrieval_mode}'. "
+                f"Supported modes: 'agentic', 'lightweight'"
             )
-            metadata = {}
 
         # Get response_top_k from config (use early for consistency)
         response_top_k = exp_config.response_top_k
 
-        # Convert to evaluation framework format (use response_top_k to be consistent with formatted_context)
+        # If Round 2 (insufficient), use round2_response_top_k for more results
+        is_multi_round = metadata.get("is_multi_round", False)
+        if is_multi_round:
+            actual_top_k = getattr(exp_config, 'round2_response_top_k', response_top_k)
+        else:
+            actual_top_k = response_top_k
+
+        # Convert to evaluation framework format
         results = []
-        for doc, score in top_results[:response_top_k]:
+        for doc, score in top_results[:actual_top_k]:
             results.append(
                 {
                     "content": doc.get("episode", ""),
@@ -554,9 +794,9 @@ class EverMemOSAdapter(BaseAdapter):
             speaker_a = conversation.metadata.get("speaker_a", "Speaker A")
             speaker_b = conversation.metadata.get("speaker_b", "Speaker B")
 
-            # Build context using response_top_k
+            # Build context using actual_top_k (Round 2 may use more)
             retrieved_docs_text = []
-            for doc, score in top_results[:response_top_k]:
+            for doc, score in top_results[:actual_top_k]:
                 subject = doc.get('subject', 'N/A')
                 episode = doc.get('episode', 'N/A')
                 doc_text = f"{subject}: {episode}\n---"
@@ -590,15 +830,61 @@ class EverMemOSAdapter(BaseAdapter):
 
         Calls stage4_response.py implementation.
         """
-        # Call stage4 answer generation implementation
         exp_config = self._convert_config_to_experiment_config()
 
-        answer = await stage4_response.locomo_response(
-            llm_provider=self.llm_provider,
-            context=context,
-            question=query,
-            experiment_config=exp_config,
-        )
+        options = kwargs.get("options") or {}
+        dataset_name = kwargs.get("dataset_name") or ""
+        use_mcq_prompt = bool(options) and dataset_name in {
+            "personamem",
+            "personamemv2",
+        }
+
+        # Load profile if enabled
+        profile_text = ""
+        if exp_config.use_profile_in_answer:
+            conversation_id = kwargs.get("conversation_id", "")
+            if conversation_id:
+                profile_text = self._load_profile_text(conversation_id)
+
+        # Determine episode context based on config
+        episode_context = context if exp_config.use_episode_in_answer else "(none)"
+
+        if use_mcq_prompt:
+            options_text = self._format_options(options)
+            profile_block = (
+                f"User Profile:\n{profile_text}" if profile_text else "User Profile:\n(none)"
+            )
+            answer = await stage4_response.locomo_response(
+                llm_provider=self.llm_provider,
+                context=episode_context,
+                question=query,
+                experiment_config=exp_config,
+                prompt_template=PERSONAMEM_MCQ_PROMPT,
+                options_text=options_text,
+                profile_text=profile_block,
+            )
+        else:
+            if profile_text:
+                episode_context = episode_context + "\n\nUser Profile:\n\n" + profile_text
+
+            # Use LME-specific prompt when question_date is available (LongMemEval temporal reasoning)
+            question_date = kwargs.get("question_date")
+            if question_date:
+                lme_template = get_lme_prompt_template(current_time=question_date)
+                answer = await stage4_response.locomo_response(
+                    llm_provider=self.llm_provider,
+                    context=episode_context,
+                    question=query,
+                    experiment_config=exp_config,
+                    prompt_template=lme_template,
+                )
+            else:
+                answer = await stage4_response.locomo_response(
+                    llm_provider=self.llm_provider,
+                    context=episode_context,
+                    question=query,
+                    experiment_config=exp_config,
+                )
 
         return answer
 
@@ -645,23 +931,42 @@ class EverMemOSAdapter(BaseAdapter):
             ]
         if "enable_clustering" in add_config:
             exp_config.enable_clustering = add_config["enable_clustering"]
+        if "cluster_similarity_threshold" in add_config:
+            exp_config.cluster_similarity_threshold = add_config["cluster_similarity_threshold"]
+        if "cluster_max_time_gap_days" in add_config:
+            exp_config.cluster_max_time_gap_days = add_config["cluster_max_time_gap_days"]
         if "enable_profile_extraction" in add_config:
             exp_config.enable_profile_extraction = add_config[
                 "enable_profile_extraction"
+            ]
+        if "profile_scenario" in add_config:
+            exp_config.profile_scenario = add_config["profile_scenario"]
+        if "profile_min_confidence" in add_config:
+            exp_config.profile_min_confidence = add_config["profile_min_confidence"]
+        if "profile_min_memcells" in add_config:
+            exp_config.profile_min_memcells = add_config["profile_min_memcells"]
+        if "profile_extraction_mode" in add_config:
+            exp_config.profile_extraction_mode = add_config[
+                "profile_extraction_mode"
+            ]
+        if "profile_life_max_items" in add_config:
+            exp_config.profile_life_max_items = add_config[
+                "profile_life_max_items"
             ]
 
         # Map Search stage configuration (only override explicitly specified in YAML)
         search_config = self.config.get("search", {})
         if "mode" in search_config:
             exp_config.retrieval_mode = search_config["mode"]
-            exp_config.use_agentic_retrieval = exp_config.retrieval_mode == "agentic"
 
-        # Map lightweight_search_mode (controls search method in lightweight mode)
-        # Options: "bm25_only" | "hybrid" | "emb_only"
-        if "lightweight_search_mode" in search_config:
-            exp_config.lightweight_search_mode = search_config[
-                "lightweight_search_mode"
-            ]
+        # Map Answer stage configuration
+        answer_config = self.config.get("answer", {})
+        if "use_profile_in_answer" in answer_config:
+            exp_config.use_profile_in_answer = answer_config["use_profile_in_answer"]
+        if "use_episode_in_answer" in answer_config:
+            exp_config.use_episode_in_answer = answer_config["use_episode_in_answer"]
+        if "use_profile_classifier" in answer_config:
+            exp_config.use_profile_classifier = answer_config["use_profile_classifier"]
 
         return exp_config
 
@@ -687,7 +992,61 @@ class EverMemOSAdapter(BaseAdapter):
             "memcells_dir": str(output_dir / "memcells"),
             "bm25_index_dir": str(output_dir / "bm25_index"),
             "emb_index_dir": str(output_dir / "vectors"),
+            "scenes_dir": str(output_dir / "scenes"),
             "conversation_ids": [conv.conversation_id for conv in conversations],
             "use_hybrid_search": True,
             "total_conversations": len(conversations),
         }
+
+    def _load_or_build_scene_index(
+        self, conv_index: str, index: Dict[str, Any], exp_config
+    ) -> Dict[str, Any]:
+        """
+        Load scene_index from file, or build all scene indexes on first miss.
+
+        On first call where scene_index files don't exist, builds indexes
+        for ALL conversations at once (efficient). Subsequent calls just load from file.
+
+        Args:
+            conv_index: Conversation numeric index (e.g., "0")
+            index: Lazy-load index metadata
+            exp_config: Experiment configuration
+
+        Returns:
+            Scene index dict with 'scenes', 'memcell_to_scene', etc.
+        """
+        # Derive scenes_dir: from index metadata, or fallback to sibling of memcells_dir
+        scenes_dir_str = index.get("scenes_dir")
+        if not scenes_dir_str:
+            scenes_dir_str = str(Path(index["memcells_dir"]).parent / "scenes")
+        scenes_dir = Path(scenes_dir_str)
+        scene_index_path = scenes_dir / f"scene_index_conv_{conv_index}.pkl"
+
+        # Try loading existing scene_index
+        if scene_index_path.exists():
+            with open(scene_index_path, "rb") as f:
+                return pickle.load(f)
+
+        # Build scene_index for ALL conversations from cluster data
+        memcells_dir = Path(index["memcells_dir"])
+        cluster_dir = memcells_dir / "clusters"
+
+        print(f"Scene index not found, building for all conversations from cluster data...")
+        scenes_dir.mkdir(parents=True, exist_ok=True)
+
+        stage2_index_building.build_scene_index(
+            config=exp_config,
+            data_dir=memcells_dir,
+            cluster_dir=cluster_dir,
+            scene_save_dir=scenes_dir,
+        )
+
+        # Load the newly built scene_index
+        if scene_index_path.exists():
+            with open(scene_index_path, "rb") as f:
+                return pickle.load(f)
+
+        raise FileNotFoundError(
+            f"Failed to build scene index for conv_{conv_index}. "
+            f"Check that cluster data exists at {cluster_dir}/conv_{conv_index}/"
+        )

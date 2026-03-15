@@ -15,18 +15,6 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Any, List, Dict, Optional
 
-from rich.console import Console
-from rich.progress import (
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    BarColumn,
-    MofNCompleteColumn,
-    TaskProgressColumn,
-    TimeElapsedColumn,
-    TimeRemainingColumn,
-)
-
 from evaluation.src.adapters.base import BaseAdapter
 from evaluation.src.core.data_models import Conversation, SearchResult
 from evaluation.src.utils.config import load_yaml
@@ -111,21 +99,10 @@ class OnlineAPIAdapter(BaseAdapter):
         conversation_ids = []
         add_results = []
 
-        console = Console()
-        console.print(f"\n{'='*60}", style="bold cyan")
-        console.print("Stage 1: Add", style="bold cyan")
-        console.print(f"{'='*60}", style="bold cyan")
-
-        def _conv_label(conv_id: str) -> str:
-            parts = conv_id.rsplit("_", 1)
-            if len(parts) == 2 and parts[1].isdigit():
-                return parts[1]
-            return conv_id
-
         # Create semaphore for concurrency control
         semaphore = asyncio.Semaphore(self.num_workers)
 
-        async def process_single_conversation(conv, progress, main_task):
+        async def process_single_conversation(conv):
             """Process a single conversation with concurrency control."""
             async with semaphore:
                 conv_id = conv.conversation_id
@@ -147,30 +124,13 @@ class OnlineAPIAdapter(BaseAdapter):
                     speaker_b_messages = self._conversation_to_messages(
                         conv, format_type=format_type, perspective="speaker_b"
                     )
-                    total_messages = len(speaker_a_messages) + len(speaker_b_messages)
-                    conv_task_id = progress.add_task(
-                        f"[yellow]Conv-{_conv_label(conv_id)}",
-                        total=total_messages,
-                        completed=0,
-                        status="Processing",
-                    )
 
                     # Add messages for both users
                     result_a = await self._add_user_messages(
-                        conv,
-                        speaker_a_messages,
-                        speaker="speaker_a",
-                        progress=progress,
-                        task_id=conv_task_id,
-                        **kwargs,
+                        conv, speaker_a_messages, speaker="speaker_a", **kwargs
                     )
                     result_b = await self._add_user_messages(
-                        conv,
-                        speaker_b_messages,
-                        speaker="speaker_b",
-                        progress=progress,
-                        task_id=conv_task_id,
-                        **kwargs,
+                        conv, speaker_b_messages, speaker="speaker_b", **kwargs
                     )
 
                     # Wait for tasks to complete (per-conversation, before releasing semaphore)
@@ -179,32 +139,16 @@ class OnlineAPIAdapter(BaseAdapter):
                         [result_a, result_b], conversation_id=conv_id, **kwargs
                     )
 
-                    progress.update(
-                        conv_task_id, completed=total_messages, status="✅"
-                    )
-                    progress.update(main_task, advance=1)
                     return conv_id, [result_a, result_b]
                 else:
                     # Single perspective: prepare messages for speaker_a only
                     messages = self._conversation_to_messages(
                         conv, format_type=format_type, perspective=None
                     )
-                    total_messages = len(messages)
-                    conv_task_id = progress.add_task(
-                        f"[yellow]Conv-{_conv_label(conv_id)}",
-                        total=total_messages,
-                        completed=0,
-                        status="Processing",
-                    )
 
                     # Add messages for single user
                     result = await self._add_user_messages(
-                        conv,
-                        messages,
-                        speaker="speaker_a",
-                        progress=progress,
-                        task_id=conv_task_id,
-                        **kwargs,
+                        conv, messages, speaker="speaker_a", **kwargs
                     )
 
                     # Wait for tasks to complete (per-conversation, before releasing semaphore)
@@ -212,43 +156,11 @@ class OnlineAPIAdapter(BaseAdapter):
                         [result], conversation_id=conv_id, **kwargs
                     )
 
-                    progress.update(
-                        conv_task_id, completed=total_messages, status="✅"
-                    )
-                    progress.update(main_task, advance=1)
                     return conv_id, [result]
 
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            MofNCompleteColumn(),
-            TextColumn("•"),
-            TaskProgressColumn(),
-            TextColumn("•"),
-            TimeElapsedColumn(),
-            TextColumn("•"),
-            TimeRemainingColumn(),
-            TextColumn("•"),
-            TextColumn("[bold blue]{task.fields[status]}"),
-            console=console,
-            transient=False,
-            refresh_per_second=1,
-        ) as progress:
-            main_task = progress.add_task(
-                "[bold cyan]🎯 Overall Progress",
-                total=len(conversations),
-                completed=0,
-                status="Processing",
-            )
-
-            # Process all conversations concurrently (with semaphore control)
-            tasks = [
-                process_single_conversation(conv, progress, main_task)
-                for conv in conversations
-            ]
-            results = await asyncio.gather(*tasks)
-            progress.update(main_task, status="✅ Complete")
+        # Process all conversations concurrently (with semaphore control)
+        tasks = [process_single_conversation(conv) for conv in conversations]
+        results = await asyncio.gather(*tasks)
 
         # Collect results
         for conv_id, conv_results in results:
@@ -569,11 +481,18 @@ class OnlineAPIAdapter(BaseAdapter):
             try:
                 result = await self.llm_provider.generate(prompt=prompt, temperature=0)
 
-                # Clean result (remove possible "FINAL ANSWER:" prefix)
-                if "FINAL ANSWER:" in result:
-                    parts = result.split("FINAL ANSWER:")
+                # Clean result (remove possible "FINAL ANSWER" prefix)
+                # Support both "## STEP 7: FINAL ANSWER\n" and "FINAL ANSWER:" formats
+                if "## STEP 7: FINAL ANSWER" in result:
+                    parts = result.split("## STEP 7: FINAL ANSWER")
                     if len(parts) > 1:
                         result = parts[1].strip()
+                    else:
+                        result = result.strip()
+                elif "FINAL ANSWER" in result:
+                    parts = result.split("FINAL ANSWER")
+                    if len(parts) > 1:
+                        result = parts[1].lstrip(":").strip()
                     else:
                         result = result.strip()
                 else:

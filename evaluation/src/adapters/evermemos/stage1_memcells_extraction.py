@@ -414,8 +414,13 @@ async def process_single_conversation(
         cluster_mgr = ClusterManager(config=cluster_config)
         cluster_state = ClusterState()
 
+    use_scene_profile = (
+        config
+        and getattr(config, "profile_extraction_mode", "conversation") == "scene"
+    )
+
     # Conditional creation: Profile manager
-    if config and config.enable_profile_extraction:
+    if config and config.enable_profile_extraction and not use_scene_profile:
         profile_storage = InMemoryProfileStorage(
             enable_persistence=True,
             persist_dir=Path(save_dir) / "profiles" / f"conv_{conv_id}",
@@ -478,7 +483,7 @@ async def process_single_conversation(
 
         async def extract_single_event_log(idx: int, memcell):
             event_log = await event_log_extractor.extract_event_log(
-                memcell=memcell, timestamp=memcell.timestamp
+                episode_text=memcell.episode, timestamp=memcell.timestamp
             )
             return idx, event_log
 
@@ -527,15 +532,34 @@ async def process_single_conversation(
                 memcell_dict, cluster_state
             )
 
-        # Save cluster state (cluster_storage.save_cluster_state internally saves both cluster_state and cluster_map)
+        # Save cluster state
         await cluster_storage.save_cluster_state(group_id, cluster_state.to_dict())
+
+        # Export clustering results
+        cluster_output_dir = Path(save_dir) / "clusters" / f"conv_{conv_id}"
+        cluster_output_dir.mkdir(parents=True, exist_ok=True)
+
+        state_file = cluster_output_dir / f"cluster_state_{group_id}.json"
+        with open(state_file, "w", encoding="utf-8") as f:
+            json.dump(
+                cluster_state.to_dict(), f, ensure_ascii=False, indent=2, default=str
+            )
+
+        assignments_file = cluster_output_dir / f"cluster_map_{group_id}.json"
+        with open(assignments_file, "w", encoding="utf-8") as f:
+            json.dump(
+                {"assignments": cluster_state.eventid_to_cluster},
+                f,
+                ensure_ascii=False,
+                indent=2,
+            )
 
         cluster_stats = cluster_mgr.get_stats()
 
     # Profile extraction: after all memcells processed
     profile_stats = {}
     profile_count = 0
-    if profile_mgr and profile_storage and memcell_list:
+    if profile_mgr and profile_storage and memcell_list and not use_scene_profile:
         user_id_set = set()
         for memcell in memcell_list:
             if hasattr(memcell, 'user_id_list'):
@@ -577,7 +601,9 @@ async def process_single_conversation(
         "conv_id": conv_id,
         "memcells": len(memcell_list),
         "clustering_enabled": config.enable_clustering if config else False,
-        "profile_enabled": config.enable_profile_extraction if config else False,
+        "profile_enabled": (
+            config.enable_profile_extraction if config and not use_scene_profile else False
+        ),
         "foresight_enabled": config.enable_foresight_extraction if config else False,
     }
 
@@ -631,10 +657,18 @@ async def main():
         f"  - Clustering: {'✅ Enabled' if config.enable_clustering else '❌ Disabled'}",
         style="green" if config.enable_clustering else "dim",
     )
-    console.print(
-        f"  - Profile extraction: {'✅ Enabled' if config.enable_profile_extraction else '❌ Disabled'}",
-        style="green" if config.enable_profile_extraction else "dim",
-    )
+    profile_mode = getattr(config, "profile_extraction_mode", "conversation")
+    if config.enable_profile_extraction and profile_mode == "scene":
+        profile_status = "✅ Enabled (scene mode, Stage 2)"
+        profile_style = "yellow"
+    elif config.enable_profile_extraction:
+        profile_status = "✅ Enabled"
+        profile_style = "green"
+    else:
+        profile_status = "❌ Disabled"
+        profile_style = "dim"
+
+    console.print(f"  - Profile extraction: {profile_status}", style=profile_style)
 
     if config.enable_clustering:
         console.print(f"\nClustering config:", style="bold")

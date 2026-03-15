@@ -1,0 +1,36 @@
+# EverMemOS Configuration for LongMemEval Dataset
+#
+# LongMemEval has conversations spanning longer time periods with diverse topics.
+# Uses looser clustering parameters compared to LoCoMo defaults.
+#
+# Usage:
+#   uv run python -m evaluation.cli --dataset longmemeval --system evermemos_longmemeval
+
+name: "evermemos_longmemeval"
+version: "1.0"
+description: "EverMemOS optimized for LongMemEval (looser clustering)"
+
+adapter: "evermemos"
+
+# LLM configuration
+llm:
+  provider: "openai"
+  model: "openai/gpt-4.1-mini"
+  api_key: "${LLM_API_KEY}"
+  base_url: "${LLM_BASE_URL:https://openrouter.ai/api/v1}"
+  temperature: 0.3
+  max_tokens: 16384
+
+# Add stage: looser clustering for LongMemEval
+add:
+  enable_clustering: true
+  enable_scene_retrieval: true
+  enable_foresight_extraction: false
+  enable_profile_extraction: false
+
+  cluster_similarity_threshold: 0.50     # Looser: topics are more diverse
+  cluster_max_time_gap_days: 30.0        # Longer: conversations span months
+
+# Search stage: agentic retrieval (default)
+search:
+  mode: "agentic"
