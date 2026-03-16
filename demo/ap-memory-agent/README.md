@@ -6,7 +6,11 @@ Accounts Payable automation agent built with **LangGraph + EverMemOS + Claude** 
 
 ## Demo Video
 
-[![Watch the demo](https://cdn.loom.com/sessions/thumbnails/9834fe7b5fca45c78c304f7101b15ac6-with-play.gif)](https://www.loom.com/share/9834fe7b5fca45c78c304f7101b15ac6)
+<a href="https://www.loom.com/share/9834fe7b5fca45c78c304f7101b15ac6">
+  <img src="https://cdn.loom.com/sessions/thumbnails/9834fe7b5fca45c78c304f7101b15ac6-31131ab95b0f7652.jpg" width="600" />
+</a>
+
+[Watch the full demo on Loom](https://www.loom.com/share/9834fe7b5fca45c78c304f7101b15ac6)
 
 ## Architecture
 
