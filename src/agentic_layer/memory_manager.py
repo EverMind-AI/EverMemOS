@@ -814,10 +814,10 @@ class MemoryManager:
             total_count=total_count,
             has_more=False,
             query_metadata=Metadata(
-                source=source_type, user_id=user_id or "", memory_type=memory_type
+                source=source_type, user_id=user_id or "", memory_type=memory_type_label
             ),
             metadata=Metadata(
-                source=source_type, user_id=user_id or "", memory_type=memory_type
+                source=source_type, user_id=user_id or "", memory_type=memory_type_label
             ),
         )
 
@@ -907,7 +907,7 @@ class MemoryManager:
             if not round1:
                 duration = time.perf_counter() - start_time
                 record_retrieve_request(
-                    memory_type=memory_type,
+                    memory_type=memory_type_label,
                     retrieve_method=RetrieveMethod.AGENTIC.value,
                     status='empty_result',
                     duration_seconds=duration,
@@ -918,7 +918,7 @@ class MemoryManager:
             # ========== Rerank → max(5, top_k) for LLM & return ==========
             rerank_n = max(config.round1_rerank_top_n, top_k)
             reranked = await self._rerank(
-                req.query, round1, rerank_n, memory_type, 'agentic',
+                req.query, round1, rerank_n, memory_type_label, 'agentic',
                 instruction=config.reranker_instruction,
             )
             # Use top 5 for sufficiency check
@@ -941,7 +941,7 @@ class MemoryManager:
                 final_results = reranked[:top_k]
                 duration = time.perf_counter() - start_time
                 record_retrieve_request(
-                    memory_type=memory_type,
+                    memory_type=memory_type_label,
                     retrieve_method=RetrieveMethod.AGENTIC.value,
                     status='success',
                     duration_seconds=duration,
@@ -988,13 +988,13 @@ class MemoryManager:
 
             # ========== Final Rerank ==========
             final = await self._rerank(
-                req.query, combined, top_k, memory_type, 'agentic',
+                req.query, combined, top_k, memory_type_label, 'agentic',
                 instruction=config.reranker_instruction,
             )
 
             duration = time.perf_counter() - start_time
             record_retrieve_request(
-                memory_type=memory_type,
+                memory_type=memory_type_label,
                 retrieve_method=RetrieveMethod.AGENTIC.value,
                 status='success',
                 duration_seconds=duration,
@@ -1006,7 +1006,7 @@ class MemoryManager:
         except Exception as e:
             duration = time.perf_counter() - start_time
             record_retrieve_request(
-                memory_type=memory_type,
+                memory_type=memory_type_label,
                 retrieve_method=RetrieveMethod.AGENTIC.value,
                 status='error',
                 duration_seconds=duration,

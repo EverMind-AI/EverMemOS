@@ -1,0 +1,809 @@
+EverMemOS
+├── AGENTS.md
+├── CLAUDE.md
+├── CONTRIBUTING.md
+├── Dockerfile
+├── LICENSE
+├── Makefile
+├── NOTICE
+├── README.md
+├── README.zh.md
+├── SECURITY.md
+├── config.json
+├── data
+│ ├── README.md
+│ ├── assistant_chat_en.json
+│ ├── assistant_chat_zh.json
+│ ├── group_chat_en.json
+│ ├── group_chat_zh.json
+│ └── locomo10.json
+├── data_format
+│ ├── __init__.py
+│ └── group_chat
+│  ├── __init__.py
+│  ├── group_chat_format.md
+│  └── group_chat_format.py
+├── demo
+│ ├── README.md
+│ ├── __init__.py
+│ ├── chat
+│ │ ├── __init__.py
+│ │ ├── orchestrator.py
+│ │ ├── selectors.py
+│ │ ├── session.py
+│ │ └── ui.py
+│ ├── chat_with_memory.py
+│ ├── config
+│ │ ├── __init__.py
+│ │ └── memory_config.py
+│ ├── extract_memory.py
+│ ├── simple_demo.py
+│ ├── tools
+│ │ ├── clear_all_data.py
+│ │ ├── debug_view_databases.py
+│ │ ├── reset_databases.py
+│ │ ├── resync_memcells.py
+│ │ ├── resync_personal_memories.py
+│ │ ├── test_retrieval_comprehensive.py
+│ │ └── test_v1api_search.py
+│ ├── ui
+│ │ ├── __init__.py
+│ │ └── i18n_texts.py
+│ └── utils
+│  ├── __init__.py
+│  ├── memory_utils.py
+│  └── simple_memory_manager.py
+├── docker-compose.yaml
+├── docs
+│ ├── ACKNOWLEDGMENTS.md
+│ ├── ARCHITECTURE.md
+│ ├── CHANGELOG.md
+│ ├── CITATION.md
+│ ├── OVERVIEW.md
+│ ├── README.md
+│ ├── STARTER_KIT.md
+│ ├── advanced
+│ │ ├── GROUP_CHAT_GUIDE.md
+│ │ ├── METADATA_CONTROL.md
+│ │ └── RETRIEVAL_STRATEGIES.md
+│ ├── api_docs
+│ │ └── memory_api.md
+│ ├── dev_docs
+│ │ ├── agentic_retrieval_guide.md
+│ │ ├── agentic_retrieve_testing.md
+│ │ ├── api_usage_guide.md
+│ │ ├── bootstrap_usage.md
+│ │ ├── development_guide.md
+│ │ ├── development_standards.md
+│ │ ├── getting_started.md
+│ │ ├── memory_types_guide.md
+│ │ ├── metrics_library_design.md
+│ │ └── run_memorize_usage.md
+│ ├── installation
+│ │ ├── DOCKER_SETUP.md
+│ │ └── SETUP.md
+│ └── usage
+│  ├── BATCH_OPERATIONS.md
+│  ├── CONFIGURATION_GUIDE.md
+│  ├── DEMOS.md
+│  ├── MONGODB_GUIDE.md
+│  └── USAGE_EXAMPLES.md
+├── env.template
+├── evaluation
+│ ├── README.md
+│ ├── __init__.py
+│ ├── cli.py
+│ ├── config
+│ │ ├── datasets
+│ │ │ ├── evermembench.yaml
+│ │ │ ├── locomo.yaml
+│ │ │ ├── longmemeval.yaml
+│ │ │ └── personamem.yaml
+│ │ ├── prompts.yaml
+│ │ └── systems
+│ │  ├── evermemos.yaml
+│ │  ├── evermemos_cloud_api.yaml
+│ │  ├── evermemos_local_api.yaml
+│ │  ├── mem0.yaml
+│ │  ├── memos.yaml
+│ │  ├── memu.yaml
+│ │  └── zep.yaml
+│ ├── data
+│ │ ├── evermembench
+│ │ ├── locomo
+│ │ │ └── locomo10.json
+│ │ ├── longmemeval
+│ │ └── personamem
+│ └── src
+│  ├── __init__.py
+│  ├── adapters
+│  │ ├── __init__.py
+│  │ ├── base.py
+│  │ ├── evermemos
+│  │ │ ├── README.md
+│  │ │ ├── __init__.py
+│  │ │ ├── config.py
+│  │ │ ├── prompts
+│  │ │ │ ├── __init__.py
+│  │ │ │ ├── answer_prompts.py
+│  │ │ │ ├── multi_query_prompts.py
+│  │ │ │ ├── refined_query_prompts.py
+│  │ │ │ └── sufficiency_check_prompts.py
+│  │ │ ├── stage1_memcells_extraction.py
+│  │ │ ├── stage2_index_building.py
+│  │ │ ├── stage3_memory_retrivel.py
+│  │ │ ├── stage4_response.py
+│  │ │ ├── stage5_eval.py
+│  │ │ └── tools
+│  │ │  ├── __init__.py
+│  │ │  ├── agentic_utils.py
+│  │ │  ├── compute_acc.py
+│  │ │  ├── in_memory_cluster_storage.py
+│  │ │  └── in_memory_profile_storage.py
+│  │ ├── evermemos_adapter.py
+│  │ ├── evermemos_api_adapter.py
+│  │ ├── mem0_adapter.py
+│  │ ├── memos_adapter.py
+│  │ ├── memu_adapter.py
+│  │ ├── online_base.py
+│  │ ├── registry.py
+│  │ └── zep_adapter.py
+│  ├── converters
+│  │ ├── __init__.py
+│  │ ├── base.py
+│  │ ├── longmemeval_converter.py
+│  │ ├── personamem_converter.py
+│  │ └── registry.py
+│  ├── core
+│  │ ├── __init__.py
+│  │ ├── data_models.py
+│  │ ├── loaders.py
+│  │ ├── pipeline.py
+│  │ └── stages
+│  │  ├── __init__.py
+│  │  ├── add_stage.py
+│  │  ├── answer_stage.py
+│  │  ├── evaluate_stage.py
+│  │  └── search_stage.py
+│  ├── evaluators
+│  │ ├── __init__.py
+│  │ ├── base.py
+│  │ ├── exact_match.py
+│  │ ├── hybrid.py
+│  │ ├── llm_judge.py
+│  │ └── registry.py
+│  └── utils
+│   ├── __init__.py
+│   ├── checkpoint.py
+│   ├── cleaner.py
+│   ├── config.py
+│   ├── logger.py
+│   ├── prompts.py
+│   └── saver.py
+├── examples
+│ └── openclaw-plugin
+│  ├── README.md
+│  ├── README.zh.md
+│  ├── SKILL.md
+│  ├── bin
+│  │ └── install.js
+│  ├── index.js
+│  ├── openclaw.plugin.json
+│  ├── package.json
+│  └── src
+│   ├── api.js
+│   ├── config.js
+│   ├── convert.js
+│   ├── engine.js
+│   ├── http.js
+│   ├── messages.js
+│   ├── prompt.js
+│   ├── subagent-assembler.js
+│   ├── subagent-tracker.js
+│   └── types.js
+├── figs
+├── pyproject.toml
+├── pyrightconfig.json
+├── pytest.ini
+├── src
+│ ├── __init__.py
+│ ├── addon.py
+│ ├── agentic_layer
+│ │ ├── __init__.py
+│ │ ├── agentic_utils.py
+│ │ ├── fetch_mem_service.py
+│ │ ├── memory_manager.py
+│ │ ├── metrics
+│ │ │ ├── __init__.py
+│ │ │ ├── memorize_metrics.py
+│ │ │ ├── rerank_metrics.py
+│ │ │ ├── retrieve_metrics.py
+│ │ │ └── vectorize_metrics.py
+│ │ ├── rerank_deepinfra.py
+│ │ ├── rerank_interface.py
+│ │ ├── rerank_service.py
+│ │ ├── rerank_vllm.py
+│ │ ├── retrieval_utils.py
+│ │ ├── vectorize_base.py
+│ │ ├── vectorize_deepinfra.py
+│ │ ├── vectorize_interface.py
+│ │ ├── vectorize_service.py
+│ │ └── vectorize_vllm.py
+│ ├── api_specs
+│ │ ├── __init__.py
+│ │ ├── dtos
+│ │ │ ├── __init__.py
+│ │ │ ├── base.py
+│ │ │ ├── conversation_meta.py
+│ │ │ └── memory.py
+│ │ ├── memory_models.py
+│ │ ├── memory_types.py
+│ │ └── request_converter.py
+│ ├── app.py
+│ ├── application_startup.py
+│ ├── base_app.py
+│ ├── biz_layer
+│ │ ├── mem_db_operations.py
+│ │ ├── mem_memorize.py
+│ │ ├── mem_sync.py
+│ │ └── memorize_config.py
+│ ├── bootstrap.py
+│ ├── common_utils
+│ │ ├── __init__.py
+│ │ ├── app_meta.py
+│ │ ├── base62_utils.py
+│ │ ├── cli_ui.py
+│ │ ├── datetime_utils.py
+│ │ ├── language_utils.py
+│ │ ├── load_env.py
+│ │ ├── project_path.py
+│ │ ├── text_utils.py
+│ │ └── url_extractor.py
+│ ├── config
+│ │ ├── __init__.py
+│ │ ├── llm_backends.yaml
+│ │ └── stopwords
+│ │  └── hit_stopwords.txt
+│ ├── core
+│ │ ├── addons
+│ │ │ ├── __init__.py
+│ │ │ ├── addon_registry.py
+│ │ │ ├── addonize
+│ │ │ │ ├── __init__.py
+│ │ │ │ ├── addon_bean_order_strategy.py
+│ │ │ │ ├── asynctasks_setup.py
+│ │ │ │ ├── di_setup.py
+│ │ │ │ └── tests
+│ │ │ │  ├── __init__.py
+│ │ │ │  └── test_addon_bean_order_strategy.py
+│ │ │ ├── addons_registry.py
+│ │ │ └── introduction.md
+│ │ ├── asynctasks
+│ │ │ ├── __init__.py
+│ │ │ ├── examples
+│ │ │ │ └── hello_word_job.py
+│ │ │ ├── task_manager.py
+│ │ │ └── task_scan_registry.py
+│ │ ├── authorize
+│ │ │ ├── __init__.py
+│ │ │ ├── decorators.py
+│ │ │ ├── enums.py
+│ │ │ ├── interfaces.py
+│ │ │ └── strategies.py
+│ │ ├── cache
+│ │ │ ├── __init__.py
+│ │ │ └── redis_cache_queue
+│ │ │  ├── __init__.py
+│ │ │  ├── redis_data_processor.py
+│ │ │  ├── redis_length_cache_manager.py
+│ │ │  └── redis_windows_cache_manager.py
+│ │ ├── capability
+│ │ │ ├── __init__.py
+│ │ │ ├── app_capability.py
+│ │ │ ├── configuration
+│ │ │ │ └── __init__.py
+│ │ │ └── logging
+│ │ │  └── __init__.py
+│ │ ├── class_annotations
+│ │ │ ├── __init__.py
+│ │ │ ├── decorator.py
+│ │ │ ├── types.py
+│ │ │ └── utils.py
+│ │ ├── component
+│ │ │ ├── __init__.py
+│ │ │ ├── auth_provider.py
+│ │ │ ├── config_provider.py
+│ │ │ ├── database_connection_provider.py
+│ │ │ ├── database_session_provider.py
+│ │ │ ├── elasticsearch_client_factory.py
+│ │ │ ├── kafka_consumer_factory.py
+│ │ │ ├── kafka_producer_factory.py
+│ │ │ ├── llm
+│ │ │ │ ├── llm_adapter
+│ │ │ │ │ ├── __init__.py
+│ │ │ │ │ ├── anthropic_adapter.py
+│ │ │ │ │ ├── completion.py
+│ │ │ │ │ ├── gemini_adapter.py
+│ │ │ │ │ ├── gemini_client.py
+│ │ │ │ │ ├── llm_backend_adapter.py
+│ │ │ │ │ ├── message.py
+│ │ │ │ │ └── openai_adapter.py
+│ │ │ │ └── tokenizer
+│ │ │ │  ├── __init__.py
+│ │ │ │  └── tokenizer_factory.py
+│ │ │ ├── milvus_client_factory.py
+│ │ │ ├── mongodb_client_factory.py
+│ │ │ ├── openai_compatible_client.py
+│ │ │ └── redis_provider.py
+│ │ ├── config
+│ │ │ └── __init__.py
+│ │ ├── constants
+│ │ │ ├── __init__.py
+│ │ │ ├── errors.py
+│ │ │ └── exceptions.py
+│ │ ├── context
+│ │ │ ├── __init__.py
+│ │ │ ├── context.py
+│ │ │ └── context_manager.py
+│ │ ├── di
+│ │ │ ├── __init__.py
+│ │ │ ├── bean_definition.py
+│ │ │ ├── bean_order_strategy.py
+│ │ │ ├── container.py
+│ │ │ ├── decorators.py
+│ │ │ ├── exceptions.py
+│ │ │ ├── introduction.md
+│ │ │ ├── scan_context.py
+│ │ │ ├── scan_path_registry.py
+│ │ │ ├── scanner.py
+│ │ │ ├── tests
+│ │ │ │ ├── __init__.py
+│ │ │ │ ├── test_bean_order_strategy.py
+│ │ │ │ ├── test_di_container.py
+│ │ │ │ ├── test_di_scanner.py
+│ │ │ │ └── test_fixtures.py
+│ │ │ └── utils.py
+│ │ ├── events
+│ │ │ ├── __init__.py
+│ │ │ ├── base_event.py
+│ │ │ ├── event_listener.py
+│ │ │ └── event_publisher.py
+│ │ ├── interface
+│ │ │ ├── __init__.py
+│ │ │ ├── controller
+│ │ │ │ ├── __init__.py
+│ │ │ │ ├── base_controller.py
+│ │ │ │ └── debug
+│ │ │ │  ├── __init__.py
+│ │ │ │  └── debug_controller.py
+│ │ │ └── decorator
+│ │ │  ├── __init__.py
+│ │ │  └── require_tenant.py
+│ │ ├── lifespan
+│ │ │ ├── __init__.py
+│ │ │ ├── business_lifespan.py
+│ │ │ ├── database_lifespan.py
+│ │ │ ├── elasticsearch_lifespan.py
+│ │ │ ├── lifespan_factory.py
+│ │ │ ├── lifespan_interface.py
+│ │ │ ├── longjob_lifespan.py
+│ │ │ ├── metrics_lifespan.py
+│ │ │ ├── milvus_lifespan.py
+│ │ │ └── mongodb_lifespan.py
+│ │ ├── lock
+│ │ │ ├── __init__.py
+│ │ │ └── redis_distributed_lock.py
+│ │ ├── longjob
+│ │ │ ├── __init__.py
+│ │ │ ├── interfaces.py
+│ │ │ ├── longjob_error.py
+│ │ │ ├── longjob_runner.py
+│ │ │ └── recycle_consumer_base.py
+│ │ ├── middleware
+│ │ │ ├── __init__.py
+│ │ │ ├── app_logic_middleware.py
+│ │ │ ├── database_session_middleware.py
+│ │ │ ├── global_exception_handler.py
+│ │ │ ├── hmac_signature_middleware.py
+│ │ │ ├── profile_middleware.py
+│ │ │ ├── prometheus_middleware.py
+│ │ │ ├── sse_exception_middleware.py
+│ │ │ └── user_context_middleware.py
+│ │ ├── nlp
+│ │ │ ├── __init__.py
+│ │ │ └── stopwords_utils.py
+│ │ ├── observation
+│ │ │ ├── logger.py
+│ │ │ ├── metrics
+│ │ │ │ ├── __init__.py
+│ │ │ │ ├── counter.py
+│ │ │ │ ├── gauge.py
+│ │ │ │ ├── histogram.py
+│ │ │ │ ├── registry.py
+│ │ │ │ └── server.py
+│ │ │ └── tracing
+│ │ │  ├── __init__.py
+│ │ │  └── decorators.py
+│ │ ├── oxm
+│ │ │ ├── __init__.py
+│ │ │ ├── constants.py
+│ │ │ ├── es
+│ │ │ │ ├── __init__.py
+│ │ │ │ ├── analyzer.py
+│ │ │ │ ├── base_converter.py
+│ │ │ │ ├── base_repository.py
+│ │ │ │ ├── doc_base.py
+│ │ │ │ ├── es_utils.py
+│ │ │ │ ├── mapping_templates.py
+│ │ │ │ └── migration
+│ │ │ │  ├── __init__.py
+│ │ │ │  └── utils.py
+│ │ │ ├── milvus
+│ │ │ │ ├── __init__.py
+│ │ │ │ ├── async_collection.py
+│ │ │ │ ├── base_converter.py
+│ │ │ │ ├── base_repository.py
+│ │ │ │ ├── migration
+│ │ │ │ │ └── utils.py
+│ │ │ │ └── milvus_collection_base.py
+│ │ │ ├── mongo
+│ │ │ │ ├── __init__.py
+│ │ │ │ ├── audit_base.py
+│ │ │ │ ├── base_repository.py
+│ │ │ │ ├── constant
+│ │ │ │ │ └── annotations.py
+│ │ │ │ ├── document_base.py
+│ │ │ │ ├── document_base_with_soft_delete.py
+│ │ │ │ ├── migration
+│ │ │ │ │ ├── __init__.py
+│ │ │ │ │ ├── cli.py
+│ │ │ │ │ └── manager.py
+│ │ │ │ └── mongo_utils.py
+│ │ │ └── pg
+│ │ │  ├── __init__.py
+│ │ │  ├── audit_base.py
+│ │ │  └── base_repository.py
+│ │ ├── queue
+│ │ │ ├── __init__.py
+│ │ │ ├── msg_group_queue
+│ │ │ │ ├── __init__.py
+│ │ │ │ ├── msg_group_queue_manager.py
+│ │ │ │ └── msg_group_queue_manager_factory.py
+│ │ │ └── redis_group_queue
+│ │ │  ├── __init__.py
+│ │ │  ├── kafka_consumer_record_item.py
+│ │ │  ├── redis_group_queue_item.py
+│ │ │  ├── redis_group_queue_lua_scripts.py
+│ │ │  ├── redis_msg_group_queue_manager.py
+│ │ │  └── redis_msg_group_queue_manager_factory.py
+│ │ ├── rate_limit
+│ │ │ ├── __init__.py
+│ │ │ └── rate_limiter.py
+│ │ ├── request
+│ │ │ ├── __init__.py
+│ │ │ ├── app_logic_provider.py
+│ │ │ ├── request_history_config.py
+│ │ │ ├── request_history_decorator.py
+│ │ │ ├── request_history_event.py
+│ │ │ └── timeout_background.py
+│ │ └── tenants
+│ │  ├── __init__.py
+│ │  ├── init_tenant_all.py
+│ │  ├── request_tenant_provider.py
+│ │  ├── tenant_config.py
+│ │  ├── tenant_contextvar.py
+│ │  ├── tenant_info_provider.py
+│ │  ├── tenant_models.py
+│ │  ├── tenant_switch.py
+│ │  └── tenantize
+│ │   ├── __init__.py
+│ │   ├── kv
+│ │   │ ├── __init__.py
+│ │   │ └── redis
+│ │   │  ├── __init__.py
+│ │   │  └── tenant_key_utils.py
+│ │   ├── oxm
+│ │   │ ├── __init__.py
+│ │   │ ├── es
+│ │   │ │ ├── __init__.py
+│ │   │ │ ├── config_utils.py
+│ │   │ │ └── tenant_aware_async_document.py
+│ │   │ ├── milvus
+│ │   │ │ ├── __init__.py
+│ │   │ │ ├── config_utils.py
+│ │   │ │ ├── tenant_aware_collection.py
+│ │   │ │ └── tenant_aware_collection_with_suffix.py
+│ │   │ └── mongo
+│ │   │  ├── __init__.py
+│ │   │  ├── config_utils.py
+│ │   │  ├── tenant_aware_client_factory.py
+│ │   │  └── tenant_aware_mongo_client.py
+│ │   └── tenant_cache_utils.py
+│ ├── devops_scripts
+│ │ ├── __init__.py
+│ │ ├── commitlint
+│ │ │ ├── __init__.py
+│ │ │ └── conventional_commit_lint.py
+│ │ ├── data_fix
+│ │ │ ├── __init__.py
+│ │ │ ├── data_fix_docs
+│ │ │ │ ├── DATA_FIX_README.md
+│ │ │ │ ├── elasticsearch_scripts_guide.md
+│ │ │ │ ├── milvus_scripts_guide.md
+│ │ │ │ └── mongodb_scripts_guide.md
+│ │ │ ├── es_rebuild_index.py
+│ │ │ ├── es_sync_docs.py
+│ │ │ ├── es_sync_episodic_memory_docs.py
+│ │ │ ├── milvus_rebuild_collection.py
+│ │ │ ├── milvus_sync_docs.py
+│ │ │ ├── milvus_sync_episodic_memory_docs.py
+│ │ │ ├── mongo_add_timestamp_shard.py
+│ │ │ └── mongo_fix_episodic_memory_missing_vector.py
+│ │ ├── i18n
+│ │ │ ├── __init__.py
+│ │ │ └── i18n_tool.py
+│ │ ├── mongo_migrate.py
+│ │ └── sensitive_info
+│ │  ├── __init__.py
+│ │  └── sensitive_info_tool.py
+│ ├── infra_layer
+│ │ ├── __init__.py
+│ │ ├── adapters
+│ │ │ ├── __init__.py
+│ │ │ ├── input
+│ │ │ │ ├── __init__.py
+│ │ │ │ ├── api
+│ │ │ │ │ ├── __init__.py
+│ │ │ │ │ ├── dto
+│ │ │ │ │ │ ├── global_user_profile_dto.py
+│ │ │ │ │ │ ├── memory_dto.py
+│ │ │ │ │ │ └── status_dto.py
+│ │ │ │ │ ├── global_user_profile
+│ │ │ │ │ │ ├── __init__.py
+│ │ │ │ │ │ └── global_user_profile_controller.py
+│ │ │ │ │ ├── health
+│ │ │ │ │ │ └── health_controller.py
+│ │ │ │ │ ├── mapper
+│ │ │ │ │ │ ├── __init__.py
+│ │ │ │ │ │ └── group_chat_converter.py
+│ │ │ │ │ ├── memory
+│ │ │ │ │ │ └── memory_controller.py
+│ │ │ │ │ └── status
+│ │ │ │ │  ├── __init__.py
+│ │ │ │ │  └── status_controller.py
+│ │ │ │ ├── jobs
+│ │ │ │ │ └── __init__.py
+│ │ │ │ ├── mcp
+│ │ │ │ │ └── __init__.py
+│ │ │ │ └── mq
+│ │ │ │  ├── __init__.py
+│ │ │ │  └── mapper
+│ │ │ │   └── __init__.py
+│ │ │ └── out
+│ │ │  ├── event
+│ │ │  │ ├── __init__.py
+│ │ │  │ └── memcell_created_event.py
+│ │ │  ├── persistence
+│ │ │  │ ├── document
+│ │ │  │ │ ├── __init__.py
+│ │ │  │ │ ├── memory
+│ │ │  │ │ │ ├── __init__.py
+│ │ │  │ │ │ ├── behavior_history.py
+│ │ │  │ │ │ ├── cluster_state.py
+│ │ │  │ │ │ ├── conversation_meta.py
+│ │ │  │ │ │ ├── conversation_status.py
+│ │ │  │ │ │ ├── core_memory.py
+│ │ │  │ │ │ ├── entity.py
+│ │ │  │ │ │ ├── episodic_memory.py
+│ │ │  │ │ │ ├── event_log_record.py
+│ │ │  │ │ │ ├── foresight_record.py
+│ │ │  │ │ │ ├── global_user_profile.py
+│ │ │  │ │ │ ├── group_profile.py
+│ │ │  │ │ │ ├── group_user_profile_memory.py
+│ │ │  │ │ │ ├── memcell.py
+│ │ │  │ │ │ ├── relationship.py
+│ │ │  │ │ │ └── user_profile.py
+│ │ │  │ │ └── request
+│ │ │  │ │  ├── __init__.py
+│ │ │  │ │  └── memory_request_log.py
+│ │ │  │ ├── mapper
+│ │ │  │ │ ├── __init__.py
+│ │ │  │ │ └── memory_request_log_mapper.py
+│ │ │  │ └── repository
+│ │ │  │  ├── __init__.py
+│ │ │  │  ├── behavior_history_raw_repository.py
+│ │ │  │  ├── cluster_state_raw_repository.py
+│ │ │  │  ├── conversation_data_raw_repository.py
+│ │ │  │  ├── conversation_meta_raw_repository.py
+│ │ │  │  ├── conversation_status_raw_repository.py
+│ │ │  │  ├── core_memory_raw_repository.py
+│ │ │  │  ├── entity_raw_repository.py
+│ │ │  │  ├── episodic_memory_raw_repository.py
+│ │ │  │  ├── event_log_record_raw_repository.py
+│ │ │  │  ├── foresight_record_repository.py
+│ │ │  │  ├── global_user_profile_raw_repository.py
+│ │ │  │  ├── group_profile_raw_repository.py
+│ │ │  │  ├── group_user_profile_memory_raw_repository.py
+│ │ │  │  ├── memcell_raw_repository.py
+│ │ │  │  ├── memory_request_log_repository.py
+│ │ │  │  ├── relationship_raw_repository.py
+│ │ │  │  └── user_profile_raw_repository.py
+│ │ │  └── search
+│ │ │   ├── __init__.py
+│ │ │   ├── elasticsearch
+│ │ │   │ ├── __init__.py
+│ │ │   │ ├── converter
+│ │ │   │ │ ├── __init__.py
+│ │ │   │ │ ├── episodic_memory_converter.py
+│ │ │   │ │ ├── event_log_converter.py
+│ │ │   │ │ └── foresight_converter.py
+│ │ │   │ └── memory
+│ │ │   │  ├── __init__.py
+│ │ │   │  ├── episodic_memory.py
+│ │ │   │  ├── event_log.py
+│ │ │   │  └── foresight.py
+│ │ │   ├── milvus
+│ │ │   │ ├── __init__.py
+│ │ │   │ ├── converter
+│ │ │   │ │ ├── __init__.py
+│ │ │   │ │ ├── episodic_memory_milvus_converter.py
+│ │ │   │ │ ├── event_log_milvus_converter.py
+│ │ │   │ │ └── foresight_milvus_converter.py
+│ │ │   │ └── memory
+│ │ │   │  ├── __init__.py
+│ │ │   │  ├── episodic_memory_collection.py
+│ │ │   │  ├── event_log_collection.py
+│ │ │   │  └── foresight_collection.py
+│ │ │   └── repository
+│ │ │    ├── __init__.py
+│ │ │    ├── episodic_memory_es_repository.py
+│ │ │    ├── episodic_memory_milvus_repository.py
+│ │ │    ├── event_log_es_repository.py
+│ │ │    ├── event_log_milvus_repository.py
+│ │ │    ├── foresight_es_repository.py
+│ │ │    └── foresight_milvus_repository.py
+│ │ └── scripts
+│ │  ├── __init__.py
+│ │  └── migrations
+│ │   └── __init__.py
+│ ├── manage.py
+│ ├── memory_layer
+│ │ ├── __init__.py
+│ │ ├── cluster_manager
+│ │ │ ├── __init__.py
+│ │ │ ├── config.py
+│ │ │ └── manager.py
+│ │ ├── constants.py
+│ │ ├── llm
+│ │ │ ├── __init__.py
+│ │ │ ├── config.py
+│ │ │ ├── llm_provider.py
+│ │ │ ├── openai_provider.py
+│ │ │ └── protocol.py
+│ │ ├── memcell_extractor
+│ │ │ ├── base_memcell_extractor.py
+│ │ │ └── conv_memcell_extractor.py
+│ │ ├── memory_extractor
+│ │ │ ├── base_memory_extractor.py
+│ │ │ ├── episode_memory_extractor.py
+│ │ │ ├── event_log_extractor.py
+│ │ │ ├── foresight_extractor.py
+│ │ │ ├── group_profile
+│ │ │ │ ├── __init__.py
+│ │ │ │ ├── data_processor.py
+│ │ │ │ ├── llm_handler.py
+│ │ │ │ ├── role_processor.py
+│ │ │ │ └── topic_processor.py
+│ │ │ ├── group_profile_memory_extractor.py
+│ │ │ ├── profile_memory
+│ │ │ │ ├── __init__.py
+│ │ │ │ ├── conversation.py
+│ │ │ │ ├── data_normalize.py
+│ │ │ │ ├── empty_evidence_completion.py
+│ │ │ │ ├── evidence_utils.py
+│ │ │ │ ├── extractor.py
+│ │ │ │ ├── merger.py
+│ │ │ │ ├── profile_helpers.py
+│ │ │ │ ├── project_helpers.py
+│ │ │ │ ├── skill_helpers.py
+│ │ │ │ ├── types.py
+│ │ │ │ └── value_helpers.py
+│ │ │ ├── profile_memory_extractor.py
+│ │ │ └── profile_memory_life
+│ │ │  ├── __init__.py
+│ │ │  ├── extractor.py
+│ │ │  ├── id_mapper.py
+│ │ │  └── types.py
+│ │ ├── memory_manager.py
+│ │ ├── profile_manager
+│ │ │ ├── README.md
+│ │ │ ├── __init__.py
+│ │ │ ├── config.py
+│ │ │ ├── discriminator.py
+│ │ │ └── manager.py
+│ │ └── prompts
+│ │  ├── __init__.py
+│ │  ├── en
+│ │  │ ├── __init__.py
+│ │  │ ├── conv_prompts.py
+│ │  │ ├── episode_mem_prompts.py
+│ │  │ ├── event_log_prompts.py
+│ │  │ ├── foresight_prompts.py
+│ │  │ ├── group_profile_merge_prompts.py
+│ │  │ ├── group_profile_prompts.py
+│ │  │ ├── profile_mem_evidence_completion_prompt.py
+│ │  │ ├── profile_mem_life_prompts.py
+│ │  │ ├── profile_mem_part1_prompts.py
+│ │  │ ├── profile_mem_part2_prompts.py
+│ │  │ ├── profile_mem_part3_prompts.py
+│ │  │ └── profile_mem_prompts.py
+│ │  └── zh
+│ │   ├── __init__.py
+│ │   ├── conv_prompts.py
+│ │   ├── episode_mem_prompts.py
+│ │   ├── event_log_prompts.py
+│ │   ├── foresight_prompts.py
+│ │   ├── group_profile_merge_prompts.py
+│ │   ├── group_profile_prompts.py
+│ │   ├── profile_mem_evidence_completion_prompt.py
+│ │   ├── profile_mem_life_prompts.py
+│ │   ├── profile_mem_part1_prompts.py
+│ │   ├── profile_mem_part2_prompts.py
+│ │   ├── profile_mem_part3_prompts.py
+│ │   └── profile_mem_prompts.py
+│ ├── migrations
+│ │ ├── __init__.py
+│ │ ├── mongodb
+│ │ │ └── __init__.py
+│ │ └── postgresql
+│ │  └── __init__.py
+│ ├── project_meta.py
+│ ├── run.py
+│ ├── run_memorize.py
+│ ├── service
+│ │ ├── __init__.py
+│ │ ├── conversation_meta_service.py
+│ │ ├── global_user_profile_service.py
+│ │ ├── memcell_delete_service.py
+│ │ ├── memory_request_log_service.py
+│ │ └── request_status_service.py
+│ └── task.py
+├── tests
+│ ├── test_business_lifespan_shutdown.py
+│ ├── test_conv_memcell_extractor.py
+│ ├── test_conversation_data_raw_repository.py
+│ ├── test_conversation_meta.py
+│ ├── test_conversation_status_raw_repository.py
+│ ├── test_core_memory_raw_repository.py
+│ ├── test_datetime_utils_to_iso_format.py
+│ ├── test_embedding_reranker_providers.py
+│ ├── test_episodic_memory_es_repository.py
+│ ├── test_episodic_memory_milvus_repository.py
+│ ├── test_global_user_profile_controller.py
+│ ├── test_group_profile_datetime_check.py
+│ ├── test_group_profile_raw_repository.py
+│ ├── test_group_profile_simple.py
+│ ├── test_group_user_profile_memory_raw_repository.py
+│ ├── test_integration_vectorize_rerank.py
+│ ├── test_keyword_vocabulary_milvus_repository.py
+│ ├── test_memcell_raw_repository.py
+│ ├── test_memory_controller.py
+│ ├── test_memory_controller_request_params.py
+│ ├── test_migrate_user_goal_to_work_responsibility.py
+│ ├── test_msg_group_queue_manager.py
+│ ├── test_pickle_size_analysis.py
+│ ├── test_rate_limiter_quick.py
+│ ├── test_rawdata_json_serialization.py
+│ ├── test_redis_distributed_lock.py
+│ ├── test_redis_length_cache.py
+│ ├── test_redis_windows_cache.py
+│ ├── test_request_converter.py
+│ ├── test_retrieval_utils_similarity.py
+│ ├── test_smart_text_parser.py
+│ ├── test_stability_database.py
+│ ├── test_stability_integration.py
+│ ├── test_task_cancel.py
+│ ├── test_task_cancel_2.py
+│ ├── test_tokenizer_factory.py
+│ └── test_wait_for.py
+└── uv.lock
