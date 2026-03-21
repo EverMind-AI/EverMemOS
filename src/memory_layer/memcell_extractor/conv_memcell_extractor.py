@@ -36,6 +36,57 @@ import time
 logger = get_logger(__name__)
 
 
+def _normalize_message_content_value(value: Any) -> str:
+    """Normalize message content into plain text for downstream memory extraction.
+
+    Handles plugin-wrapped/nested content structures (e.g. OpenClaw/Feishu payloads)
+    by recursively extracting textual fields and flattening them into a readable string.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (int, float, bool)):
+        return str(value)
+
+    if isinstance(value, list):
+        parts = [_normalize_message_content_value(item) for item in value]
+        return "\n".join(part for part in parts if part)
+
+    if isinstance(value, dict):
+        preferred_keys = [
+            'text', 'content', 'message', 'body', 'value',
+            'output_text', 'input_text', 'title', 'description'
+        ]
+
+        collected = []
+        seen = set()
+        for key in preferred_keys:
+            if key in value:
+                normalized = _normalize_message_content_value(value.get(key))
+                if normalized and normalized not in seen:
+                    collected.append(normalized)
+                    seen.add(normalized)
+
+        if collected:
+            return "\n".join(collected)
+
+        skip_keys = {
+            'type', 'role', 'id', '_id', 'msgType', 'timestamp', 'time',
+            'speaker_id', 'speaker_name', 'sender', 'sender_name', 'referList',
+            'metadata', 'extra', 'tool_calls', 'tool_call_id', 'arguments', 'name'
+        }
+        for key, nested in value.items():
+            if key in skip_keys:
+                continue
+            normalized = _normalize_message_content_value(nested)
+            if normalized:
+                return normalized
+        return ""
+
+    return str(value)
+
+
 @dataclass
 class BoundaryDetectionResult:
     """Boundary detection result."""
@@ -579,5 +630,17 @@ class ConvMemCellExtractor(MemCellExtractor):
                 logger.debug(
                     f"[ConvMemCellExtractor] Message type {msg_type} converted to placeholder: {placeholder}"
                 )
+
+        if isinstance(content, dict) and 'content' in content:
+            normalized_text = _normalize_message_content_value(content.get('content'))
+            if normalized_text != content.get('content'):
+                content = content.copy()
+                content['content'] = normalized_text
+
+        if isinstance(content, dict) and 'content' in content:
+            normalized_text = _normalize_message_content_value(content.get('content'))
+            if normalized_text != content.get('content'):
+                content = content.copy()
+                content['content'] = normalized_text
 
         return content
