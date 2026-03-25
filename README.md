@@ -3,6 +3,12 @@
 ![banner-gif][banner-gif]
 
 [![][arxiv-badge]][arxiv-link]
+[![Docker][docker-badge]][docker]
+[![Ask DeepWiki][deepwiki-badge]][deepwiki]
+[![License][license-badge]][license]
+
+
+<!-- [![][arxiv-badge]][arxiv-link]
 [![Python][python-badge]][python]
 [![Docker][docker-badge]][docker]
 [![FastAPI][fastapi-badge]][fastapi]
@@ -10,17 +16,15 @@
 [![Elasticsearch][elasticsearch-badge]][elasticsearch]
 [![Milvus][milvus-badge]][milvus]
 [![Ask DeepWiki][deepwiki-badge]][deepwiki]
-[![License][license-badge]][license]
+[![License][license-badge]][license] -->
 
-<p><strong>Share EverMemOS Repository</strong></p>
+<!-- <p><strong>Share EverMemOS Repository</strong></p>
 
 [![][share-x-shield]][share-x-link]
 [![][share-linkedin-shield]][share-linkedin-link]
 [![][share-reddit-shield]][share-reddit-link]
-[![][share-telegram-shield]][share-telegram-link]
-<!-- [![][share-whatsapp-shield]][share-whatsapp-link]
-[![][share-mastodon-shield]][share-mastodon-link]
-[![][share-weibo-shield]][share-weibo-link] -->
+[![][share-telegram-shield]][share-telegram-link] -->
+
 
 [Documentation][documentation] •
 [API Reference][api-docs] •
@@ -31,7 +35,7 @@
 
 </div>
 
-<br>
+<!-- <br>
 
 [![Memory Genesis Competition 2026][competition-image]][competition-link]
 
@@ -50,7 +54,7 @@
 >
 > Join our [Discord][discord] to ask anything you want. AMA session is open to everyone and occurs biweekly.
 
-<br>
+<br> -->
 
 <!-- <details>
 <summary><kbd>Table of Contents</kbd></summary>
@@ -537,7 +541,7 @@ Read our [Contribution Guidelines][contributing-doc] for code standards and Git 
 [star-gif]: https://github.com/user-attachments/assets/0c512570-945a-483a-9f47-8e067bd34484
 
 <!-- Header Badges -->
-[arxiv-badge]: https://img.shields.io/badge/arXiv-EverMemOS_Paper-F5C842?labelColor=gray&style=flat-square&logo=arxiv&logoColor=white
+[arxiv-badge]: https://img.shields.io/badge/arXiv-2601.02163-b31b1b?labelColor=gray&style=flat-square&logo=arxiv&logoColor=white
 [license-badge]: https://img.shields.io/badge/License-Apache%202.0-blue?labelColor=gray&labelColor=F5C842&style=flat-square
 
 <!-- Tech Stack Badges -->
