@@ -7,8 +7,11 @@ services:
     container_name: memsys-mongodb
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: memsys123
+      # Credentials are read from shell environment / .env file.
+      # Copy env.template to .env and set MONGODB_USERNAME and MONGODB_PASSWORD
+      # before running `docker compose up`.
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:?MONGODB_PASSWORD must be set in .env – see env.template}
       MONGO_INITDB_DATABASE: memsys
     ports:
       - "27017:27017"
@@ -160,4 +163,3 @@ volumes:
 networks:
   memsys-network:
     driver: bridge
-
