@@ -1,4 +1,4 @@
-# EverMemOS Memory Types: Episode / Foresight / EventLog
+# EverOS Memory Types: Episode / Foresight / EventLog
 
 ---
 

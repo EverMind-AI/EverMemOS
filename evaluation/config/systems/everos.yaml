@@ -1,10 +1,10 @@
-# EverMemOS System Configuration
+# EverOS System Configuration
 
-name: "evermemos"
+name: "everos"
 version: "1.0"
-description: "EverMemOS"
+description: "EverOS"
 
-adapter: "evermemos"
+adapter: "everos"
 
 # LLM configuration
 llm:

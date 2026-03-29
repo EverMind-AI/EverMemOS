@@ -1,4 +1,4 @@
-"""Group Profile Extraction prompts for EverMemOS."""
+"""Group Profile Extraction prompts for EverOS."""
 
 # ======================================
 # PARALLEL EXTRACTION PROMPTS

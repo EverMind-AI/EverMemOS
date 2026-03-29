@@ -1,13 +1,13 @@
 /**
  * Context Assembler Module
- * Handles query-aware context assembly from EverMemOS memories
+ * Handles query-aware context assembly from EverOS memories
  */
 
 import { searchMemories } from "./api.js";
 import { buildMemoryPrompt, parseSearchResponse } from "./prompt.js";
 
 /**
- * @typedef {import("./types.js").EverMemOSConfig} EverMemOSConfig
+ * @typedef {import("./types.js").EverOSConfig} EverOSConfig
  * @typedef {import("./types.js").Logger} Logger
  * @typedef {import("./types.js").ParsedMemoryResponse} ParsedMemoryResponse
  */
@@ -18,7 +18,7 @@ import { buildMemoryPrompt, parseSearchResponse } from "./prompt.js";
  */
 export class ContextAssembler {
   /**
-   * @param {EverMemOSConfig} cfg
+   * @param {EverOSConfig} cfg
    * @param {Logger} logger
    */
   constructor(cfg, logger) {

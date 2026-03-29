@@ -1,5 +1,5 @@
 """
-Simple Boundary Detection Base Class for EverMemOS
+Simple Boundary Detection Base Class for EverOS
 
 This module provides a simple and extensible base class for detecting
 boundaries in various types of content (conversations, emails, notes, etc.).

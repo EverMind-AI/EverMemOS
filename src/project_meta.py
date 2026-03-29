@@ -1,6 +1,6 @@
 import os
 
-PROJECT_NAME = "EverMemOS"
+PROJECT_NAME = "EverOS"
 PROJECT_VERSION = "1.0.0"
 
 

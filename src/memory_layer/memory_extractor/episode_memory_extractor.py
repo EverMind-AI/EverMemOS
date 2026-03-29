@@ -1,5 +1,5 @@
 """
-Simple Memory Extraction Base Class for EverMemOS
+Simple Memory Extraction Base Class for EverOS
 
 This module provides a simple base class for extracting memories
 from boundary detection results (BoundaryResult).

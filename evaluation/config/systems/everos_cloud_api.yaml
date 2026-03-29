@@ -1,15 +1,15 @@
-# EverMemOS (HTTP API) System Configuration
-name: "evermemos_api"
+# EverOS (HTTP API) System Configuration
+name: "everos_api"
 version: "1.0"
-description: "EverMemOS via HTTP Memory API"
+description: "EverOS via HTTP Memory API"
 
-adapter: "evermemos_api"
+adapter: "everos_api"
 
-# EverMemOS API configuration
+# EverOS API configuration
 # base_url can be either host base (https://api.evermind.ai) or full endpoint (.../api/v1/memories)
-base_url: "${EVERMEMOS_API_URL:https://api.evermind.ai/api/v1/memories}"
+base_url: "${EVEROS_API_URL:https://api.evermind.ai/api/v1/memories}"
 # Hosted API requires Bearer token in Authorization header.
-api_key: "${EVERMEMOS_API_KEY}"
+api_key: "${EVEROS_API_KEY}"
 sync_mode: true
 max_retries: 3
 timeout_seconds: 60

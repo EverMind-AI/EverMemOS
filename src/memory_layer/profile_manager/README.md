@@ -321,5 +321,5 @@ profile_mgr.attach_to_extractor(memcell_extractor)
 
 ## License
 
-Part of the EverMemOS project.
+Part of the EverOS project.
 

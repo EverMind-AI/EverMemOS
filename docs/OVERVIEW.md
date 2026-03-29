@@ -1,4 +1,4 @@
-# EverMemOS Overview
+# EverOS Overview
 
 [Home](../README.md) > [Docs](README.md) > Overview
 
@@ -6,13 +6,13 @@
 
 Build AI memory that never forgets, making every conversation built on previous understanding.
 
-## What is EverMemOS?
+## What is EverOS?
 
-**EverMemOS** is an open-source project designed to provide long-term memory capabilities to conversational AI agents. It extracts, structures, and retrieves information from conversations, enabling agents to maintain context, recall past interactions, and progressively build user profiles. This results in more personalized, coherent, and intelligent conversations.
+**EverOS** is an open-source project designed to provide long-term memory capabilities to conversational AI agents. It extracts, structures, and retrieves information from conversations, enabling agents to maintain context, recall past interactions, and progressively build user profiles. This results in more personalized, coherent, and intelligent conversations.
 
-**EverMemOS** is a forward-thinking **intelligent system**. While traditional AI memory serves merely as a "look-back" database, EverMemOS enables AI not only to "remember" what happened, but also to "understand" the meaning behind these memories and use them to guide current actions and decisions. In the EverMemOS demo tools, you can see how EverMemOS extracts important information from your history, and then remembers your preferences, habits, and history during conversations, just like a **friend** who truly knows you.
+**EverOS** is a forward-thinking **intelligent system**. While traditional AI memory serves merely as a "look-back" database, EverOS enables AI not only to "remember" what happened, but also to "understand" the meaning behind these memories and use them to guide current actions and decisions. In the EverOS demo tools, you can see how EverOS extracts important information from your history, and then remembers your preferences, habits, and history during conversations, just like a **friend** who truly knows you.
 
-On the **LoCoMo** benchmark, our approach built upon EverMemOS achieved a reasoning accuracy of **92.3%** (evaluated by LLM-Judge), outperforming comparable methods in our evaluation.
+On the **LoCoMo** benchmark, our approach built upon EverOS achieved a reasoning accuracy of **92.3%** (evaluated by LLM-Judge), outperforming comparable methods in our evaluation.
 
 > 💬 **More than memory — it's foresight.**
 
@@ -55,7 +55,7 @@ On the **LoCoMo** benchmark, our approach built upon EverMemOS achieved a reason
 
 ## System Framework
 
-EverMemOS operates along two main tracks: **memory construction** and **memory perception**. Together they form a cognitive loop that continuously absorbs, consolidates, and applies past information, so every response is grounded in real context and long-term memory.
+EverOS operates along two main tracks: **memory construction** and **memory perception**. Together they form a cognitive loop that continuously absorbs, consolidates, and applies past information, so every response is grounded in real context and long-term memory.
 
 <p align="center">
   <img src="../figs/overview.png" alt="Overview" />
@@ -107,9 +107,9 @@ Memory perception layer: quickly recalls relevant memories through multi-round r
 
 ---
 
-## Why EverMemOS?
+## Why EverOS?
 
-Traditional AI systems lack persistent memory, treating each conversation in isolation. EverMemOS changes this by:
+Traditional AI systems lack persistent memory, treating each conversation in isolation. EverOS changes this by:
 
 1. **Extracting structured knowledge** from unstructured conversations
 2. **Building coherent narratives** that connect related information
@@ -122,7 +122,7 @@ This results in AI that doesn't just respond, but truly understands and remember
 
 ## Use Cases
 
-EverMemOS is ideal for:
+EverOS is ideal for:
 
 - **Personal AI Assistants** - Remember user preferences, habits, and history across sessions
 - **Customer Service** - Maintain customer context and history for personalized support
@@ -134,9 +134,9 @@ EverMemOS is ideal for:
 
 ## Next Steps
 
-- **[Quick Setup](installation/SETUP.md)** - Get EverMemOS running
+- **[Quick Setup](installation/SETUP.md)** - Get EverOS running
 - **[Architecture](ARCHITECTURE.md)** - Deep dive into system design
-- **[Usage Examples](usage/USAGE_EXAMPLES.md)** - Learn how to use EverMemOS
+- **[Usage Examples](usage/USAGE_EXAMPLES.md)** - Learn how to use EverOS
 - **[API Documentation](api_docs/memory_api.md)** - Integrate with your application
 
 ---

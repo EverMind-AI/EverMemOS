@@ -1,5 +1,5 @@
 """
-EverMemOS Adapter - connects evaluation framework with EverMemOS implementation.
+EverOS Adapter - connects evaluation framework with EverOS implementation.
 """
 
 import asyncio
@@ -26,8 +26,8 @@ from evaluation.src.adapters.registry import register_adapter
 from evaluation.src.core.data_models import Conversation, SearchResult
 from common_utils.datetime_utils import to_iso_format
 
-# Import EverMemOS implementation
-from evaluation.src.adapters.evermemos import (
+# Import EverOS implementation
+from evaluation.src.adapters.everos import (
     stage1_memcells_extraction,
     stage2_index_building,
     stage3_memory_retrivel,
@@ -39,14 +39,14 @@ from memory_layer.llm.llm_provider import LLMProvider
 from memory_layer.memory_extractor.event_log_extractor import EventLogExtractor
 
 
-@register_adapter("evermemos")
-class EverMemOSAdapter(BaseAdapter):
+@register_adapter("everos")
+class EverOSAdapter(BaseAdapter):
     """
-    EverMemOS adapter.
+    EverOS adapter.
 
     Responsibilities:
     1. Receive calls from evaluation framework
-    2. Convert data formats (evaluation framework ↔ EverMemOS)
+    2. Convert data formats (evaluation framework ↔ EverOS)
     3. Call stage*.py implementations
     4. Return results in evaluation framework format
 
@@ -80,7 +80,7 @@ class EverMemOSAdapter(BaseAdapter):
         # Ensure NLTK data is available
         stage2_index_building.ensure_nltk_data()
 
-        print(f"✅ EverMemOS Adapter initialized")
+        print(f"✅ EverOS Adapter initialized")
         print(f"   LLM Model: {llm_config.get('model')}")
         print(f"   Output Dir: {self.output_dir}")
 
@@ -161,7 +161,7 @@ class EverMemOSAdapter(BaseAdapter):
         console.print(f"Stage 1: MemCell Extraction", style="bold cyan")
         console.print(f"{'='*60}", style="bold cyan")
 
-        # Convert data format: evaluation framework → EverMemOS
+        # Convert data format: evaluation framework → EverOS
         raw_data_dict = {}
         for conv in conversations:
             conv_id = conv.conversation_id
@@ -605,17 +605,17 @@ class EverMemOSAdapter(BaseAdapter):
     def get_system_info(self) -> Dict[str, Any]:
         """Return system info."""
         return {
-            "name": "EverMemOS",
+            "name": "EverOS",
             "version": "1.0",
-            "description": "EverMemOS memory system with agentic retrieval",
-            "adapter": "Adapter connecting framework to EverMemOS implementation",
+            "description": "EverOS memory system with agentic retrieval",
+            "adapter": "Adapter connecting framework to EverOS implementation",
         }
 
     def _convert_config_to_experiment_config(self):
         """
         Convert evaluation framework config to ExperimentConfig format.
         """
-        from evaluation.src.adapters.evermemos.config import ExperimentConfig
+        from evaluation.src.adapters.everos.config import ExperimentConfig
         import os
 
         exp_config = ExperimentConfig()
@@ -669,9 +669,9 @@ class EverMemOSAdapter(BaseAdapter):
         self, conversations: List[Conversation], output_dir: Any
     ) -> Dict[str, Any]:
         """
-        Build EverMemOS lazy-load index metadata.
+        Build EverOS lazy-load index metadata.
 
-        EverMemOS specifics:
+        EverOS specifics:
         - Local indexes (memcells, bm25, embeddings)
         - Lazy loading (only save metadata, don't load actual index files)
 

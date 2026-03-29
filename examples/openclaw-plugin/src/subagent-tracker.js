@@ -4,7 +4,7 @@
  */
 
 /**
- * @typedef {import("./types.js").EverMemOSConfig} EverMemOSConfig
+ * @typedef {import("./types.js").EverOSConfig} EverOSConfig
  * @typedef {import("./types.js").Logger} Logger
  * @typedef {import("./types.js").SubagentInfo} SubagentInfo
  */
@@ -15,7 +15,7 @@
  */
 export class SubagentTracker {
   /**
-   * @param {EverMemOSConfig} cfg
+   * @param {EverOSConfig} cfg
    * @param {Logger} logger
    */
   constructor(cfg, logger) {

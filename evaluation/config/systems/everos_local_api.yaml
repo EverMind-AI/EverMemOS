@@ -1,10 +1,10 @@
-# EverMemOS (Local HTTP API) System Configuration
-name: "evermemos_local_api"
+# EverOS (Local HTTP API) System Configuration
+name: "everos_local_api"
 version: "1.0"
-description: "EverMemOS via LOCAL HTTP Memory API (no hosted auth)"
+description: "EverOS via LOCAL HTTP Memory API (no hosted auth)"
 
 # Reuse the same adapter implementation
-adapter: "evermemos_api"
+adapter: "everos_api"
 
 # Local API configuration
 base_url: "http://localhost:1995"
