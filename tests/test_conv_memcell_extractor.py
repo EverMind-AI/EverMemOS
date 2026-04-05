@@ -82,6 +82,55 @@ class TestConvMemCellExtractor:
             raw_data_list.append(raw_data)
         return raw_data_list
 
+    def test_data_process_normalizes_plugin_wrapped_content(self):
+        """Should flatten nested plugin-wrapped content into plain text."""
+        extractor = ConvMemCellExtractor(None)
+
+        raw_data = RawData(
+            content={
+                "speaker_id": "user_1",
+                "speaker_name": "Alice",
+                "content": {
+                    "type": "message",
+                    "content": [
+                        {"type": "text", "text": "今天讨论 EverMemOS 的修复方案"},
+                        {"type": "tool_result", "content": {"text": "需要过滤插件包裹结构"}},
+                    ],
+                    "metadata": {"plugin": "openclaw-feishu"},
+                },
+                "timestamp": self.base_time.isoformat(),
+                "msgType": 1,
+            },
+            data_id="wrapped_1",
+            metadata={},
+        )
+
+        processed = extractor._data_process(raw_data)
+
+        assert processed is not None
+        assert processed["content"] == "今天讨论 EverMemOS 的修复方案\n需要过滤插件包裹结构"
+
+    def test_data_process_preserves_plain_text_content(self):
+        """Should keep plain text content unchanged."""
+        extractor = ConvMemCellExtractor(None)
+
+        raw_data = RawData(
+            content={
+                "speaker_id": "user_1",
+                "speaker_name": "Alice",
+                "content": "普通文本消息",
+                "timestamp": self.base_time.isoformat(),
+                "msgType": 1,
+            },
+            data_id="plain_1",
+            metadata={},
+        )
+
+        processed = extractor._data_process(raw_data)
+
+        assert processed is not None
+        assert processed["content"] == "普通文本消息"
+
     def create_realistic_conversation(self) -> tuple[List[RawData], List[RawData]]:
         """Create realistic conversation scenario"""
         # Historical conversation - Project discussion
