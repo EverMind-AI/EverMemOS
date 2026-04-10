@@ -110,10 +110,23 @@ celerybeat.pid
 docker-compose.override.yml
 docker-compose.*.yml
 
-# 其他
+# Directories not needed in image
+tests/
+docs/
+demo/
+examples/
+docker/
+.claude/
+.github/
+
+# Other
 *.bak
 *.backup
 *.orig
 *.rej
 *.patch
 *.diff
+*.md
+!README.md
+Makefile
+LICENSE
