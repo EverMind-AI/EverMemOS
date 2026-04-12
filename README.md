@@ -1,30 +1,69 @@
 <div align="center" id="readme-top">
 
-<!-- Logo -->
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="methods/evermemos/figs/evermind-logo-dark.svg">
-  <img src="methods/evermemos/figs/evermind-logo-light.svg" alt="EverMind" width="260">
-</picture>
-
-<br><br>
-
-# 面向 Agentic AI 的记忆操作系统
-
-**为 AI 提供长期记忆基础设施，让它能记住、适应并持续进化。**
-
-<br>
+![banner-gif][banner-gif]
 
 [![License: Apache 2.0][license-badge]][license]
-[![arXiv: EverMemOS][arxiv-evermemos-badge]][arxiv-evermemos-link]
+[![arXiv: EverOS][arxiv-evermemos-badge]][arxiv-evermemos-link]
 [![arXiv: HyperMem][arxiv-hypermem-badge]][arxiv-hypermem-link]
 [![arXiv: EverMemBench][arxiv-evermembench-badge]][arxiv-evermembench-link]
 [![HuggingFace: EverMemBench-Dynamic][hf-badge]][hf-link]
+[![Ask DeepWiki][deepwiki-badge]][deepwiki]
 
-[官网][website] · [博客][blog] · [文档][docs] · [讨论区][discussions]
+[Website][website] · [Documentation][docs] · [Blog][blog] · [Discord][discord]
 
 </div>
 
 <br>
+
+> [!IMPORTANT]
+>
+> ### [Memory Sparse Attention](https://github.com/EverMind-AI/MSA)
+>
+> Check out our latest paper [Memory Sparse Attention](https://github.com/EverMind-AI/MSA) — A scalable, end-to-end trainable latent-memory framework for 100M token contexts.
+>
+> - Scalable sparse attention + document-wise RoPE achieving near-linear complexity in both training and inference.
+> - KV cache compression with a Memory Parallel inference engine to deliver 100M token throughput on 2×A800 GPUs.
+> - Memory Interleave for multi-round, multi-hop reasoning across scattered memory segments.
+>
+> Join our [Discord][discord] to ask anything. AMA sessions are open to everyone and occur biweekly.
+
+<br>
+
+<details open>
+<summary><kbd>Table of Contents</kbd></summary>
+
+<br>
+
+- [EverOS Ecosystem](#everos-ecosystem)
+- [Key Results](#key-results)
+- [Use Cases](#use-cases)
+- [Quick Start](#quick-start)
+- [Evaluation & Benchmarking](#evaluation--benchmarking)
+- [Documentation](#documentation)
+- [GitHub Codespaces](#github-codespaces)
+- [Community](#community)
+- [Citation](#citation)
+- [Contributing](#contributing)
+
+<br>
+
+</details>
+
+## EverOS Ecosystem
+
+Large language models are evolving from single-turn chatbots to long-lived interactive agents. But when an agent needs to stay coherent across weeks of conversation, it hits a hard ceiling: finite context windows and fragmented memory.
+
+Expanding the context window is not the answer — ultra-long contexts are expensive and degrade with distance. The future of long-term agents depends on **structured memory organization**.
+
+EverOS is a memory operating system that transforms unlimited interaction streams into a structured "digital brain" through a three-stage memory lifecycle: **episodic trace formation**, **semantic consolidation**, and **reconstructive recall** — enabling agents to continuously convert raw interactions into structured, evolving knowledge.
+
+| Project | Preview |
+| ------- | ------- |
+| [**️TEN Framework**][ten-framework-link]<br>Open-source framework for conversational AI Agents.<br><br>![][ten-framework-shield] | ![][ten-framework-banner] |
+| [**TEN VAD**][ten-vad-link]<br>Low-latency, lightweight and high-performance streaming voice activity detector (VAD).<br><br>![][ten-vad-shield] | ![][ten-vad-banner] |
+| [**️ TEN Turn Detection**][ten-turn-detection-link]<br>TEN Turn Detection enables full-duplex dialogue communication.<br><br>![][ten-turn-detection-shield] | ![][ten-turn-detection-banner] |
+| [**TEN Agent Examples**][ten-agent-example-link]<br>Usecases powered by TEN.<br><br> | ![][ten-agent-example-banner] |
+| [**TEN Portal**][ten-portal-link]<br>The official site of the TEN Framework with documentation and a blog.<br><br>![][ten-portal-shield] | ![][ten-portal-banner] |
 
 <!-- Benchmark Stats -->
 <table>
@@ -35,94 +74,86 @@
   </tr>
 </table>
 
----
-
-## 为什么需要 EverOS
-
-> *"没有记忆的实体无法展现一致性，也无法进化——因为它缺失了表层之下的根基。"*
-
-大语言模型正从单轮对话机器人进化为长期交互式智能体。但当一个 Agent 需要在数周的对话中保持连贯时，它会撞上一个现实的天花板：有限的上下文窗口和碎片化的记忆。
-
-扩大上下文窗口不是答案——超长上下文既昂贵，效果也会随距离衰减。长期 Agent 的未来取决于**结构化的记忆组织**。
-
-EverOS 是一个记忆操作系统，通过三阶段记忆生命周期将无限的交互流转化为结构化的"数字大脑"：**情景痕迹形成**、**语义巩固**、**重构性回忆**——让 Agent 能够持续地将原始交互转化为结构化的、不断进化的知识。
-
----
-
-## 项目结构
-
-EverOS 围绕两大支柱构建——**方法**为 Agent 提供记忆与进化能力，**评测**客观衡量这些能力是否真正有效。
+The ecosystem is built around two pillars — **Methods** give agents memory and evolution capabilities, and **Benchmarks** objectively measure whether those capabilities actually work.
 
 ```
 EverOS/
 ├── methods/
-│   ├── evermemos/          # 长期记忆操作系统
-│   └── hypermem/           # 超图记忆架构
+│   ├── evermemos/          # Long-term memory operating system
+│   └── hypermem/           # Hypergraph memory architecture
 │
 └── benchmarks/
-    ├── evermembench/        # 记忆质量评测
-    └── evoagentbench/       # Agent 自进化评测
+    ├── evermembench/        # Memory quality evaluation
+    └── evoagentbench/       # Agent self-evolution evaluation
+└── examples/
+    ├── evermembench/        # Memory quality evaluation
+    └── evoagentbench/       # Agent self-evolution evaluation
 ```
 
-### 方法
+### Methods
 
 <table>
 <tr>
 <td width="50%">
 
-#### 🧠 EverMemOS
+#### EverMemos
 
-受生物印迹原理启发的自组织记忆操作系统。从对话中提取、构建和检索长期知识——让 Agent 能够记住、理解并持续进化。
+A self-organizing memory operating system inspired by biological imprinting. Extracts, structures, and retrieves long-term knowledge from conversations — enabling agents to remember, understand, and continuously evolve.
 
-[论文][arxiv-evermemos-link] · [文档](methods/evermemos/) · [快速开始](#快速开始)
+[Paper][arxiv-evermemos-link] · [Docs](methods/evermemos/) · [Quick Start](#quick-start)
 
 </td>
 <td width="50%">
 
-#### 🔮 HyperMem
+#### HyperMem
 
-基于超图的层次化记忆架构，通过超边捕获高阶关联。将记忆组织为主题、事件和事实三层结构，支持粗到细的长期对话检索。LoCoMo 92.73%。
+A hypergraph-based hierarchical memory architecture that captures high-order associations through hyperedges. Organizes memory into topic, event, and fact layers for coarse-to-fine long-term conversation retrieval. LoCoMo 92.73%.
 
-[论文][arxiv-hypermem-link] · [文档](methods/hypermem/)
+[Paper][arxiv-hypermem-link] · [Docs](methods/hypermem/)
 
 </td>
 </tr>
 </table>
 
-### 评测
+### Benchmarks
 
 <table>
 <tr>
 <td width="50%">
 
-#### 📊 EverMemBench
+#### EverMemBench
 
-记忆质量三层评估：事实召回、应用推理、个性化泛化。在统一标准下评测记忆系统和大语言模型。
+Three-layer memory quality evaluation: factual recall, applied reasoning, and personalized generalization. Evaluates memory systems and LLMs under a unified standard.
 
-[论文][arxiv-evermembench-link] · [数据集][hf-link] · [文档](benchmarks/evermembench/)
+[Paper][arxiv-evermembench-link] · [Dataset][hf-link] · [Docs](benchmarks/evermembench/)
 
 </td>
 <td width="50%">
 
-#### 📈 EvoAgentBench
+#### EvoAgentBench
 
-Agent 自进化能力评测——不是静态快照，而是纵向成长曲线。通过有无进化的受控对照实验衡量迁移效率、错误规避和技能命中质量。
+Agent self-evolution evaluation — not static snapshots, but longitudinal growth curves. Measures transfer efficiency, error avoidance, and skill-hit quality through controlled experiments with and without evolution.
 
-[文档](benchmarks/evoagentbench/)
+[Docs](benchmarks/evoagentbench/)
 
 </td>
 </tr>
 </table>
 
-> 所有评测都设计为**开放的公共标准**。任何记忆架构、任何 Agent 框架都可以在同一把标尺下接受检验。
+> All benchmarks are designed as **open public standards**. Any memory architecture or agent framework can be evaluated under the same ruler.
 
----
+<br>
+<div align="right">
 
-## 核心结果
+[![][back-to-top]][readme-top]
 
-### 记忆性能
+</div>
 
-| 系统 | LoCoMo | LongMemEval-S |
+## Key Results
+
+### Memory Performance
+
+| System | LoCoMo | LongMemEval-S |
 | :--- | :----: | :----: |
 | **EverMemOS** | **93.05%** | **83.00%** |
 | **HyperMem** | **92.73%** | — |
@@ -130,53 +161,333 @@ Agent 自进化能力评测——不是静态快照，而是纵向成长曲线�
 | MemOS | 74.2% | — |
 | Zep | 71.6% | — |
 
-### 自进化增益
+### Self-Evolution Gains
 
-| 任务类型 | Agent + LLM | 基线 | + EverOS 技能 | Δ |
+| Task Type | Agent + LLM | Baseline | + EverOS Skills | Delta |
 | :--- | :--- | :----: | :----: | :----: |
-| 代码 (Django) | OpenClaw + Qwen3.5-397B | 37% | 58% | **+21%** |
-| 代码 (Django) | Nanobot + Qwen3.5-397B | 21% | 47% | **+26%** |
-| 通用 (GDPVAL) | OpenClaw + Qwen3.5-397B | 29% | 69% | **+40%** |
-| 通用 (GDPVAL) | OpenClaw + Qwen3.5-27B | 41% | 61% | **+20%** |
+| Code (Django) | OpenClaw + Qwen3.5-397B | 37% | 58% | **+21%** |
+| Code (Django) | Nanobot + Qwen3.5-397B | 21% | 47% | **+26%** |
+| General (GDPVAL) | OpenClaw + Qwen3.5-397B | 29% | 69% | **+40%** |
+| General (GDPVAL) | OpenClaw + Qwen3.5-27B | 41% | 61% | **+20%** |
 
----
+<br>
+<div align="right">
 
-## 快速开始
+[![][back-to-top]][readme-top]
+
+</div>
+
+## Use Cases
+
+[![EverMind + OpenClaw Agent Memory and Plugin][usecase-openclaw-image]][usecase-openclaw-link]
+
+**EverMind + OpenClaw Agent Memory and Plugin**
+
+Imagine a 24/7 agent with continuous learning memory that you can carry with you wherever you go. Check out the [agent_memory][usecase-openclaw-link] branch and the [plugin][usecase-openclaw-plugin-link] for more details.
+
+![divider][divider-light]
+![divider][divider-dark]
+
+<br>
+
+[![Live2D Character with Memory][usecase-live2d-image]][usecase-live2d-link]
+
+**Live2D Character with Memory**
+
+Add long-term memory to your anime character that can talk to you in real-time powered by [TEN Framework][ten-framework-link].
+See the [Live2D Character with Memory Example][usecase-live2d-link] for more details.
+
+![divider][divider-light]
+![divider][divider-dark]
+
+<br>
+
+[![Computer-Use with Memory][usecase-computer-image]][usecase-computer-link]
+
+**Computer-Use with Memory**
+
+Use computer-use to launch screenshot-based analysis, all stored in your memory.
+See the [live demo][usecase-computer-link] for more details.
+
+![divider][divider-light]
+![divider][divider-dark]
+
+<br>
+
+[![Game of Thrones Memories][usecase-got-image]][usecase-got-link]
+
+**Game of Thrones Memories**
+
+A demonstration of AI memory infrastructure through an interactive Q&A experience with "A Game of Thrones".
+See the [code][usecase-got-link] for more details.
+
+![divider][divider-light]
+![divider][divider-dark]
+
+<br>
+
+[![EverOS Claude Code Plugin][usecase-claude-image]][usecase-claude-link]
+
+**EverOS Claude Code Plugin**
+
+Persistent memory for Claude Code. Automatically saves and recalls context from past coding sessions.
+See the [code][usecase-claude-link] for more details.
+
+![divider][divider-light]
+![divider][divider-dark]
+
+<br>
+
+[![Visualize Memories with Graphs][usecase-graph-image]][usecase-graph-link]
+
+**Visualize Memories with Graphs**
+
+Memory Graph view that visualizes your stored entities and how they relate. This is a pure frontend demo which has not been plugged into the backend yet — we are working on it.
+See the [live demo][usecase-graph-link].
+
+<br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
+
+## Quick Start
 
 ```bash
 git clone https://github.com/EverMind-AI/EverOS.git
 cd EverOS
 ```
 
-然后根据需求进入对应的组件：
+Then navigate to the component you need:
 
-| | 场景 | 入口 |
+| | Use Case | Entry Point |
 | :-- | :--- | :--- |
-| 🧠 | 构建拥有长期记忆的 Agent | [methods/evermemos/](methods/evermemos/) |
-| 🔮 | 使用超图记忆架构 | [methods/hypermem/](methods/hypermem/) |
-| 📊 | 评测记忆系统质量 | [benchmarks/evermembench/](benchmarks/evermembench/) |
-| 📈 | 衡量 Agent 自进化效果 | [benchmarks/evoagentbench/](benchmarks/evoagentbench/) |
+| **EverMemos** | Build agents with long-term memory | [methods/evermemos/](methods/evermemos/) |
+| **HyperMem** | Use the hypergraph memory architecture | [methods/hypermem/](methods/hypermem/) |
+| **EverMemBench** | Evaluate memory system quality | [benchmarks/evermembench/](benchmarks/evermembench/) |
+| **EvoAgentBench** | Measure agent self-evolution | [benchmarks/evoagentbench/](benchmarks/evoagentbench/) |
 
-> 每个组件都有独立的安装指南、依赖配置和使用示例。
+> Each component has its own installation guide, dependency configuration, and usage examples.
 
----
+### EverMemos Quick Start
 
-## 社区
+```bash
+cd methods/evermemos
 
-我们热爱开源力量！无论是修 Bug、开发新功能、完善文档，还是抛出奇思妙想——每一个 PR 都在推动 EverOS 前进。
+# Start Docker services
+docker compose up -d
 
-浏览 [Issues][issues-link] 找到你的切入点，加入 [Discussions][discussions] 分享想法，或联系维护者——[@elliotchen200][elliot-x-link]（𝕏）和 [@cyfyifanchen][cyfyifanchen-link]（GitHub）。
+# Install dependencies
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv sync
 
-| 社区 | 链接 |
+# Configure API keys
+cp env.template .env
+# Edit .env and set:
+#   - LLM_API_KEY (for memory extraction)
+#   - VECTORIZE_API_KEY (for embedding/rerank)
+
+# Start server
+uv run python src/run.py
+
+# Verify installation
+curl http://localhost:1995/health
+# Expected response: {"status": "healthy", ...}
+```
+
+Server runs at `http://localhost:1995` · [Full Setup Guide][setup-guide]
+
+### Basic Usage
+
+Store and retrieve memories with simple Python code:
+
+```python
+import requests
+
+API_BASE = "http://localhost:1995/api/v1"
+
+# 1. Store a conversation memory
+requests.post(f"{API_BASE}/memories", json={
+    "message_id": "msg_001",
+    "create_time": "2025-02-01T10:00:00+00:00",
+    "sender": "user_001",
+    "content": "I love playing soccer on weekends"
+})
+
+# 2. Search for relevant memories
+response = requests.get(f"{API_BASE}/memories/search", json={
+    "query": "What sports does the user like?",
+    "user_id": "user_001",
+    "memory_types": ["episodic_memory"],
+    "retrieve_method": "hybrid"
+})
+
+result = response.json().get("result", {})
+for memory_group in result.get("memories", []):
+    print(f"Memory: {memory_group}")
+```
+
+[More Examples][usage-examples] · [API Reference][api-docs] · [Interactive Demos][interactive-demos]
+
+<br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
+
+## Demo
+
+### Run the Demo
+
+```bash
+# Terminal 1: Start the API server
+uv run python src/run.py
+
+# Terminal 2: Run the simple demo
+uv run python src/bootstrap.py demo/simple_demo.py
+```
+
+**Try it now**: Follow the [Demo Guide][interactive-demos] for step-by-step instructions.
+
+### Full Demo Experience
+
+```bash
+# Extract memories from sample data
+uv run python src/bootstrap.py demo/extract_memory.py
+
+# Start interactive chat with memory
+uv run python src/bootstrap.py demo/chat_with_memory.py
+```
+
+See the [Demo Guide][interactive-demos] for details.
+
+<br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
+
+## Evaluation & Benchmarking
+
+EverOS achieves **93% overall accuracy** on the LoCoMo benchmark, outperforming comparable memory systems.
+
+### Benchmark Results
+
+![EverOS Benchmark Results][benchmark-image]
+
+### Supported Benchmarks
+
+- **[LoCoMo][locomo-link]** — Long-context memory benchmark with single/multi-hop reasoning
+- **[LongMemEval][longmemeval-link]** — Multi-session conversation evaluation
+- **[PersonaMem][personamem-link]** — Persona-based memory evaluation
+
+### Run Evaluations
+
+```bash
+# Install evaluation dependencies
+uv sync --group evaluation
+
+# Run smoke test (quick verification)
+uv run python -m evaluation.cli --dataset locomo --system evermemos --smoke
+
+# Run full evaluation
+uv run python -m evaluation.cli --dataset locomo --system evermemos
+
+# View results
+cat evaluation/results/locomo-evermemos/report.txt
+```
+
+[Full Evaluation Guide][evaluation-guide] · [Complete Results][evaluation-results-link]
+
+<br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
+
+## Documentation
+
+| Guide | Description |
+| ----- | ----------- |
+| [Quick Start][getting-started] | Installation and configuration |
+| [Configuration Guide][config-guide] | Environment variables and services |
+| [API Usage Guide][api-usage-guide] | Endpoints and data formats |
+| [Development Guide][dev-guide] | Architecture and best practices |
+| [Memory API][memory-api-doc] | Complete API reference |
+| [Demo Guide][demo-guide] | Interactive examples |
+| [Evaluation Guide][evaluation-guide] | Benchmark testing |
+
+### Advanced Techniques
+
+- **[Group Chat Conversations][group-chat-guide]** — Combine messages from multiple speakers
+- **[Conversation Metadata Control][metadata-control-guide]** — Fine-grained control over conversation context
+- **[Memory Retrieval Strategies][retrieval-strategies-guide]** — Lightweight vs Agentic retrieval modes
+- **[Batch Operations][batch-operations-guide]** — Process multiple messages efficiently
+
+<br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
+
+## GitHub Codespaces
+
+EverOS supports [GitHub Codespaces][codespaces-link] for cloud-based development — no Docker setup or local environment configuration needed.
+
+[![Open in GitHub Codespaces][codespaces-badge]][codespaces-project-link]
+
+| Machine Type | Status | Notes |
+| ------------ | ------ | ----- |
+| 2-core (Free tier) | Not supported | Insufficient resources for infrastructure services |
+| 4-core | Minimum | Works but may be slow under load |
+| 8-core | Recommended | Good performance with all services |
+| 16-core+ | Optimal | Best for heavy development workloads |
+
+> **Note:** If your company provides GitHub Codespaces, hardware limitations typically will not be an issue since enterprise plans often include access to larger machine types.
+
+### Getting Started with Codespaces
+
+1. Click the "Open in GitHub Codespaces" button above
+2. Select a **4-core or larger** machine when prompted
+3. Wait for the container to build and services to start
+4. Update API keys in `.env` (`LLM_API_KEY`, `VECTORIZE_API_KEY`, etc.)
+5. Run `make run` to start the server
+
+All infrastructure services (MongoDB, Elasticsearch, Milvus, Redis) start automatically and are pre-configured to work together.
+
+<br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
+
+## Community
+
+We love open-source energy! Whether you are squashing bugs, shipping features, sharpening docs, or tossing in ideas — every PR moves EverOS forward.
+
+| Platform | Link |
 | :--- | :--- |
 | Discord | [![Discord Members][discord-members-badge]][discord] |
 | WeChat | [![WeChat][wechat-badge]][wechat] |
+| DeepWiki | [![Ask DeepWiki][deepwiki-badge]][deepwiki] |
+| Discussions | [GitHub Discussions][discussions] |
 
----
+<br>
+<div align="right">
 
-## 引用
+[![][back-to-top]][readme-top]
 
-如果 EverOS 对你的研究有帮助，请引用：
+</div>
+
+## Citation
+
+If EverOS helps your research, please cite:
 
 ```bibtex
 @article{evermemos2025,
@@ -208,9 +519,29 @@ cd EverOS
 }
 ```
 
----
+<br>
+<div align="right">
 
-## 许可证
+[![][back-to-top]][readme-top]
+
+</div>
+
+## Contributing
+
+Browse [Issues][issues-link] to find your entry point, join [Discussions][discussions] to share ideas, or connect with maintainers — [@elliotchen200][elliot-x-link] on X and [@cyfyifanchen][cyfyifanchen-link] on GitHub.
+
+![divider][divider-light]
+![divider][divider-dark]
+
+### Code Contributors
+
+[![EverOS Contributors][contributors-image]][contributors]
+
+### Contribution Guidelines
+
+Read our [Contribution Guidelines][contributing-doc] for code standards and Git workflow.
+
+### License
 
 [Apache 2.0][license]
 
@@ -222,27 +553,92 @@ cd EverOS
 
 </div>
 
-<!-- Badge Definitions -->
-[license-badge]: https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square
-[arxiv-evermemos-badge]: https://img.shields.io/badge/arXiv-EverMemOS-b31b1b?style=flat-square&logo=arxiv&logoColor=white
+<!-- Navigation -->
+[readme-top]: #readme-top
+
+<!-- Dividers -->
+[divider-light]: https://github.com/user-attachments/assets/2e2bbcc6-e6d8-4227-83c6-0620fc96f761#gh-light-mode-only
+[divider-dark]: https://github.com/user-attachments/assets/d57fad08-4f49-4a1c-bdfc-f659a5d86150#gh-dark-mode-only
+
+<!-- Images -->
+[banner-gif]: https://github.com/user-attachments/assets/73634a04-9ea8-4ce8-a8ec-eb71925df968
+[usecase-openclaw-image]: https://github.com/user-attachments/assets/0e06da2b-0236-430f-89b4-980b8b6a855f
+[usecase-live2d-image]: https://github.com/user-attachments/assets/a80bdab3-e5d0-43b9-9e8d-0a9605012a26
+[usecase-computer-image]: https://github.com/user-attachments/assets/0d306b4c-bcd7-4e9e-a244-22fa3cb7b727
+[usecase-got-image]: https://github.com/user-attachments/assets/d1efe507-4eb7-4867-8996-457497333449
+[usecase-claude-image]: https://github.com/user-attachments/assets/b40b2241-b0e6-4fc9-9a35-92139f3a2d81
+[usecase-graph-image]: https://github.com/user-attachments/assets/6586e647-dd5f-4f9f-9b26-66f930e8241c
+[benchmark-image]: figs/benchmark_2.png
+
+<!-- Badges -->
+[license-badge]: https://img.shields.io/badge/License-Apache%202.0-blue?labelColor=gray&style=flat-square
+[arxiv-evermemos-badge]: https://img.shields.io/badge/arXiv-EverOS-b31b1b?style=flat-square&logo=arxiv&logoColor=white
 [arxiv-hypermem-badge]: https://img.shields.io/badge/arXiv-HyperMem-b31b1b?style=flat-square&logo=arxiv&logoColor=white
 [arxiv-evermembench-badge]: https://img.shields.io/badge/arXiv-EverMemBench-b31b1b?style=flat-square&logo=arxiv&logoColor=white
 [hf-badge]: https://img.shields.io/badge/🤗_EverMemBench--Dynamic-F5C842?style=flat-square
+[deepwiki-badge]: https://deepwiki.com/badge.svg
+[back-to-top]: https://img.shields.io/badge/-Back_to_top-gray?style=flat-square
+[codespaces-badge]: https://github.com/codespaces/badge.svg
 [discord-members-badge]: https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv10%2Finvites%2FgYep5nQRZJ%3Fwith_counts%3Dtrue&query=%24.approximate_member_count&suffix=%20members&label=Discord&color=404EED&style=for-the-badge&logo=discord&logoColor=white
-[wechat-badge]: https://img.shields.io/badge/WeChat-EverMind%20社区-07C160?style=for-the-badge&logo=wechat&logoColor=white
+[wechat-badge]: https://img.shields.io/badge/WeChat-EverMind-07C160?style=for-the-badge&logo=wechat&logoColor=white
 
-<!-- Link Definitions -->
+<!-- Primary Links -->
 [license]: https://github.com/EverMind-AI/EverOS/blob/main/LICENSE
+[website]: https://evermind.ai
+[blog]: https://evermind.ai/blogs
+[docs]: https://docs.evermind.ai
+[api-docs]: https://docs.evermind.ai/api-reference/introduction
+[discussions]: https://github.com/EverMind-AI/EverOS/discussions
+[discord]: https://discord.gg/gYep5nQRZJ
+[wechat]: https://github.com/EverMind-AI/EverOS/discussions/67
+[deepwiki]: https://deepwiki.com/EverMind-AI/EverOS
+
+<!-- arXiv Links -->
 [arxiv-evermemos-link]: https://arxiv.org/abs/2601.02163
 [arxiv-hypermem-link]: https://arxiv.org/abs/2604.08256
 [arxiv-evermembench-link]: https://arxiv.org/abs/2602.01313
 [hf-link]: https://huggingface.co/datasets/EverMind-AI/EverMemBench-Dynamic
-[website]: https://evermind.ai
-[blog]: https://evermind.ai/blogs
-[docs]: methods/evermemos/docs/
-[discussions]: https://github.com/EverMind-AI/EverOS/discussions
+
+<!-- Use Case Links -->
+[usecase-openclaw-link]: https://github.com/EverMind-AI/EverMemOS/tree/agent_memory
+[usecase-openclaw-plugin-link]: https://github.com/EverMind-AI/EverMemOS/tree/agent_memory/evermemos-openclaw-plugin
+[ten-framework-link]: https://github.com/TEN-framework/ten-framework
+[usecase-live2d-link]: https://github.com/TEN-framework/ten-framework/tree/main/ai_agents/agents/examples/voice-assistant-with-EverMemOS
+[usecase-computer-link]: https://screenshot-analysis-vercel.vercel.app/
+[usecase-got-link]: https://github.com/EverMind-AI/evermem_got_demo
+[usecase-claude-link]: https://github.com/EverMind-AI/evermem-claude-code
+[usecase-graph-link]: https://main.d2j21qxnymu6wl.amplifyapp.com/graph.html
+
+<!-- Documentation Links -->
+[setup-guide]: docs/installation/SETUP.md
+[usage-examples]: docs/usage/USAGE_EXAMPLES.md
+[interactive-demos]: docs/usage/DEMOS.md
+[group-chat-guide]: docs/advanced/GROUP_CHAT_GUIDE.md
+[metadata-control-guide]: docs/advanced/METADATA_CONTROL.md
+[retrieval-strategies-guide]: docs/advanced/RETRIEVAL_STRATEGIES.md
+[batch-operations-guide]: docs/usage/BATCH_OPERATIONS.md
+[getting-started]: docs/dev_docs/getting_started.md
+[config-guide]: docs/usage/CONFIGURATION_GUIDE.md
+[api-usage-guide]: docs/dev_docs/api_usage_guide.md
+[dev-guide]: docs/dev_docs/development_guide.md
+[memory-api-doc]: docs/api_docs/memory_api.md
+[demo-guide]: demo/README.md
+[evaluation-guide]: evaluation/README.md
+
+<!-- Evaluation Links -->
+[locomo-link]: https://github.com/snap-research/locomo
+[longmemeval-link]: https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned
+[personamem-link]: https://huggingface.co/datasets/bowen-upenn/PersonaMem
+[evaluation-results-link]: https://huggingface.co/datasets/EverMind-AI/EverMemOS_Eval_Results
+
+<!-- Infrastructure Links -->
+[codespaces-link]: https://github.com/features/codespaces
+[codespaces-project-link]: https://codespaces.new/EverMind-AI/EverOS
+
+<!-- Community Links -->
 [issues-link]: https://github.com/EverMind-AI/EverOS/issues
 [elliot-x-link]: https://x.com/elliotchen200
 [cyfyifanchen-link]: https://github.com/cyfyifanchen
-[discord]: https://discord.gg/gYep5nQRZJ
-[wechat]: https://github.com/EverMind-AI/EverOS/discussions/67
+[contributors-image]: https://contrib.rocks/image?repo=EverMind-AI/EverOS
+[contributors]: https://github.com/EverMind-AI/EverOS/graphs/contributors
+[contributing-doc]: CONTRIBUTING.md
