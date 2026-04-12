@@ -1,6 +1,6 @@
 ---
 name: evermind-ai-everos
-version: 1.5.1
+version: 1.5.2
 description: |
   Install and configure EverOS for OpenClaw natural-language memory.
 
