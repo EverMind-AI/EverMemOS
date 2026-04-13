@@ -87,7 +87,7 @@ Benchmark Stats
 
 A self-organizing memory operating system inspired by biological imprinting. Extracts, structures, and retrieves long-term knowledge from conversations — enabling agents to remember, understand, and continuously evolve.
 
-[Paper][arxiv-evermemos-link] · [Docs](methods/evermemos/) · [Quick Start](#quick-start)
+[Paper][arxiv-evermemos-link] · [Docs](methods/evermemos/)
 
 </td>
 <td width="50%">
