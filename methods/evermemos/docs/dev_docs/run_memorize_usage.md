@@ -2,13 +2,13 @@
 
 ## Overview
 
-`run_memorize.py` is a group chat memory storage script that reads JSON files conforming to the `GroupChatFormat` format and stores them item by item into the memory system via HTTP API.
+`run_memorize.py` is a conversation memory storage script that reads JSON files conforming to the `ConversationFormat` format and stores them item by item into the memory system via HTTP API.
 
 ## Features
 
-- ✅ Read and validate JSON files in GroupChatFormat format
-- ✅ Support both `assistant` and `companion` scenarios
-- ✅ Automatically save conversation metadata (conversation-meta)
+- ✅ Read and validate JSON files in ConversationFormat format
+- ✅ Support both `solo` and `team` scenarios
+- ✅ Automatically save settings metadata
 - ✅ Call memorize interface item by item to process messages
 - ✅ Provide format validation mode
 - ✅ Detailed logging output
@@ -21,18 +21,18 @@ Store memories via HTTP API (must specify scene):
 
 ```bash
 python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --api-url http://localhost:1995/api/v1/memories \
-  --scene assistant
+  --input data/team_chat.json \
+  --api-url http://localhost:8001/api/v0/memories \
+  --scene solo
 ```
 
-### 2. Using companion Scenario
+### 2. Using team Scenario
 
 ```bash
 python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --api-url http://localhost:1995/api/v1/memories \
-  --scene companion
+  --input data/team_chat.json \
+  --api-url http://localhost:8001/api/v0/memories \
+  --scene team
 ```
 
 ### 3. Format Validation Only
@@ -41,8 +41,8 @@ Validate whether the input file format is correct without performing storage (no
 
 ```bash
 python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --scene assistant \
+  --input data/team_chat.json \
+  --scene solo \
   --validate-only
 ```
 
@@ -50,8 +50,8 @@ python src/bootstrap.py src/run_memorize.py \
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `--input` | Yes | Input group chat JSON file path (GroupChatFormat format) |
-| `--scene` | Yes | Memory extraction scenario, only supports `assistant` or `companion` |
+| `--input` | Yes | Input conversation JSON file path (ConversationFormat format) |
+| `--scene` | Yes | Memory extraction scenario, only supports `solo` or `team` |
 | `--api-url` | No* | memorize API address (required for non-validation mode) |
 | `--validate-only` | No | Only validate input file format, do not perform storage |
 
@@ -59,14 +59,14 @@ python src/bootstrap.py src/run_memorize.py \
 
 ## Input File Format
 
-The input file must conform to the `GroupChatFormat` specification, see `data_format/group_chat/group_chat_format.py`.
+The input file must conform to the `ConversationFormat` specification, see `data_format/conversation/conversation_format.py`.
 
 ### Format Example
 
 ```json
 {
   "version": "1.0.0",
-  "conversation_meta": {
+  "session_meta": {
     "name": "Smart Sales Assistant Project Team",
     "description": "Development discussion group for Smart Sales Assistant project",
     "group_id": "group_sales_ai_2025",
@@ -104,13 +104,13 @@ The script executes the following steps:
 
 1. **Format Validation**
    - Read input JSON file
-   - Validate whether it conforms to GroupChatFormat specification
+   - Validate whether it conforms to ConversationFormat specification
    - Output data statistics
 
-2. **Save Conversation Metadata**
-   - Call `conversation-meta` interface
+2. **Save Settings**
+   - Call `settings` interface
    - Save metadata such as scene, group information, user details
-   - API address: `{base_url}/api/v1/conversation-meta`
+   - API address: `{base_url}/api/v1/settings`
 
 3. **Process Messages Item by Item**
    - Call `memorize` interface sequentially for each message
@@ -129,15 +129,15 @@ The script executes the following steps:
 ```
 🚀 Group Chat Memory Storage Script
 ======================================================================
-📄 Input File: /path/to/group_chat.json
+📄 Input File: /path/to/team_chat.json
 🔍 Validation Mode: No
-🌐 API Address: http://localhost:1995/api/v1/memories
+🌐 API Address: http://localhost:8001/api/v0/memories
 ======================================================================
 ======================================================================
 Validating Input File Format
 ======================================================================
-Reading file: /path/to/group_chat.json
-Validating GroupChatFormat format...
+Reading file: /path/to/team_chat.json
+Validating ConversationFormat format...
 ✓ Format validation passed!
 
 === Data Statistics ===
@@ -151,7 +151,7 @@ Time Range: 2025-02-01T02:00:00Z ~ 2025-02-01T02:05:00Z
 ======================================================================
 Reading Group Chat Data
 ======================================================================
-Reading file: /path/to/group_chat.json
+Reading file: /path/to/team_chat.json
 Using simple direct single message format, processing item by item
 
 ======================================================================
@@ -160,13 +160,13 @@ Starting to Call memorize API Item by Item
 Group Name: Smart Sales Assistant Project Team
 Group ID: group_sales_ai_2025
 Number of Messages: 8
-API Address: http://localhost:1995/api/v1/memories
+API Address: http://localhost:8001/api/v0/memories
 
---- Saving Conversation Metadata (conversation-meta) ---
-Saving conversation metadata to: http://localhost:1995/api/v1/conversation-meta
-Scene: assistant, Group ID: group_sales_ai_2025
-  ✓ Conversation metadata saved successfully
-  Scene: assistant
+--- Saving Settings ---
+Saving settings to: http://localhost:8001/api/v1/settings
+Scene: solo, Group ID: group_sales_ai_2025
+  ✓ Settings saved successfully
+  Scene: solo
 
 --- Processing Message 1/8 ---
   ✓ Successfully saved 1 memory
@@ -215,7 +215,7 @@ Error: Input file does not exist: /path/to/file.json
 
 ```
 ✗ Format validation failed!
-Please ensure input file conforms to GroupChatFormat specification
+Please ensure input file conforms to ConversationFormat specification
 ```
 
 ### JSON Parsing Error
@@ -228,7 +228,7 @@ Please ensure input file conforms to GroupChatFormat specification
 
 ### Core Dependencies
 
-- `infra_layer.adapters.input.api.mapper.group_chat_converter`: Format validation
+- `infra_layer.adapters.input.api.mapper.conversation_converter`: Format validation
 - `httpx`: HTTP client (async requests)
 - `core.observation.logger`: Logging utilities
 
@@ -236,9 +236,9 @@ Please ensure input file conforms to GroupChatFormat specification
 
 The script calls two API endpoints:
 
-1. **conversation-meta**: Save conversation metadata
-   - Path: `{base_url}/api/v1/conversation-meta`
-   - Method: POST
+1. **settings**: Save settings
+   - Path: `{base_url}/api/v1/settings`
+   - Method: PUT
    - Data: Contains metadata such as scene, group_id, user_details
 
 2. **memorize**: Store single message memory
@@ -266,11 +266,11 @@ A: `bootstrap.py` automatically handles:
 
 This ensures the script runs in a complete application context.
 
-### Q2: What's the difference between assistant and companion scenarios?
+### Q2: What's the difference between solo and team scenarios?
 
-A: 
-- **assistant**: Assistant scenario, suitable for AI assistant and user conversations
-- **companion**: Companion scenario, suitable for AI companion interactive conversations
+A:
+- **solo**: Assistant scenario, suitable for AI assistant and user one-on-one conversations
+- **team**: Team scenario, suitable for multi-person group chat and team collaboration
 
 Different scenarios affect memory extraction strategies and storage methods. Choose based on actual application scenario.
 
@@ -295,6 +295,6 @@ A: Check the following:
 
 ## References
 
-- [GroupChatFormat Format Definition](../../data_format/group_chat/group_chat_format.py)
+- [ConversationFormat Format Definition](../../data_format/conversation/conversation_format.py)
 - [Memory API Documentation](../api_docs/memory_api.md)
 - [Bootstrap Usage Documentation](./bootstrap_usage.md)

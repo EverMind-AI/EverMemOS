@@ -5,9 +5,11 @@ Unified storage of foresights extracted from episodic memories (personal or grou
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from beanie import Indexed
+from typing import List, Optional
 from core.oxm.mongo.document_base import DocumentBase
+from core.tenants.tenantize.oxm.mongo.tenant_aware_document import (
+    TenantAwareDocumentBaseWithSoftDelete,
+)
 from pydantic import Field, ConfigDict
 from pymongo import IndexModel, ASCENDING, DESCENDING
 from core.oxm.mongo.audit_base import AuditBase
@@ -15,7 +17,7 @@ from beanie import PydanticObjectId
 from api_specs.memory_types import ParentType
 
 
-class ForesightRecord(DocumentBase, AuditBase):
+class ForesightRecord(TenantAwareDocumentBaseWithSoftDelete, AuditBase):
     """
     Generic foresight document model
 
@@ -23,17 +25,22 @@ class ForesightRecord(DocumentBase, AuditBase):
     When user_id exists, it represents personal foresight; when user_id is empty and group_id exists, it represents group foresight.
     """
 
-    # Core fields
+    # field from api input
     user_id: Optional[str] = Field(
         default=None,
         description="User ID, required for personal memory, None for group memory",
     )
-    user_name: Optional[str] = Field(default=None, description="User name")
+    # field from api input
     group_id: Optional[str] = Field(default=None, description="Group ID")
-    group_name: Optional[str] = Field(default=None, description="Group name")
+    session_id: Optional[str] = Field(default=None, description="Session identifier")
     content: str = Field(..., min_length=1, description="Foresight content")
     parent_type: str = Field(..., description="Parent memory type (memcell/episode)")
     parent_id: str = Field(..., description="Parent memory ID")
+
+    # Evidence
+    evidence: Optional[str] = Field(
+        default=None, description="Evidence supporting this foresight"
+    )
 
     # Time range fields
     start_time: Optional[str] = Field(
@@ -44,9 +51,15 @@ class ForesightRecord(DocumentBase, AuditBase):
     )
     duration_days: Optional[int] = Field(default=None, description="Duration in days")
 
-    # Group and participant information
+    type: Optional[str] = Field(
+        default=None, description="Foresight type, such as Conversation"
+    )
+
     participants: Optional[List[str]] = Field(
         default=None, description="Related participants"
+    )
+    sender_ids: Optional[List[str]] = Field(
+        default=None, description="Sender IDs of messages"
     )
 
     # Vector and model
@@ -57,23 +70,14 @@ class ForesightRecord(DocumentBase, AuditBase):
         default=None, description="Vectorization model used"
     )
 
-    # Evidence and extension information
-    evidence: Optional[str] = Field(
-        default=None, description="Evidence supporting this foresight"
-    )
-    extend: Optional[Dict[str, Any]] = Field(
-        default=None, description="Extension field"
-    )
-
     model_config = ConfigDict(
-        collection="foresight_records",
+        collection="v1_foresight_records",
         validate_assignment=True,
         json_encoders={datetime: lambda dt: dt.isoformat()},
         json_schema_extra={
             "example": {
                 "id": "foresight_001",
                 "user_id": "user_12345",
-                "user_name": "Alice",
                 "content": "User likes Sichuan cuisine, especially spicy hotpot",
                 "parent_type": ParentType.MEMCELL.value,
                 "parent_id": "memcell_001",
@@ -81,12 +85,10 @@ class ForesightRecord(DocumentBase, AuditBase):
                 "end_time": "2024-12-31",
                 "duration_days": 365,
                 "group_id": "group_friends",
-                "group_name": "Friends group",
                 "participants": ["Zhang San", "Li Si"],
                 "vector": [0.1, 0.2, 0.3],
                 "vector_model": "text-embedding-3-small",
                 "evidence": "Mentioned multiple times in chat about liking hotpot",
-                "extend": {"confidence": 0.9},
             }
         },
         extra="allow",
@@ -100,56 +102,54 @@ class ForesightRecord(DocumentBase, AuditBase):
     class Settings:
         """Beanie settings"""
 
-        name = "foresight_records"
+        name = "v1_foresight_records"
 
         indexes = [
-            # Single field indexes
-            IndexModel([("user_id", ASCENDING)], name="idx_user_id"),
-            IndexModel([("group_id", ASCENDING)], name="idx_group_id", sparse=True),
-            # Parent memory index
-            IndexModel([("parent_id", ASCENDING)], name="idx_parent_id"),
-            # Composite index for time range queries (start_time, end_time)
             IndexModel(
-                [("start_time", ASCENDING), ("end_time", ASCENDING)],
-                name="idx_time_range",
+                [("tenant_id", ASCENDING), ("deleted_at", ASCENDING)],
+                name="idx_tenant_deleted_at",
                 sparse=True,
             ),
-            # Composite index of user ID and time range
+            IndexModel(
+                [("tenant_id", ASCENDING), ("parent_id", ASCENDING)],
+                name="idx_tenant_parent_id",
+            ),
             IndexModel(
                 [
+                    ("tenant_id", ASCENDING),
                     ("user_id", ASCENDING),
                     ("start_time", ASCENDING),
                     ("end_time", ASCENDING),
                 ],
-                name="idx_user_time_range",
-                sparse=True,
+                name="idx_tenant_user_time_range",
             ),
-            # Composite index of group ID and time range
             IndexModel(
                 [
+                    ("tenant_id", ASCENDING),
                     ("group_id", ASCENDING),
                     ("start_time", ASCENDING),
                     ("end_time", ASCENDING),
                 ],
-                name="idx_group_time_range",
-                sparse=True,
+                name="idx_tenant_group_time_range",
             ),
-            # Composite index of group ID, user ID and time range
-            # Note: This also covers (group_id, user_id) queries by left-prefix rule
             IndexModel(
                 [
+                    ("tenant_id", ASCENDING),
                     ("group_id", ASCENDING),
                     ("user_id", ASCENDING),
                     ("start_time", ASCENDING),
                     ("end_time", ASCENDING),
                 ],
-                name="idx_group_user_time_range",
-                sparse=True,
+                name="idx_tenant_group_user_time_range",
             ),
-            # Creation time index
-            IndexModel([("created_at", DESCENDING)], name="idx_created_at"),
-            # Update time index
-            IndexModel([("updated_at", DESCENDING)], name="idx_updated_at"),
+            IndexModel(
+                [("tenant_id", ASCENDING), ("created_at", DESCENDING)],
+                name="idx_tenant_created_at",
+            ),
+            IndexModel(
+                [("tenant_id", ASCENDING), ("updated_at", DESCENDING)],
+                name="idx_tenant_updated_at",
+            ),
         ]
 
         validate_on_save = True
@@ -169,9 +169,9 @@ class ForesightRecordProjection(DocumentBase, AuditBase):
         default=None,
         description="User ID, required for personal memory, None for group memory",
     )
-    user_name: Optional[str] = Field(default=None, description="User name")
     group_id: Optional[str] = Field(default=None, description="Group ID")
-    group_name: Optional[str] = Field(default=None, description="Group name")
+    sender_id: Optional[str] = Field(default=None, description="Sender identifier")
+    session_id: Optional[str] = Field(default=None, description="Session identifier")
     content: str = Field(..., min_length=1, description="Foresight content")
     parent_type: str = Field(..., description="Parent memory type (memcell/episode)")
     parent_id: str = Field(..., description="Parent memory ID")
@@ -185,9 +185,16 @@ class ForesightRecordProjection(DocumentBase, AuditBase):
     )
     duration_days: Optional[int] = Field(default=None, description="Duration in days")
 
-    # Group and participant information
+    type: Optional[str] = Field(
+        default=None, description="Foresight type, such as Conversation"
+    )
+
+    # Participant information
     participants: Optional[List[str]] = Field(
         default=None, description="Related participants"
+    )
+    sender_ids: Optional[List[str]] = Field(
+        default=None, description="Sender IDs of related participants"
     )
 
     # Vector model information (retain model name, but exclude vector data)
@@ -195,12 +202,9 @@ class ForesightRecordProjection(DocumentBase, AuditBase):
         default=None, description="Vectorization model used"
     )
 
-    # Evidence and extension information
+    # Evidence
     evidence: Optional[str] = Field(
         default=None, description="Evidence supporting this foresight"
-    )
-    extend: Optional[Dict[str, Any]] = Field(
-        default=None, description="Extension field"
     )
 
     model_config = ConfigDict(

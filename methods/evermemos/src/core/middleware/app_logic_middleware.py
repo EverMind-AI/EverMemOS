@@ -5,7 +5,7 @@ Responsible for extracting and setting application-level context information, an
 
 from typing import Callable, Dict, Any, Optional
 
-from fastapi import Request
+from fastapi import Request, HTTPException
 from starlette.responses import Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
@@ -51,6 +51,7 @@ class AppLogicMiddleware(BaseHTTPMiddleware):
 
         response: Optional[Response] = None
         error_message: Optional[str] = None
+        exception_status_code: Optional[int] = None
 
         try:
             # ========== Validate request: call validate_request ==========
@@ -65,6 +66,12 @@ class AppLogicMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             return response
 
+        except HTTPException as e:
+            logger.error("HTTPException in application logic middleware: %s", e)
+            error_message = str(e.detail) if e.detail else str(e)
+            exception_status_code = e.status_code
+            raise
+
         except Exception as e:
             logger.error("Exception in application logic middleware: %s", e)
             error_message = str(e)
@@ -75,6 +82,8 @@ class AppLogicMiddleware(BaseHTTPMiddleware):
             # Determine HTTP status code
             if response is not None:
                 http_code = response.status_code
+            elif exception_status_code is not None:
+                http_code = exception_status_code
             else:
                 http_code = 500
 

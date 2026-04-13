@@ -1,2 +1,0 @@
-"""Commit message linting utilities."""
-

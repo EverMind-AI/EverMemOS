@@ -1,4 +1,4 @@
-# EverMemOS Memory Types: Episode / Foresight / EventLog
+# EverMemOS Memory Types: Episode / Foresight / AtomicFact
 
 ---
 
@@ -17,8 +17,8 @@
 │   │               │               │               │               │            │
 │   ↓               ↓               ↓               ↓               ↓            │
 │ ┌────────────────┐ ┌────────────────┐  ┌─────────────┐ ┌─────────────┐         │
-│ │ Group Episode  │ │Personal Episode│  │  Foresight  │ │  EventLog   │         │
-│ │ (all scenes)   │ │ (group chat)   │  │ (assistant  │ │ (assistant  │         │
+│ │ Group Episode  │ │Personal Episode│  │  Foresight  │ │ AtomicFact  │         │
+│ │ (all scenes)   │ │ (group chat)   │  │ (solo       │ │ (solo       │         │
 │ └────────────────┘ └────────────────┘  │  scene only)│ │  scene only)│         │
 │                                        └─────────────┘ └─────────────┘         │
 └────────────────────────────────────────────────────────────────────────────────┘
@@ -46,7 +46,7 @@
 **Business Purpose**:
 - Source of all downstream memories
 - Guarantees each unit represents a full topic
-- **One-to-many relationship**: Each MemCell can produce multiple downstream memories (Episode, Foresight, EventLog), but each downstream memory **comes from exactly one MemCell**
+- **One-to-many relationship**: Each MemCell can produce multiple downstream memories (Episode, Foresight, AtomicFact), but each downstream memory **comes from exactly one MemCell**
 
 ---
 
@@ -68,7 +68,8 @@
 | `subject` | Title |
 | `summary` | Short summary |
 | `episode` | Full narrative |
-| `memcell_event_id_list` | Source MemCell IDs |
+| `parent_type` | Parent memory type (memcell) |
+| `parent_id` | Parent memory ID |
 
 **Business Purpose**:
 - Human-readable understanding for assistants
@@ -78,7 +79,7 @@
 
 ### 2.3 Foresight
 
-> ⚠️ **Note**: Foresight is only extracted in **assistant scene** (1:1 chat), not in group chat.
+> ⚠️ **Note**: Foresight is only extracted in **solo scene** (1:1 chat), not in group chat.
 
 **Definition**: Predictive memories describing how the conversation may impact future decisions. Extracted directly from MemCell.
 
@@ -111,15 +112,15 @@
 
 ---
 
-### 2.4 EventLog
+### 2.4 AtomicFact
 
-> ⚠️ **Note**: EventLog is only extracted in **assistant scene** (1:1 chat), not in group chat.
+> ⚠️ **Note**: AtomicFact is only extracted in **solo scene** (1:1 chat), not in group chat.
 
 **Definition**: Atomic facts extracted directly from MemCell/conversation; every fact is an independent retrieval unit.
 
-> ⚠️ **Important**: The LLM returns a list of `atomic_fact`, but each fact is persisted as its own `EventLogRecord`.
+> ⚠️ **Important**: The LLM returns a list of `atomic_fact`, but each fact is persisted as its own `AtomicFactRecord`.
 
-**MongoDB schema (`event_log_records`)**:
+**MongoDB schema (`atomic_fact_records`)**:
 
 | Field | Description |
 |-------|-------------|
@@ -151,19 +152,19 @@
 | Layer | DB Records | Notes |
 |-------|-----------|-------|
 | MemCell | 1 | One per boundary |
-| Episode | 1 (assistant) / 1+N (group) | assistant: 1 group (copied to user); group: 1 group + N personal |
-| Foresight | ~10 | **Assistant scene only**, 4-10 items per MemCell |
-| EventLog | **M** | **Assistant scene only**, M = atomic facts (5–15 typical) |
+| Episode | 1 (solo) / 1+N (group) | solo: 1 group (copied to user); group: 1 group + N personal |
+| Foresight | ~10 | **Solo scene only**, 4-10 items per MemCell |
+| AtomicFact | **M** | **Solo scene only**, M = atomic facts (5–15 typical) |
 
 ### 3.2 Scenario Examples
 
-**Scenario A: Assistant Chat (1:1)**
+**Scenario A: Solo Chat (1:1)**
 ```
 MemCell: 1
 ├── Group Episode: 1 (copied to user)
 ├── Foresight: ~10 (extracted from MemCell)
-├── EventLog: ~8 (extracted from MemCell)
-└── Total records: 1 Episode + 10 Foresight + 8 EventLog = 19
+├── AtomicFact: ~8 (extracted from MemCell)
+└── Total records: 1 Episode + 10 Foresight + 8 AtomicFact = 19
 ```
 
 **Scenario B: Group Chat (3 participants)**
@@ -174,11 +175,11 @@ MemCell: 1
 ├── Personal Episode (User B): 1
 ├── Personal Episode (User C): 1
 ├── Foresight: 0 (NOT extracted in group chat)
-├── EventLog: 0 (NOT extracted in group chat)
+├── AtomicFact: 0 (NOT extracted in group chat)
 └── Total records: 4 Episodes
 ```
 
-> **Note**: Foresight and EventLog are only extracted in assistant (1:1) scenes for efficiency.
+> **Note**: Foresight and AtomicFact are only extracted in solo (1:1) scenes for efficiency.
 
 ---
 
@@ -187,7 +188,7 @@ MemCell: 1
 | Query Need | Best Memory Type | Retrieval Method |
 |------------|------------------|------------------|
 | Narrative context | Episode | vector + BM25 |
-| Precise fact lookup | EventLog | vector on atomic facts |
+| Precise fact lookup | AtomicFact | vector on atomic facts |
 | Future reminders | Foresight | time filter + vector |
 | Persona/profile info | Profile | direct lookup (not covered here) |
 
@@ -202,7 +203,7 @@ MemCell: 1
 | MemCell | `memcells` | raw storage |
 | Episode | `episodic_memories` | narrative docs |
 | Foresight | `foresight_records` | predictions |
-| EventLog | `event_log_records` | atomic facts |
+| AtomicFact | `atomic_fact_records` | atomic facts |
 
 ### 5.2 Search Indexes
 
@@ -210,7 +211,7 @@ MemCell: 1
 |--------|---------------|--------|
 | Episode | ✅ | ✅ |
 | Foresight | ✅ | ✅ |
-| EventLog | ✅ | ✅ (per fact) |
+| AtomicFact | ✅ | ✅ (per fact) |
 
 ---
 
@@ -223,8 +224,8 @@ MemCell: 1
 biz_layer/mem_memorize.py::memorize()
     └── process_memory_extraction()
         ├── _extract_episodes()      # All scenes
-        ├── _extract_foresights()    # Assistant scene only
-        └── _extract_event_logs()    # Assistant scene only
+        ├── _extract_foresights()    # Solo scene only
+        └── _extract_atomic_facts()  # Assistant scene only
 ```
 
 ### 6.2 Extractors
@@ -233,7 +234,7 @@ biz_layer/mem_memorize.py::memorize()
 memory_layer/memory_extractor/
 ├── episode_memory_extractor.py
 ├── foresight_extractor.py
-└── event_log_extractor.py
+└── atomic_fact_extractor.py
 ```
 
 ### 6.3 Retrieval Interfaces
@@ -254,15 +255,15 @@ agentic_layer/memory_manager.py::MemoryManager
 
 **Q2: Is "10 foresights" hard-coded?**  
 - The extractor targets 4-10 items, but fewer items are accepted if the LLM provides less content.
-- **Only extracted in assistant scene** (not in group chat).
+- **Only extracted in solo scene** (not in group chat).
 
-**Q3: How many EventLog records per MemCell?**  
+**Q3: How many AtomicFact records per MemCell?**  
 - Depends on LLM output; every atomic fact becomes one document (typically 5–15).
-- **Only extracted in assistant scene** (not in group chat).
+- **Only extracted in solo scene** (not in group chat).
 
 **Q4: Which memory type should I query?**  
 - Narrative/story: Episode  
-- Concrete fact: EventLog  
+- Concrete fact: AtomicFact  
 - Future impact/reminder: Foresight
 
 ---
@@ -272,6 +273,6 @@ agentic_layer/memory_manager.py::MemoryManager
 | Version | Date | Notes |
 |---------|------|-------|
 | v1.0 | 2024-12 | Initial release |
-| v1.1 | 2025-01 | Foresight/EventLog now extracted from MemCell (assistant scene only) |
+| v1.1 | 2025-01 | Foresight/AtomicFact now extracted from MemCell (solo scene only) |
 
 

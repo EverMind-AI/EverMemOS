@@ -65,7 +65,7 @@ class V1APITester:
     ) -> Dict[str, Any]:
         """Test GET /api/v1/memories/search (RESTful query params)
 
-        Supports all data sources: episodic_memory, foresight, event_log
+        Supports all data sources: episodic_memory, foresight, atomic_fact
         user_id: User ID, required for personal memories
         group_id: Group ID, required for group memories
         """
@@ -116,7 +116,7 @@ class V1APITester:
                 or "atomic_fact" in mem
                 or "content" in mem
             ):
-                # Fetch returns episodic/event_log/foresight types
+                # Fetch returns episodic/atomic_fact/foresight types
                 total_records += 1
             elif isinstance(mem, dict):
                 # V1 Search result: {group_id: [records]} structure
@@ -145,10 +145,10 @@ class V1APITester:
                     print(f"     profile: {mem}")
                     if profile:
                         print(
-                            f"     personality: {len(profile.get('personality', []))} items"
+                            f"     explicit_info: {len(profile.get('explicit_info', []))} items"
                         )
                         print(
-                            f"     interests: {len(profile.get('interests', []))} items"
+                            f"     implicit_traits: {len(profile.get('implicit_traits', []))} items"
                         )
                 elif "profile" in mem:
                     # V1 Profile type
@@ -160,7 +160,7 @@ class V1APITester:
                     # Select display field based on data source
                     content = (
                         mem.get('foresight')  # foresight
-                        or mem.get('atomic_fact')  # event_log
+                        or mem.get('atomic_fact')  # atomic_fact
                         or mem.get('subject')  # episode
                         or 'N/A'
                     )
@@ -176,7 +176,7 @@ class V1APITester:
                     or "atomic_fact" in mem
                     or "content" in mem
                 ):
-                    # Fetch returns episodic/event_log/foresight types
+                    # Fetch returns episodic/atomic_fact/foresight types
                     content = (
                         mem.get('summary')
                         or mem.get('content')
@@ -261,19 +261,19 @@ class V1APITester:
         # Test Fetch (KV method)
         print("\n📦 Test Fetch")
         print("-" * 40)
-        fetch_types = ["profile", "episodic_memory", "foresight", "event_log"]
+        fetch_types = ["profile", "episodic_memory", "foresight", "atomic_fact"]
         for mem_type in fetch_types:
             result = await self.test_fetch_memories(user_id, mem_type, 5)
             self.print_result(f"fetch {mem_type}", result, verbose, raw)
 
         # Full combination test of memory types and retrieval methods
-        memory_types = ["episodic_memory", "foresight", "event_log"]
+        memory_types = ["episodic_memory", "foresight", "atomic_fact"]
         # memory_types = ["foresight"]
         retrieval_methods = ["keyword", "vector", "hybrid", "rrf", "agentic"]
         # retrieval_methods = ["vector"]
         # retrieval_methods = ["hybrid", "vector"]
         # retrieval_methods = ["keyword"]
-        icons = {"episodic_memory": "🎬", "foresight": "🔮", "event_log": "📋"}
+        icons = {"episodic_memory": "🎬", "foresight": "🔮", "atomic_fact": "📋"}
 
         # Group memory test (only group_id, no user_id) - only episodic_memory
         group_id = "chat_user_001_assistant"

@@ -179,9 +179,7 @@ class OnlineAPIAdapter(BaseAdapter):
                         [result_a, result_b], conversation_id=conv_id, **kwargs
                     )
 
-                    progress.update(
-                        conv_task_id, completed=total_messages, status="✅"
-                    )
+                    progress.update(conv_task_id, completed=total_messages, status="✅")
                     progress.update(main_task, advance=1)
                     return conv_id, [result_a, result_b]
                 else:
@@ -212,9 +210,7 @@ class OnlineAPIAdapter(BaseAdapter):
                         [result], conversation_id=conv_id, **kwargs
                     )
 
-                    progress.update(
-                        conv_task_id, completed=total_messages, status="✅"
-                    )
+                    progress.update(conv_task_id, completed=total_messages, status="✅")
                     progress.update(main_task, advance=1)
                     return conv_id, [result]
 
@@ -626,7 +622,7 @@ class OnlineAPIAdapter(BaseAdapter):
         for msg in conversation.messages:
             # Intelligently determine role and content
             role, content = self._determine_role_and_content(
-                msg.speaker_name, msg.content, speaker_a, speaker_b, perspective
+                msg.sender_name, msg.content, speaker_a, speaker_b, perspective
             )
 
             # Base message
@@ -643,7 +639,7 @@ class OnlineAPIAdapter(BaseAdapter):
 
             elif format_type == "memu":
                 # Memu format: needs name and time
-                message["name"] = msg.speaker_name
+                message["name"] = msg.sender_name
                 message["time"] = (
                     msg.timestamp.isoformat() + "Z" if msg.timestamp else None
                 )
@@ -656,7 +652,7 @@ class OnlineAPIAdapter(BaseAdapter):
 
     def _determine_role_and_content(
         self,
-        speaker_name: str,
+        sender_name: str,
         content: str,
         speaker_a: str,
         speaker_b: str,
@@ -673,7 +669,7 @@ class OnlineAPIAdapter(BaseAdapter):
         3. Content for custom speakers needs "speaker: " prefix
 
         Args:
-            speaker_name: Speaker name
+            sender_name: Sender name
             content: Message content
             speaker_a: speaker_a in conversation
             speaker_b: speaker_b in conversation
@@ -683,7 +679,7 @@ class OnlineAPIAdapter(BaseAdapter):
             (role, content) tuple
         """
         # Case 1: Standard roles (user/assistant and variants)
-        speaker_lower = speaker_name.lower()
+        speaker_lower = sender_name.lower()
 
         # Check if standard role or variant
         if speaker_lower in ["user", "assistant"]:
@@ -700,25 +696,25 @@ class OnlineAPIAdapter(BaseAdapter):
         # Default behavior: speaker_a is user, speaker_b is assistant
         if perspective == "speaker_b":
             # From speaker_b's perspective
-            if speaker_name == speaker_b:
+            if sender_name == speaker_b:
                 role = "user"
-            elif speaker_name == speaker_a:
+            elif sender_name == speaker_a:
                 role = "assistant"
             else:
                 # Unknown speaker, default to assistant
                 role = "assistant"
         else:
             # From speaker_a's perspective (default)
-            if speaker_name == speaker_a:
+            if sender_name == speaker_a:
                 role = "user"
-            elif speaker_name == speaker_b:
+            elif sender_name == speaker_b:
                 role = "assistant"
             else:
                 # Unknown speaker, default to user
                 role = "user"
 
         # For custom speakers, content needs prefix
-        formatted_content = f"{speaker_name}: {content}"
+        formatted_content = f"{sender_name}: {content}"
 
         return role, formatted_content
 
@@ -735,7 +731,7 @@ class OnlineAPIAdapter(BaseAdapter):
             speaker: Speaker identifier (speaker_a or speaker_b)
 
         Returns:
-            user_id string, format: {conv_id}_{speaker_name}
+            user_id string, format: {conv_id}_{sender_name}
 
         Examples:
             - LoCoMo: speaker_a="Caroline" → user_id="locomo_0_Caroline"
@@ -748,12 +744,12 @@ class OnlineAPIAdapter(BaseAdapter):
             - Replace spaces with underscores: Avoid spaces in user_id
         """
         conv_id = conversation.conversation_id
-        speaker_name = conversation.metadata.get(speaker)
+        sender_name = conversation.metadata.get(speaker)
 
-        if speaker_name:
-            # Has speaker name: replace spaces with underscores
-            speaker_name_normalized = speaker_name.replace(" ", "_")
-            user_id = f"{conv_id}_{speaker_name_normalized}"
+        if sender_name:
+            # Has sender name: replace spaces with underscores
+            sender_name_normalized = sender_name.replace(" ", "_")
+            user_id = f"{conv_id}_{sender_name_normalized}"
         else:
             # No speaker name: locomo_0_speaker_a
             user_id = f"{conv_id}_{speaker}"

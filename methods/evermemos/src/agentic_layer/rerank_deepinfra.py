@@ -10,8 +10,13 @@ import logging
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
-from agentic_layer.rerank_interface import RerankServiceInterface, RerankError
-from api_specs.memory_models import MemoryType
+from agentic_layer.rerank_interface import (
+    RerankServiceInterface,
+    RerankError,
+    extract_text_from_hit,
+)
+from core.di.utils import get_bean_by_type
+from core.component.token_usage_collector import TokenUsageCollector
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +25,7 @@ logger = logging.getLogger(__name__)
 class DeepInfraRerankConfig:
     """DeepInfra rerank service configuration"""
 
-    api_key: str = ""
+    api_key: str = ""  # skip-sensitive-check
     base_url: str = "https://api.deepinfra.com/v1/inference"
     model: str = "Qwen/Qwen3-Reranker-4B"
     timeout: int = 30
@@ -187,6 +192,13 @@ class DeepInfraRerankService(RerankServiceInterface):
             total_input_tokens += result.get("input_tokens", 0)
             last_response = result
 
+        # Report rerank token usage
+        try:
+            collector = get_bean_by_type(TokenUsageCollector)
+            collector.add(self.config.model, total_input_tokens, 0, call_type="rerank")
+        except Exception:
+            pass
+
         combined_response = {
             "scores": all_scores,
             "input_tokens": total_input_tokens,
@@ -216,44 +228,6 @@ class DeepInfraRerankService(RerankServiceInterface):
             "request_id": combined_response.get("request_id"),
         }
 
-    def _extract_text_from_hit(self, hit: Dict[str, Any]) -> str:
-        """Extract and concatenate text based on memory_type"""
-        source = hit.get('_source', hit)
-        memory_type = hit.get('memory_type', '')
-
-        # Extract text based on memory_type
-        match memory_type:
-            case MemoryType.EPISODIC_MEMORY.value:
-                episode = source.get('episode', '')
-                if episode:
-                    return f"Episode Memory: {episode}"
-            case MemoryType.FORESIGHT.value:
-                foresight = source.get('foresight', '') or source.get('content', '')
-                evidence = source.get('evidence', '')
-                if foresight:
-                    if evidence:
-                        return f"Foresight: {foresight} (Evidence: {evidence})"
-                    return f"Foresight: {foresight}"
-            case MemoryType.EVENT_LOG.value:
-                atomic_fact = source.get('atomic_fact', '')
-                if atomic_fact:
-                    return f"Atomic Fact: {atomic_fact}"
-
-        # Generic fallback
-        if source.get('episode'):
-            return source['episode']
-        if source.get('atomic_fact'):
-            return source['atomic_fact']
-        if source.get('foresight'):
-            return source['foresight']
-        if source.get('content'):
-            return source['content']
-        if source.get('summary'):
-            return source['summary']
-        if source.get('subject'):
-            return source['subject']
-        return str(hit)
-
     async def rerank_memories(
         self,
         query: str,
@@ -279,7 +253,7 @@ class DeepInfraRerankService(RerankServiceInterface):
         # Extract text content from hits for reranking
         all_texts = []
         for hit in hits:
-            text = self._extract_text_from_hit(hit)
+            text = extract_text_from_hit(hit)
             all_texts.append(text)
 
         if not all_texts:

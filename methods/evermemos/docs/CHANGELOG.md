@@ -10,7 +10,7 @@ All notable changes to EverMemOS will be documented in this file.
 
 ### Changed
 - 🔌 **API Enhancement**: Added `role` field to `POST /memories` endpoint to identify message source (`user` or `assistant`)
-- 🔧 **Conversation Metadata**: `group_id` is now optional in conversation-meta endpoints, allowing default configuration without specifying a group
+- 🔧 **Settings API**: Global settings are now managed via `PUT /api/v1/settings` (singleton, no group_id)
 
 ### Improved
 - 🚀 **Database Efficiency**: Major performance improvements to database operations

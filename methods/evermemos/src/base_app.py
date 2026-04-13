@@ -6,6 +6,7 @@ Contains business-agnostic FastAPI base configurations such as CORS, middleware,
 
 import os
 from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.observation.logger import get_logger
@@ -76,6 +77,9 @@ def create_base_app(
 
     # Add HTTP exception handler, otherwise HTTPException won't be handled by global_exception_handler
     app.add_exception_handler(HTTPException, global_exception_handler)
+
+    # Convert FastAPI/Pydantic 422 validation errors to our ErrorApiResponse format
+    app.add_exception_handler(RequestValidationError, global_exception_handler)
 
     # Add global exception handler
     # Acts as a fallback outside middleware

@@ -15,7 +15,7 @@ from core.component.mongodb_client_factory import (
     MongoDBConfig,
     MongoDBClientWrapper,
 )
-from core.tenants.tenantize.oxm.mongo.config_utils import get_default_database_name
+from core.tenants.tenantize.oxm.mongo.config_utils import generate_tenant_database_name
 from core.tenants.tenantize.oxm.mongo.tenant_aware_mongo_client import (
     TenantAwareMongoClient,
 )
@@ -84,7 +84,7 @@ class TenantAwareMongoDBClientFactory(MongoDBClientFactory):
                     dummy_config = MongoDBConfig(
                         host="tenant-aware",
                         port=27017,
-                        database=get_default_database_name(),
+                        database=generate_tenant_database_name(),
                     )
 
                     # Wrap into MongoDBClientWrapper
@@ -148,7 +148,7 @@ class TenantAwareMongoDBClientFactory(MongoDBClientFactory):
             MongoDBClientWrapper: MongoDB client wrapper
         """
         if database is None:
-            database = get_default_database_name()
+            database = generate_tenant_database_name()
         logger.info(
             "📋 Creating client with specified configuration (tenant-aware mode): host=%s, port=%s, database=%s",
             host,

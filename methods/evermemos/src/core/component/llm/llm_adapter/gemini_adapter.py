@@ -21,6 +21,8 @@ from core.component.llm.llm_adapter.llm_backend_adapter import LLMBackendAdapter
 
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from core.constants.errors import ErrorMessage
+from core.di.utils import get_bean_by_type
+from core.component.token_usage_collector import TokenUsageCollector
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +120,28 @@ class GeminiAdapter(LLMBackendAdapter):
 
     def _convert_gemini_response(self, response, model: str) -> ChatCompletionResponse:
         """Convert Gemini response to OpenAI format"""
-        # Token information is handled uniformly by the audit system, no need to extract here
+        # Extract token usage from Gemini's usage_metadata
+        usage = {}
+        if hasattr(response, 'usage_metadata') and response.usage_metadata:
+            prompt_tokens = (
+                getattr(response.usage_metadata, 'prompt_token_count', 0) or 0
+            )
+            completion_tokens = (
+                getattr(response.usage_metadata, 'candidates_token_count', 0) or 0
+            )
+            usage = {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": getattr(response.usage_metadata, 'total_token_count', 0)
+                or 0,
+            }
+            # Report token usage
+            try:
+                collector = get_bean_by_type(TokenUsageCollector)
+                collector.add(model, prompt_tokens, completion_tokens, call_type="llm")
+            except Exception:
+                pass
+
         result = ChatCompletionResponse(
             id=f"chatcmpl-{int(time.time())}",  # Gemini does not provide ID, we generate one
             object="chat.completion",
@@ -131,7 +154,7 @@ class GeminiAdapter(LLMBackendAdapter):
                     "finish_reason": "stop",  # Gemini API v1 does not directly provide finish_reason
                 }
             ],
-            usage={},  # empty usage, token information handled by audit system
+            usage=usage,
         )
 
         # Attach the original Gemini response object to the result for use by the audit system
@@ -143,12 +166,34 @@ class GeminiAdapter(LLMBackendAdapter):
         self, contents: List[ContentDict], generation_config: GenerateContentConfig
     ) -> AsyncGenerator[str, None]:
         """Streamed chat completion"""
-        response_stream = await self.client.aio.models.generate_content_stream(
-            model=self.model_name, contents=contents, config=generation_config
-        )
-        async for chunk in response_stream:
-            if chunk.text:
-                yield chunk.text
+        last_chunk = None
+        try:
+            response_stream = await self.client.aio.models.generate_content_stream(
+                model=self.model_name, contents=contents, config=generation_config
+            )
+            async for chunk in response_stream:
+                last_chunk = chunk
+                if chunk.text:
+                    yield chunk.text
+        finally:
+            # Report usage even if client disconnects mid-stream
+            if (
+                last_chunk
+                and hasattr(last_chunk, 'usage_metadata')
+                and last_chunk.usage_metadata
+            ):
+                try:
+                    collector = get_bean_by_type(TokenUsageCollector)
+                    collector.add(
+                        self.model_name,
+                        getattr(last_chunk.usage_metadata, 'prompt_token_count', 0)
+                        or 0,
+                        getattr(last_chunk.usage_metadata, 'candidates_token_count', 0)
+                        or 0,
+                        call_type="llm",
+                    )
+                except Exception:
+                    pass
 
     def get_available_models(self) -> List[str]:
         """Get list of available models"""

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Type, TypeVar, Union
 from pymongo.asynchronous.client_session import AsyncClientSession
 from bson import ObjectId
 from core.observation.logger import get_logger
@@ -8,7 +8,10 @@ from core.oxm.mongo.base_repository import BaseRepository
 from core.oxm.constants import MAGIC_ALL
 from infra_layer.adapters.out.persistence.document.memory.episodic_memory import (
     EpisodicMemory,
+    EpisodicMemoryProjection,
 )
+
+T = TypeVar("T")
 from agentic_layer.vectorize_service import get_vectorize_service
 
 logger = get_logger(__name__)
@@ -123,35 +126,39 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemory]):
     async def find_by_filters(
         self,
         user_id: Optional[str] = MAGIC_ALL,
-        group_id: Optional[str] = MAGIC_ALL,
+        group_ids: Optional[List[str]] = None,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
         limit: Optional[int] = None,
         skip: Optional[int] = None,
         sort_desc: bool = True,
         session: Optional[AsyncClientSession] = None,
-    ) -> List[EpisodicMemory]:
+        model: Optional[Type[T]] = None,
+    ) -> List[Union[EpisodicMemory, EpisodicMemoryProjection]]:
         """
-        Retrieve list of episodic memories by filters (user_id, group_id, and/or time range)
+        Retrieve list of episodic memories by filters (user_id, group_ids, and/or time range)
 
         Args:
             user_id: User ID
                 - Not provided or MAGIC_ALL ("__all__"): Don't filter by user_id
                 - None or "": Filter for null/empty values (records with user_id as None or "")
                 - Other values: Exact match
-            group_id: Group ID
-                - Not provided or MAGIC_ALL ("__all__"): Don't filter by group_id
-                - None or "": Filter for null/empty values (records with group_id as None or "")
-                - Other values: Exact match
+            group_ids: List of Group IDs
+                - None: Skip group filtering
+                - []: Empty array, skip filtering
+                - ["g1"]: Single element array, exact match
+                - ["g1", "g2"]: Multiple elements, use $in operator
             start_time: Optional start time (inclusive)
             end_time: Optional end time (exclusive)
             limit: Limit number of returned results
             skip: Number of results to skip
             sort_desc: Whether to sort by time in descending order
             session: Optional MongoDB session, for transaction support
+            model: Projection model type, default is EpisodicMemory (full version),
+                   can pass EpisodicMemoryProjection to exclude vector field
 
         Returns:
-            List of EpisodicMemory
+            List of episodic memory objects of specified type
         """
         try:
             # Build query filter
@@ -173,31 +180,48 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemory]):
                 else:
                     filter_dict["user_id"] = user_id
 
-            # Handle group_id filter
-            if group_id != MAGIC_ALL:
-                if group_id == "" or group_id is None:
-                    # Explicitly filter for null or empty string
-                    filter_dict["group_id"] = {"$in": [None, ""]}
+            # Handle group_ids filter (array, no MAGIC_ALL)
+            if group_ids is not None and len(group_ids) > 0:
+                if len(group_ids) == 1:
+                    # Single element: exact match
+                    filter_dict["group_id"] = group_ids[0]
                 else:
-                    filter_dict["group_id"] = group_id
+                    # Multiple elements: use $in operator
+                    filter_dict["group_id"] = {"$in": group_ids}
+            # group_ids is None or empty: skip group filtering
 
-            query = self.model.find(filter_dict, session=session)
+            # If model is not specified, use full version
+            target_model = model if model is not None else self.model
 
-            if sort_desc:
-                query = query.sort("-timestamp")
+            # Determine whether to use projection based on model type
+            if target_model == self.model:
+                query = self.model.find(filter_dict, session=session)
             else:
-                query = query.sort("timestamp")
+                query = self.model.find(
+                    filter_dict, projection_model=target_model, session=session
+                )
+
+            sort_field = "-timestamp" if sort_desc else "timestamp"
+            query = query.sort(sort_field)
 
             if skip:
                 query = query.skip(skip)
             if limit:
                 query = query.limit(limit)
 
+            logger.debug(
+                "🔍 EpisodicMemory.find_by_filters query: %s, sort=%s, skip=%s, limit=%s",
+                query.get_filter_query(),
+                sort_field,
+                skip,
+                limit,
+            )
+
             results = await query.to_list()
             logger.debug(
-                "✅ Successfully retrieved episodic memories: user_id=%s, group_id=%s, time_range=[%s, %s), found %d records",
+                "✅ Successfully retrieved episodic memories: user_id=%s, group_ids=%s, time_range=[%s, %s), found %d records",
                 user_id,
-                group_id,
+                group_ids,
                 start_time,
                 end_time,
                 len(results),
@@ -206,6 +230,65 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemory]):
         except Exception as e:
             logger.error("❌ Failed to retrieve episodic memories: %s", e)
             return []
+
+    async def count_by_filters(
+        self,
+        user_id: Optional[str] = MAGIC_ALL,
+        group_ids: Optional[List[str]] = None,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        session: Optional[AsyncClientSession] = None,
+    ) -> int:
+        """
+        Count episodic memories by filters (without pagination)
+
+        Args:
+            user_id: User ID filter (same semantics as find_by_filters)
+            group_ids: Group IDs filter (same semantics as find_by_filters)
+            start_time: Optional start time (inclusive)
+            end_time: Optional end time (exclusive)
+            session: Optional MongoDB session
+
+        Returns:
+            Total count of matching records
+        """
+        try:
+            # Build query filter (same as find_by_filters)
+            filter_dict = {}
+
+            # Handle time range filter
+            if start_time is not None and end_time is not None:
+                filter_dict["timestamp"] = {"$gte": start_time, "$lt": end_time}
+            elif start_time is not None:
+                filter_dict["timestamp"] = {"$gte": start_time}
+            elif end_time is not None:
+                filter_dict["timestamp"] = {"$lt": end_time}
+
+            # Handle user_id filter
+            if user_id != MAGIC_ALL:
+                if user_id == "" or user_id is None:
+                    filter_dict["user_id"] = {"$in": [None, ""]}
+                else:
+                    filter_dict["user_id"] = user_id
+
+            # Handle group_ids filter
+            if group_ids is not None and len(group_ids) > 0:
+                if len(group_ids) == 1:
+                    filter_dict["group_id"] = group_ids[0]
+                else:
+                    filter_dict["group_id"] = {"$in": group_ids}
+
+            count = await self.model.find(filter_dict, session=session).count()
+            logger.debug(
+                "✅ Counted episodic memories: user_id=%s, group_ids=%s, count=%d",
+                user_id,
+                group_ids,
+                count,
+            )
+            return count
+        except Exception as e:
+            logger.error("❌ Failed to count episodic memories: %s", e)
+            return 0
 
     async def append_episodic_memory(
         self,
@@ -317,6 +400,76 @@ class EpisodicMemoryRawRepository(BaseRepository[EpisodicMemory]):
         except Exception as e:
             logger.error("❌ Failed to delete episodic memories by user ID: %s", e)
             return 0
+
+    async def delete_by_filters(
+        self,
+        user_id: Optional[str] = MAGIC_ALL,
+        group_id: Optional[str] = MAGIC_ALL,
+        parent_id: Optional[str] = None,
+        session_id: Optional[str] = MAGIC_ALL,
+        sender_id: Optional[str] = MAGIC_ALL,
+        session: Optional[AsyncClientSession] = None,
+    ) -> int:
+        """
+        Soft delete episodic memories by filter conditions
+
+        Three-state filter semantics (user_id, group_id, session_id, sender_id):
+        - MAGIC_ALL (default): skip this filter
+        - None or "": match null/empty records
+        - other value: exact match
+
+        Args:
+            user_id: User ID filter
+            group_id: Group ID filter
+            parent_id: Parent ID filter (for cascade delete)
+            session_id: Session ID filter
+            sender_id: Sender ID filter (maps to "sender_ids" field)
+            session: Optional MongoDB session, for transaction support
+
+        Returns:
+            Number of deleted records
+        """
+        filter_dict: Dict[str, Any] = {}
+
+        if user_id != MAGIC_ALL:
+            if user_id is None or user_id == "":
+                filter_dict["user_id"] = {"$in": [None, ""]}
+            else:
+                filter_dict["user_id"] = user_id
+
+        if group_id != MAGIC_ALL:
+            if group_id is None or group_id == "":
+                filter_dict["group_id"] = {"$in": [None, ""]}
+            else:
+                filter_dict["group_id"] = group_id
+
+        if parent_id is not None:
+            filter_dict["parent_id"] = parent_id
+
+        if session_id != MAGIC_ALL:
+            if session_id is None or session_id == "":
+                filter_dict["session_id"] = {"$in": [None, ""]}
+            else:
+                filter_dict["session_id"] = session_id
+
+        if sender_id != MAGIC_ALL:
+            if sender_id is None or sender_id == "":
+                filter_dict["sender_ids"] = {"$in": [None, ""]}
+            else:
+                filter_dict["sender_ids"] = sender_id
+
+        if not filter_dict:
+            logger.warning("No filter conditions provided for delete_by_filters")
+            return 0
+
+        result = await self.model.delete_many(filter_dict, session=session)
+        count = result.modified_count if result else 0
+        logger.info(
+            "Soft deleted episodic memories by filters: filter=%s, deleted %d records",
+            filter_dict,
+            count,
+        )
+        return count
 
     async def find_by_filter_paginated(
         self,

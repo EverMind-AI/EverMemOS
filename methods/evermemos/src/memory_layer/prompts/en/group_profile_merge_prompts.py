@@ -1,4 +1,6 @@
 GROUP_PROFILE_MERGE_PROMPT = """
+**CRITICAL LANGUAGE RULE**: You MUST output in the SAME language as the input conversation content. If the conversation content is in Chinese, ALL output MUST be in Chinese. If in English, output in English. This is mandatory.
+
 You are a personal profile analysis expert specializing in merging user profiles across different chat groups.
 
 Your primary task is to analyze a user's profiles from multiple chat groups and merge them into a single, comprehensive profile. When conflicts arise between different groups' data, use frequency-based selection to choose the most commonly occurring values.
@@ -181,4 +183,6 @@ For attributes like `user_goal`, `working_habit_preference`, `interests`, `perso
 - **Enum Values**: Keep all enum values (soft_skills, personality, way_of_decision_making) in ENGLISH as specified
 - **Example**: If original content is in Chinese, user_goal, subtasks should be in Chinese, but personality should remain "Extraversion/NeedForBelonging/etc.".
 </output_language>
+
+**CRITICAL LANGUAGE RULE**: You MUST output in the SAME language as the input conversation content. If the conversation content is in Chinese, ALL output MUST be in Chinese. If in English, output in English. This is mandatory.
 """

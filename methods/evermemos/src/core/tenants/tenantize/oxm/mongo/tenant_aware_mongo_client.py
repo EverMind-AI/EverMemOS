@@ -19,7 +19,7 @@ from core.tenants.tenantize.oxm.mongo.config_utils import (
     get_tenant_mongo_config,
     get_mongo_client_cache_key,
     load_mongo_config_from_env,
-    get_default_database_name,
+    generate_tenant_database_name,
 )
 from core.tenants.tenantize.tenant_cache_utils import get_or_compute_tenant_cache
 
@@ -200,12 +200,12 @@ class TenantAwareMongoClient(AsyncMongoClient):
             # No constructor parameter configuration, load from environment variables
             self._fallback_config = load_mongo_config_from_env()
 
-        # In non-tenant mode, raise error if no configuration
-        if self._config.non_tenant_mode and not self._fallback_config:
+        # Raise error if no configuration available
+        if not self._fallback_config:
             raise RuntimeError(
-                "Connection parameters must be provided in non-tenant mode. "
-                "Please pass host, port, etc., when creating TenantAwareMongoClient, "
-                "or set environment variables MONGODB_* configuration."
+                "MongoDB connection parameters not available. "
+                "Please set environment variables MONGODB_* or pass host/port "
+                "when creating TenantAwareMongoClient."
             )
 
         # Create fallback client
@@ -219,11 +219,16 @@ class TenantAwareMongoClient(AsyncMongoClient):
         """
         Create MongoDB client from configuration
 
+        This is the SINGLE factory method for all real AsyncMongoClient instances
+        (both tenant clients and fallback client). Tenant command interceptor and
+        guard listener are automatically installed here to guarantee no client
+        can escape tenant isolation.
+
         Args:
             config: Configuration dictionary containing fields like host, port, username, password, or uri
 
         Returns:
-            AsyncMongoClient: Created client instance
+            AsyncMongoClient: Created client instance with interceptor installed
         """
         # Build connection parameters (including timezone and timeout settings)
         conn_kwargs = {
@@ -245,37 +250,58 @@ class TenantAwareMongoClient(AsyncMongoClient):
             }
             # User-provided parameters have higher priority
             conn_kwargs.update(extra_kwargs)
-            return AsyncMongoClient(uri, **conn_kwargs)
-
-        # Build connection parameters
-        host = config.get("host", "localhost")
-        port = config.get("port", 27017)
-        username = config.get("username")
-        password = config.get("password")
-
-        # Build connection string
-        if username and password:
-            from urllib.parse import quote_plus
-
-            encoded_username = quote_plus(username)
-            encoded_password = quote_plus(password)
-            connection_string = (
-                f"mongodb://{encoded_username}:{encoded_password}@{host}:{port}"
-            )
+            client = AsyncMongoClient(uri, **conn_kwargs)
         else:
-            connection_string = f"mongodb://{host}:{port}"
+            # Build connection parameters
+            host = config.get("host", "localhost")
+            port = config.get("port", 27017)
+            username = config.get("username")
+            password = config.get("password")
 
-        # Merge extra parameters
-        extra_kwargs = {
-            k: v
-            for k, v in config.items()
-            if k not in ("host", "port", "username", "password", "database")
-        }
-        # User-provided parameters have higher priority
-        conn_kwargs.update(extra_kwargs)
+            # Build connection string
+            if username and password:
+                from urllib.parse import quote_plus
 
-        # Create client
-        return AsyncMongoClient(connection_string, **conn_kwargs)
+                encoded_username = quote_plus(username)
+                encoded_password = quote_plus(password)
+                connection_string = (
+                    f"mongodb://{encoded_username}:{encoded_password}@{host}:{port}"
+                )
+            else:
+                connection_string = f"mongodb://{host}:{port}"
+
+            # Merge extra parameters
+            extra_kwargs = {
+                k: v
+                for k, v in config.items()
+                if k not in ("host", "port", "username", "password", "database")
+            }
+            # User-provided parameters have higher priority
+            conn_kwargs.update(extra_kwargs)
+
+            # Create client
+            client = AsyncMongoClient(connection_string, **conn_kwargs)
+
+        # Install tenant command interceptor + guard listener on every client.
+        # This is the chokepoint: all clients (tenant + fallback) are created here,
+        # so no client can escape without interceptor.
+        self._install_interceptor(client)
+
+        return client
+
+    def _install_interceptor(self, client: AsyncMongoClient) -> None:
+        """
+        Install tenant command interceptor and guard listener on a client.
+
+        Always installs — interceptor checks tenant context at runtime
+        and passes through when no tenant_id is present.
+        """
+        from core.tenants.tenantize.oxm.mongo.tenant_field_command_interceptor import (
+            install_tenant_interceptor,
+        )
+
+        install_tenant_interceptor(client)
+        logger.info("Tenant interceptor installed on client %s", id(client))
 
     def __getitem__(self, key: str) -> "TenantAwareDatabase":
         """
@@ -451,7 +477,7 @@ class TenantAwareDatabase(AsyncDatabase):
         return get_or_compute_tenant_cache(
             patch_key=TenantPatchKey.ACTUAL_DATABASE_NAME,
             compute_func=compute_database_name,
-            fallback=lambda: get_default_database_name(),  # Lazy evaluation, only called when needed
+            fallback=lambda: generate_tenant_database_name(),  # Lazy: returns b0001_memsys when no tenant context
             cache_description="database name",
         )
 

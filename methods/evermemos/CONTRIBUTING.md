@@ -1,102 +1,182 @@
 # Contributing to EverMemOS
 
-Thanks for contributing. This guide is intentionally short so you can start fast.
+Thank you for your interest in contributing to EverMemOS! We welcome contributions from the community.
 
-## Fast Path
+## 🚀 Getting Started
 
-1. Check existing [issues](https://github.com/EverMind-AI/EverMemOS/issues) and [discussions](https://github.com/EverMind-AI/EverMemOS/discussions).
-2. Fork the repo and create a branch.
-3. Run the local setup.
-4. Make a focused change.
-5. Run checks and open a PR.
+### Prerequisites
 
-## Local Setup
+- Python 3.10+
+- Docker and Docker Compose
+- `uv` package manager
 
+### Development Setup
+
+1. Fork and clone the repository:
 ```bash
 git clone https://github.com/YOUR_USERNAME/EverMemOS.git
 cd EverMemOS
+```
 
-# install dependencies
-uv sync --group dev
+2. Install dependencies:
+```bash
+uv sync
+```
 
-# configure environment
+3. Set up environment variables:
+```bash
 cp env.template .env
-
-# start infrastructure (optional for docs-only changes)
-docker compose up -d
+# Edit .env with your configuration
 ```
 
-## Before Opening a PR
-
-Run these checks from repo root:
-
+4. Start development services:
 ```bash
-PYTHONPATH=src uv run pytest tests/
-uv run black --check src tests demo
-uv run isort --check-only src tests demo
+docker-compose up -d
 ```
 
-Optional helper targets:
+## 📝 Code Style
 
+### Python Guidelines
+
+- Follow [PEP 8](https://pep8.org/) style guide
+- Use type hints for function parameters and return values
+- Add docstrings for classes and functions
+- Maximum line length: 100 characters
+
+### Key Rules
+
+- **No relative imports**: Use absolute imports from project root
+- **No wildcard imports**: Avoid `from module import *`
+- **DateTime handling**: Use `common_utils.datetime_utils` instead of direct `datetime` module
+- **No code in `__init__.py`**: Use only as package markers
+
+## 🔀 Git Workflow
+
+### Branch Naming
+
+- `feature/description` - New features
+- `fix/description` - Bug fixes
+- `docs/description` - Documentation updates
+- `refactor/description` - Code refactoring
+
+### Commit Messages
+
+We use [Gitmoji](https://gitmoji.dev/) for commit messages.
+
+**Format**: `<emoji> <type>: <description>`
+
+**Examples**:
+```
+✨ feat: Add new memory retrieval algorithm
+🐛 fix: Fix memory leak in vector indexing
+📝 docs: Update API documentation
+♻️ refactor: Simplify memory extraction logic
+✅ test: Add tests for profile extraction
+⚡ perf: Optimize vector search performance
+```
+
+**Common Gitmoji**:
+
+| Emoji | Code | Usage |
+|-------|------|-------|
+| ✨ | `:sparkles:` | New feature |
+| 🐛 | `:bug:` | Bug fix |
+| 🚑 | `:ambulance:` | Critical hotfix |
+| 📝 | `:memo:` | Documentation |
+| ♻️ | `:recycle:` | Refactor code |
+| 🔥 | `:fire:` | Remove code/files |
+| ✅ | `:white_check_mark:` | Add tests |
+| ⚡ | `:zap:` | Performance improvement |
+| 🔧 | `:wrench:` | Configuration changes |
+| 🗃️ | `:card_file_box:` | Database changes |
+| ⬆️ | `:arrow_up:` | Upgrade dependencies |
+| 🐳 | `:whale:` | Docker related |
+| 🚀 | `:rocket:` | Deployment |
+
+See [gitmoji.dev](https://gitmoji.dev/) for full reference.
+
+### Pull Request Process
+
+1. **Create a feature branch** from `main`:
 ```bash
-make lint
-make test
+git checkout -b feature/your-feature-name
 ```
 
-## Coding Conventions
+2. **Make your changes** following the code style guidelines
 
-- Python style follows PEP 8.
-- Use type hints for new/changed code.
-- Use `async`/`await` for I/O paths.
-- Formatting is Black with line length `88`.
-- Use absolute imports from project modules.
-- Avoid wildcard imports (`from x import *`).
-- For time conversion logic, prefer `common_utils.datetime_utils`.
+3. **Test your changes**:
+```bash
+# Run tests (if applicable)
+pytest tests/
 
-## Branch and Commit Conventions
+# Check code style
+ruff check .
+```
 
-Suggested branch names:
+4. **Commit your changes** with clear, descriptive commit messages
 
-- `feature/<short-name>`
-- `fix/<short-name>`
-- `docs/<short-name>`
-- `refactor/<short-name>`
+5. **Push to your fork**:
+```bash
+git push origin feature/your-feature-name
+```
 
-Commit style:
+6. **Open a Pull Request** with:
+   - Clear description of changes
+   - Reference to related issues (if any)
+   - Screenshots (if UI changes)
 
-- Commit messages are validated by a `commit-msg` hook using Conventional Commits.
-- Required format: `<type>(<scope>)?: <description>` or `<type>!: <description>`.
-- Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+7. **Address review feedback** promptly
 
-Examples:
+## 🧪 Testing
 
-- `feat(api): add memory search pagination`
-- `fix(core): handle empty tenant id`
-- `refactor(di)!: simplify lifecycle bootstrap`
+- Add tests for new features
+- Ensure existing tests pass
+- Maintain or improve code coverage
 
-## Pull Request Expectations
+## 📚 Documentation
 
-Please include:
+- Update relevant documentation when changing functionality
+- Add docstrings to new functions and classes
+- Update README.md if adding major features
+- Keep API documentation in sync with code changes
 
-- What changed and why.
-- Linked issue (if available).
-- How you tested it.
-- Screenshots for UI changes (if applicable).
+## 🐛 Reporting Bugs
 
-Keep PRs focused. Smaller PRs review faster.
+Please report bugs by [creating a bug report](https://github.com/EverMind-AI/EverMemOS/issues/new?template=bug_report.md) with:
 
-## Reporting Bugs and Features
+- Clear, descriptive title
+- Steps to reproduce
+- Expected vs actual behavior
+- Environment details (OS, Python version, etc.)
+- Relevant logs or error messages
 
-- Bug report: <https://github.com/EverMind-AI/EverMemOS/issues/new?template=bug_report.md>
-- Feature request: <https://github.com/EverMind-AI/EverMemOS/issues/new?template=feature_request.md>
+## 💡 Suggesting Features
 
-## Security Reports
+Feature requests are welcome! Please [submit a feature request](https://github.com/EverMind-AI/EverMemOS/issues/new?template=feature_request.md) with:
 
-Do not report security vulnerabilities in public issues.
+- Check if the feature is already requested
+- Provide clear use cases
+- Explain why this feature would be useful
+- Consider backward compatibility
 
-- See: [Security Policy](SECURITY.md)
-- Report via email: `evermind@shanda.com`
+## 📄 License
 
-## License
+By contributing to EverMemOS, you agree that your contributions will be licensed under the [Apache License 2.0](LICENSE).
 
-By contributing, you agree your contributions are licensed under the Apache License 2.0 in this repository.
+## 🤝 Code of Conduct
+
+- Be respectful and inclusive
+- Welcome newcomers
+- Focus on constructive feedback
+- Maintain a professional environment
+
+## 📞 Questions?
+
+- Open a [Discussion](https://github.com/EverMind-AI/EverMemOS/discussions)
+- Join our community channels
+- Email: evermind@shanda.com
+
+---
+
+Thank you for contributing to EverMemOS! 🎉
+

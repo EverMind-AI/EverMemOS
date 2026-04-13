@@ -28,35 +28,10 @@ class TenantConfig:
 
     def __init__(self):
         """Initialize tenant configuration"""
-        self._non_tenant_mode: Optional[bool] = None
         self._single_tenant_id: Optional[str] = None
         self._app_ready: bool = (
             False  # Application startup completion status, used for strict tenant checks
         )
-
-    @property
-    def non_tenant_mode(self) -> bool:
-        """
-        Get the non-tenant mode switch
-
-        Read configuration from environment variable TENANT_NON_TENANT_MODE:
-        - "false", "0", "no", "off" (case-insensitive) -> False (enable tenant mode)
-
-        Returns:
-            bool: True means tenant mode is disabled, False means tenant mode is enabled
-        """
-        if self._non_tenant_mode is None:
-            env_value = os.getenv("TENANT_NON_TENANT_MODE", "true").lower()
-            self._non_tenant_mode = env_value in ("true", "1", "yes", "on")
-
-            if self._non_tenant_mode:
-                logger.info(
-                    "🔧 Tenant mode disabled (NON_TENANT_MODE=true), traditional mode will be used"
-                )
-            else:
-                logger.info("✅ Tenant mode enabled (NON_TENANT_MODE=false)")
-
-        return self._non_tenant_mode
 
     @property
     def single_tenant_id(self) -> Optional[str]:
@@ -134,7 +109,6 @@ class TenantConfig:
 
         Note: reload does not reset the app_ready state, as it reflects runtime status rather than configuration.
         """
-        self._non_tenant_mode = None
         self._single_tenant_id = None
         logger.info("🔄 Tenant configuration reloaded")
 
@@ -160,9 +134,10 @@ def get_tenant_config() -> TenantConfig:
 
     Examples:
         >>> config = get_tenant_config()
-        >>> if config.non_tenant_mode:
-        ...     print("Non-tenant mode")
+        >>> config = get_tenant_config()
+        >>> if config.single_tenant_id:
+        ...     print("Single tenant mode")
         ... else:
-        ...     print("Tenant mode")
+        ...     print("Multi-tenant mode")
     """
     return TenantConfig()

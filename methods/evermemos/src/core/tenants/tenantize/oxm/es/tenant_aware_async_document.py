@@ -8,6 +8,7 @@ Core idea: Dynamically return the correct connection and index names based on te
 from typing import Optional, Any, Dict, Type
 from fnmatch import fnmatch
 from elasticsearch import AsyncElasticsearch
+from elasticsearch.dsl import field as e_field
 from elasticsearch.dsl.async_connections import connections as async_connections
 
 from core.observation.logger import get_logger
@@ -53,6 +54,11 @@ class TenantAwareAsyncDocument(AliasSupportDoc):
     - Connection is automatically registered on first access
     - Connection alias and configuration are cached in tenant_info_patch to avoid redundant computation
     """
+
+    # Logical tenant isolation field.
+    # Keyword type for exact matching + filter cache.
+    # Injected by TenantAwareAsyncElasticsearch interceptor at write time.
+    tenant_id = e_field.Keyword()
 
     class Meta:
         abstract = True
@@ -223,11 +229,20 @@ class TenantAwareAsyncDocument(AliasSupportDoc):
             elif username and password:
                 conn_params["basic_auth"] = (username, password)
 
-            # Create connection via async_connections.create_connection
-            async_connections.create_connection(alias=using, **conn_params)
+            # Create tenant-aware client with Guard transport (dual-layer defense)
+            # Layer 1: TenantAwareAsyncElasticsearch intercepts at perform_request()
+            # Layer 2: TenantGuardTransport verifies at transport level
+            from core.tenants.tenantize.oxm.es.tenant_field_es_interceptor import (
+                TenantAwareAsyncElasticsearch,
+                TenantGuardTransport,
+            )
+
+            conn_params["transport_class"] = TenantGuardTransport
+            client = TenantAwareAsyncElasticsearch(**conn_params)
+            async_connections.add_connection(alias=using, conn=client)
 
             logger.info(
-                "✅ Elasticsearch connection registered [using=%s, hosts=%s]",
+                "✅ Tenant-aware Elasticsearch connection registered [using=%s, hosts=%s]",
                 using,
                 conn_params["hosts"],
             )
@@ -365,7 +380,7 @@ class TenantAwareAsyncDocument(AliasSupportDoc):
 
 def TenantAwareAliasDoc(
     doc_name: str,
-    number_of_shards: int = 2,
+    number_of_shards: int = 3,
     number_of_replicas: int = 1,
     refresh_interval: str = "10s",
 ) -> Type[TenantAwareAsyncDocument]:
@@ -418,6 +433,12 @@ def TenantAwareAliasDoc(
             numeric_detection = MetaField(False)
             # Dynamic mapping rules based on field suffixes (see mapping_templates.py)
             dynamic_templates = MetaField(DYNAMIC_TEMPLATES)
+            # NOTE: _routing.required is NOT set here globally because:
+            # - Exclusive mode: routing=tenant_id would concentrate all docs on one shard,
+            #   breaking multi-shard load balancing for large tenants
+            # - Exclusive mode: get/delete by ID passthrough without routing, would be rejected
+            # _routing.required should be configured per-index by the routing layer
+            # for shared-mode indexes only.
 
         @classmethod
         def get_original_index_name(cls) -> str:

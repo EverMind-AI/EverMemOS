@@ -36,7 +36,7 @@ from evaluation.src.adapters.evermemos import (
 
 # Import Memory Layer components
 from memory_layer.llm.llm_provider import LLMProvider
-from memory_layer.memory_extractor.event_log_extractor import EventLogExtractor
+from memory_layer.memory_extractor.atomic_fact_extractor import AtomicFactExtractor
 
 
 @register_adapter("evermemos")
@@ -74,8 +74,8 @@ class EverMemOSAdapter(BaseAdapter):
             max_tokens=llm_config.get("max_tokens", 32768),
         )
 
-        # Initialize Event Log Extractor
-        self.event_log_extractor = EventLogExtractor(llm_provider=self.llm_provider)
+        # Initialize Atomic Fact Extractor
+        self.atomic_fact_extractor = AtomicFactExtractor(llm_provider=self.llm_provider)
 
         # Ensure NLTK data is available
         stage2_index_building.ensure_nltk_data()
@@ -181,9 +181,9 @@ class EverMemOSAdapter(BaseAdapter):
                     timestamp_str = to_iso_format(pseudo_time)
 
                 message_dict = {
-                    "speaker_id": msg.speaker_id,
-                    "user_name": msg.speaker_name or msg.speaker_id,
-                    "speaker_name": msg.speaker_name or msg.speaker_id,
+                    "sender_id": msg.sender_id,
+                    "user_name": msg.sender_name or msg.sender_id,
+                    "sender_name": msg.sender_name or msg.sender_id,
                     "content": msg.content,
                     "timestamp": timestamp_str,
                 }
@@ -301,7 +301,7 @@ class EverMemOSAdapter(BaseAdapter):
                         conversation=raw_data_dict[conv_id],  # Data uses original ID
                         save_dir=str(memcells_dir),
                         llm_provider=self.llm_provider,
-                        event_log_extractor=self.event_log_extractor,
+                        atomic_fact_extractor=self.atomic_fact_extractor,
                         progress_counter=None,
                         progress=progress,
                         task_id=conv_task_id,

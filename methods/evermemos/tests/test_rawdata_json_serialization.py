@@ -17,9 +17,9 @@ class TestRawDataJsonSerialization:
         # Create test data
         original_data = RawData(
             content={
-                "speaker_id": "user_001",
-                "speaker_name": "Zhang San",
-                "content": "This is a test message",
+                "sender_id": "user_001",
+                "sender_name": "Zhang San",
+                "content": [{"type": "text", "text": "This is a test message"}],
                 "msgType": 1,
                 "roomId": "room_123",
             },
@@ -52,7 +52,7 @@ class TestRawDataJsonSerialization:
                 "timestamp": test_time,
                 "createTime": test_time,
                 "updateTime": test_time,
-                "content": "Message containing time",
+                "content": [{"type": "text", "text": "Message containing time"}],
             },
             data_id="msg_datetime",
             data_type="Conversation",
@@ -199,18 +199,23 @@ class TestRawDataJsonSerialization:
 
         original_data = RawData(
             content={
-                "speaker_name": "Zhang San",
+                "sender_name": "Zhang San",
                 "receiverId": "room_123",
                 "roomId": "room_123",
                 "groupName": "Project Discussion Group",
                 "userIdList": ["user_001", "user_002", "user_003"],
                 "referList": [],
-                "content": "Hello everyone, let's discuss the project progress today",
+                "content": [
+                    {
+                        "type": "text",
+                        "content": "Hello everyone, let's discuss the project progress today",
+                    }
+                ],
                 "timestamp": test_time,
                 "createBy": "user_001",
                 "updateTime": test_time,
                 "orgId": "org_456",
-                "speaker_id": "user_001",
+                "sender_id": "user_001",
                 "msgType": 1,
             },
             data_id="conv_789",
@@ -229,7 +234,7 @@ class TestRawDataJsonSerialization:
         restored_data = RawData.from_json_str(json_str)
 
         # Verify conversation-specific fields
-        assert restored_data.content["speaker_name"] == "Zhang San"
+        assert restored_data.content["sender_name"] == "Zhang San"
         assert restored_data.content["groupName"] == "Project Discussion Group"
         assert restored_data.content["userIdList"] == [
             "user_001",
@@ -458,18 +463,23 @@ class TestRawDataJsonSerialization:
         # Simulate real output from format_transfer.py
         original_data = RawData(
             content={
-                "speaker_name": "Zhang San",
+                "sender_name": "Zhang San",
                 "receiverId": "room_123",
                 "roomId": "room_123",
                 "groupName": "Technical Discussion Group",
                 "userIdList": ["user_001", "user_002"],
                 "referList": [],
-                "content": "Meeting time is set for 2024-01-01T10:00:00Z, remember to attend",  # Message content containing time format
+                "content": [
+                    {
+                        "type": "text",
+                        "content": "Meeting time is set for 2024-01-01T10:00:00Z, remember to attend",
+                    }
+                ],  # Message content containing time format
                 "timestamp": test_time,  # Actual time field
                 "createBy": "user_001",
                 "updateTime": test_time,  # Actual time field
                 "orgId": "org_456",
-                "speaker_id": "user_001",
+                "sender_id": "user_001",
                 "msgType": 1,
             },
             data_id="conv_001",
@@ -498,7 +508,7 @@ class TestRawDataJsonSerialization:
         assert "2024-01-01T10:00:00Z" in restored_data.content["content"]
 
         # Verify other field types are correct
-        assert isinstance(restored_data.content["speaker_name"], str)
+        assert isinstance(restored_data.content["sender_name"], str)
         assert isinstance(restored_data.content["userIdList"], list)
         assert isinstance(restored_data.content["msgType"], int)
 
@@ -582,7 +592,12 @@ class TestRawDataJsonSerialization:
         original_data = RawData(
             content={
                 "message_info": {
-                    "content": "Scheduled task will execute at 2024-01-01T10:00:00Z",  # Non-time field but contains time format
+                    "content": [
+                        {
+                            "type": "text",
+                            "content": "Scheduled task will execute at 2024-01-01T10:00:00Z",
+                        }
+                    ],  # Non-time field but contains time format
                     "timestamp": test_time,  # Time field
                     "createTime": test_time,  # Time field
                     "author": {

@@ -4,6 +4,7 @@ import uuid
 from fastapi import Request
 
 from core.di.decorators import component
+from core.di.utils import get_bean_by_type
 from core.observation.logger import get_logger
 from core.context.context import get_current_app_info, get_current_request
 
@@ -107,6 +108,7 @@ class AppLogicProvider(ABC):
         Callback method when request begins
 
         Used to handle business logic at the start of a request, for example:
+        - Initialize token usage collector
         - Dispatching request start event
 
         Note: Context data has already been set by setup_app_context(),
@@ -115,8 +117,7 @@ class AppLogicProvider(ABC):
         Args:
             request: FastAPI request object
         """
-        # Default implementation is empty; subclasses may optionally override
-        _ = request  # Avoid unused parameter warning
+        self._init_token_usage_collector()
 
     async def on_request_complete(
         self, request: Request, http_code: int, error_message: Optional[str] = None
@@ -125,7 +126,7 @@ class AppLogicProvider(ABC):
         Callback method when request completes (optional implementation)
 
         Subclasses can override this method to handle post-request logic,
-        for example: logging request details, dispatching events, etc.
+        for example: logging request details, dispatching events, cleanup, etc.
 
         Note: Current app_info set in setup_app_context() or on_request_begin() can be retrieved via self.get_current_app_info().
 
@@ -134,8 +135,7 @@ class AppLogicProvider(ABC):
             http_code: HTTP response status code
             error_message: Error message (optional)
         """
-        # Default implementation is empty; subclasses may optionally override
-        _ = (request, http_code, error_message)  # Avoid unused parameter warning
+        self._cleanup_token_usage_collector()
 
     def get_current_request_id(self) -> str:
         """
@@ -144,12 +144,12 @@ class AppLogicProvider(ABC):
         Retrieve app_info from context, then extract request_id.
 
         Returns:
-            str: Current request's request_id, returns "unknown" if not set
+            str: Current request's request_id, returns "-" if not set
         """
         app_info = get_current_app_info()
         if app_info:
-            return app_info.get("request_id", "unknown")
-        return "unknown"
+            return app_info.get("request_id", "-")
+        return "-"
 
     def get_current_request(self) -> Optional[Request]:
         """
@@ -173,10 +173,50 @@ class AppLogicProvider(ABC):
         """
         return get_current_app_info()
 
+    def _init_token_usage_collector(self) -> None:
+        """
+        Initialize token usage collector for the current request.
+
+        Must be called before asyncio.create_task() to establish the shared
+        ContextVar dict that T1/T2/C0 will reference via in-place mutation.
+        """
+        try:
+            from core.component.token_usage_collector import TokenUsageCollector
+
+            collector = get_bean_by_type(TokenUsageCollector)
+            collector.reset()
+        except Exception:
+            pass
+
+    def _cleanup_token_usage_collector(self) -> None:
+        """
+        Cleanup token usage collector after request completes.
+
+        Clears the ContextVar to prevent leaks between requests.
+        """
+        try:
+            from core.component.token_usage_collector import TokenUsageCollector
+
+            collector = get_bean_by_type(TokenUsageCollector)
+            collector.reset()
+        except Exception:
+            pass
+
 
 @component(name="app_logic_provider")
 class AppLogicProviderImpl(AppLogicProvider):
     """Application logic provider implementation, responsible for extracting application-level context information from requests"""
+
+    def __init__(self):
+        self._tenant_router = None
+
+    def _get_tenant_router(self):
+        """Lazy-load TenantRouter to avoid circular imports at DI scan time."""
+        if self._tenant_router is None:
+            from core.tenants.tenant_router import TenantRouter
+
+            self._tenant_router = get_bean_by_type(TenantRouter)
+        return self._tenant_router
 
     def setup_app_context(self, request: Request) -> Dict[str, Any]:
         """
@@ -198,5 +238,11 @@ class AppLogicProviderImpl(AppLogicProvider):
             request_id = str(uuid.uuid4())
 
         app_info['request_id'] = request_id
+
+        # Resolve tenant context via TenantRouter
+        # Open-source default: no-op. Enterprise: resolves from headers.
+        tenant_info = self._get_tenant_router().resolve_tenant(request)
+        if tenant_info:
+            app_info['tenant_id'] = tenant_info.tenant_id
 
         return app_info

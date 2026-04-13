@@ -31,6 +31,10 @@ _PROMPT_REGISTRY = {
         "en": ("memory_layer.prompts.en.conv_prompts", False),
         "zh": ("memory_layer.prompts.zh.conv_prompts", False),
     },
+    "CONV_BATCH_BOUNDARY_DETECTION_PROMPT": {
+        "en": ("memory_layer.prompts.en.conv_prompts", False),
+        "zh": ("memory_layer.prompts.zh.conv_prompts", False),
+    },
     "CONV_SUMMARY_PROMPT": {
         "en": ("memory_layer.prompts.en.conv_prompts", False),
         "zh": ("memory_layer.prompts.zh.conv_prompts", False),
@@ -48,58 +52,66 @@ _PROMPT_REGISTRY = {
         "en": ("memory_layer.prompts.en.episode_mem_prompts", False),
         "zh": ("memory_layer.prompts.zh.episode_mem_prompts", False),
     },
-    # Profile
-    "CONVERSATION_PROFILE_EXTRACTION_PROMPT": {
-        "en": ("memory_layer.prompts.en.profile_mem_prompts", False),
-        "zh": ("memory_layer.prompts.zh.profile_mem_prompts", False),
+    # Profile (Explicit information + Implicit traits)
+    "PROFILE_UPDATE_PROMPT": {
+        "en": ("memory_layer.prompts.en.profile_prompts", False),
+        "zh": ("memory_layer.prompts.zh.profile_prompts", False),
     },
-    "CONVERSATION_PROFILE_PART1_EXTRACTION_PROMPT": {
-        "en": ("memory_layer.prompts.en.profile_mem_part1_prompts", False),
-        "zh": ("memory_layer.prompts.zh.profile_mem_part1_prompts", False),
+    "TEAM_PROFILE_UPDATE_PROMPT": {
+        "en": ("memory_layer.prompts.en.profile_prompts", False),
+        "zh": ("memory_layer.prompts.zh.profile_prompts", False),
     },
-    "CONVERSATION_PROFILE_PART2_EXTRACTION_PROMPT": {
-        "en": ("memory_layer.prompts.en.profile_mem_part2_prompts", False),
-        "zh": ("memory_layer.prompts.zh.profile_mem_part2_prompts", False),
+    "PROFILE_INITIAL_EXTRACTION_PROMPT": {
+        "en": ("memory_layer.prompts.en.profile_prompts", False),
+        "zh": ("memory_layer.prompts.zh.profile_prompts", False),
     },
-    "CONVERSATION_PROFILE_PART3_EXTRACTION_PROMPT": {
-        "en": ("memory_layer.prompts.en.profile_mem_part3_prompts", False),
-        "zh": ("memory_layer.prompts.zh.profile_mem_part3_prompts", False),
-    },
-    "CONVERSATION_PROFILE_EVIDENCE_COMPLETION_PROMPT": {
-        "en": ("memory_layer.prompts.en.profile_mem_evidence_completion_prompt", False),
-        "zh": ("memory_layer.prompts.zh.profile_mem_evidence_completion_prompt", False),
-    },
-    # Group Profile
-    "CONTENT_ANALYSIS_PROMPT": {
-        "en": ("memory_layer.prompts.en.group_profile_prompts", False),
-        "zh": ("memory_layer.prompts.zh.group_profile_prompts", False),
-    },
-    "BEHAVIOR_ANALYSIS_PROMPT": {
-        "en": ("memory_layer.prompts.en.group_profile_prompts", False),
-        "zh": ("memory_layer.prompts.zh.group_profile_prompts", False),
+    "PROFILE_COMPACT_PROMPT": {
+        "en": ("memory_layer.prompts.en.profile_prompts", False),
+        "zh": ("memory_layer.prompts.zh.profile_prompts", False),
     },
     # Foresight
     "FORESIGHT_GENERATION_PROMPT": {
         "en": ("memory_layer.prompts.en.foresight_prompts", False),
         "zh": ("memory_layer.prompts.zh.foresight_prompts", False),
     },
-    # Event Log
-    "EVENT_LOG_PROMPT": {
-        "en": ("memory_layer.prompts.en.event_log_prompts", False),
-        "zh": ("memory_layer.prompts.zh.event_log_prompts", False),
+    # Atomic Fact
+    "ATOMIC_FACT_PROMPT": {
+        "en": ("memory_layer.prompts.en.atomic_fact_prompts", False),
+        "zh": ("memory_layer.prompts.zh.atomic_fact_prompts", False),
     },
-    # Profile Life (Explicit information + Implicit traits)
-    "PROFILE_LIFE_UPDATE_PROMPT": {
-        "en": ("memory_layer.prompts.en.profile_mem_life_prompts", False),
-        "zh": ("memory_layer.prompts.zh.profile_mem_life_prompts", False),
+    # Agent Memory
+    "AGENT_TOOL_PRE_COMPRESS_PROMPT": {
+        "en": ("memory_layer.prompts.en.agent_prompts", False),
+        "zh": ("memory_layer.prompts.zh.agent_prompts", False),
     },
-    "PROFILE_LIFE_COMPACT_PROMPT": {
-        "en": ("memory_layer.prompts.en.profile_mem_life_prompts", False),
-        "zh": ("memory_layer.prompts.zh.profile_mem_life_prompts", False),
+    "AGENT_CASE_FILTER_PROMPT": {
+        "en": ("memory_layer.prompts.en.agent_prompts", False),
+        "zh": ("memory_layer.prompts.zh.agent_prompts", False),
     },
-    "PROFILE_LIFE_INITIAL_EXTRACTION_PROMPT": {
-        "en": ("memory_layer.prompts.en.profile_mem_life_prompts", False),
-        "zh": ("memory_layer.prompts.zh.profile_mem_life_prompts", False),
+    "AGENT_CASE_COMPRESS_PROMPT": {
+        "en": ("memory_layer.prompts.en.agent_prompts", False),
+        "zh": ("memory_layer.prompts.zh.agent_prompts", False),
+    },
+    "AGENT_SKILL_SUCCESS_EXTRACT_PROMPT": {
+        "en": ("memory_layer.prompts.en.agent_prompts", False),
+        "zh": ("memory_layer.prompts.zh.agent_prompts", False),
+    },
+    "AGENT_SKILL_FAILURE_EXTRACT_PROMPT": {
+        "en": ("memory_layer.prompts.en.agent_prompts", False),
+        "zh": ("memory_layer.prompts.zh.agent_prompts", False),
+    },
+    "AGENT_SKILL_RELEVANCE_VERIFY_PROMPT": {
+        "en": ("memory_layer.prompts.en.agent_prompts", False),
+        "zh": ("memory_layer.prompts.zh.agent_prompts", False),
+    },
+    "AGENT_SKILL_MATURITY_SCORE_PROMPT": {
+        "en": ("memory_layer.prompts.en.agent_prompts", False),
+        "zh": ("memory_layer.prompts.zh.agent_prompts", False),
+    },
+    # Clustering
+    "CLUSTER_LLM_ASSIGNMENT_PROMPT": {
+        "en": ("memory_layer.prompts.en.agent_prompts", False),
+        "zh": ("memory_layer.prompts.zh.agent_prompts", False),
     },
 }
 

@@ -1,13 +1,15 @@
 from datetime import datetime
 from typing import Optional
-from core.oxm.mongo.document_base import DocumentBase
+from core.tenants.tenantize.oxm.mongo.tenant_aware_document import (
+    TenantAwareDocumentBase,
+)
 from pydantic import Field, ConfigDict
 from pymongo import IndexModel, ASCENDING, DESCENDING
 from beanie import PydanticObjectId
 from core.oxm.mongo.audit_base import AuditBase
 
 
-class ConversationStatus(DocumentBase, AuditBase):
+class ConversationStatus(TenantAwareDocumentBase, AuditBase):
     """
     Conversation status document model
 
@@ -16,6 +18,8 @@ class ConversationStatus(DocumentBase, AuditBase):
 
     # Basic information
     group_id: str = Field(..., description="Group ID, empty means private chat")
+    session_id: Optional[str] = Field(default=None, description="Session ID")
+
     old_msg_start_time: Optional[datetime] = Field(
         default=None, description="Conversation window read start time"
     )
@@ -27,7 +31,7 @@ class ConversationStatus(DocumentBase, AuditBase):
     )
 
     model_config = ConfigDict(
-        collection="conversation_status",
+        collection="v1_conversation_status",
         validate_assignment=True,
         json_encoders={datetime: lambda dt: dt.isoformat()},
         json_schema_extra={
@@ -48,14 +52,26 @@ class ConversationStatus(DocumentBase, AuditBase):
     class Settings:
         """Beanie settings"""
 
-        name = "conversation_status"
+        name = "v1_conversation_status"
         indexes = [
-            # Note: conversation_id maps to the _id field, MongoDB automatically creates a primary key index on _id
+            # Composite unique index: one status per (group_id, session_id) pair
             IndexModel(
-                [("group_id", ASCENDING)], name="idx_group_id", unique=True
-            ),  # group_id must be unique
-            IndexModel([("created_at", DESCENDING)], name="idx_created_at"),
-            IndexModel([("updated_at", DESCENDING)], name="idx_updated_at"),
+                [
+                    ("tenant_id", ASCENDING),
+                    ("group_id", ASCENDING),
+                    ("session_id", ASCENDING),
+                ],
+                name="idx_tenant_group_session",
+                unique=True,
+            ),
+            IndexModel(
+                [("tenant_id", ASCENDING), ("created_at", DESCENDING)],
+                name="idx_tenant_created_at",
+            ),
+            IndexModel(
+                [("tenant_id", ASCENDING), ("updated_at", DESCENDING)],
+                name="idx_tenant_updated_at",
+            ),
         ]
         validate_on_save = True
         use_state_management = True

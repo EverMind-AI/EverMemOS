@@ -99,7 +99,7 @@ Batch process conversation data and extract memories via HTTP API.
 
 **Workflow**:
 - Clears all existing memories (ensures clean starting state)
-- Loads conversation files from `data/` directory (e.g., `data/assistant_chat_zh.json`)
+- Loads conversation files from `data/` directory (e.g., `data/solo_chat_zh.json`)
 - Sends each message to the API server (`/api/v1/memories`)
 - Server-side automatically extracts MemCells, generates episodes and profiles
 - All data is stored in databases (MongoDB, Elasticsearch, Milvus)
@@ -189,7 +189,7 @@ uv run python src/bootstrap.py demo/extract_memory.py
 
 The script will:
 - Clear all existing memory data
-- Load `data/assistant_chat_zh.json` conversation file
+- Load `data/solo_chat_zh.json` conversation file
 - Send each message to the API server for memory extraction
 - Store all memories in databases (MongoDB, Elasticsearch, Milvus)
 
@@ -225,12 +225,12 @@ The system uses sample conversation files from the `data/` directory:
 
 | Scenario | Language | Filename |
 |----------|----------|----------|
-| Assistant Chat | Chinese | `data/assistant_chat_zh.json` |
-| Assistant Chat | English | `data/assistant_chat_en.json` |
-| Group Chat | Chinese | `data/group_chat_zh.json` |
-| Group Chat | English | `data/group_chat_en.json` |
+| Assistant Chat | Chinese | `data/solo_chat_zh.json` |
+| Assistant Chat | English | `data/solo_chat_en.json` |
+| Group Chat | Chinese | `data/team_chat_zh.json` |
+| Group Chat | English | `data/team_chat_en.json` |
 
-All data files follow the [GroupChatFormat](../data_format/group_chat/group_chat_format.md) specification. See [data documentation](../data/README.md) for details.
+All data files follow the [ConversationFormat](../data_format/conversation/conversation_format.md) specification. See [data documentation](../data/README.md) for details.
 
 **Using Custom Data**:
 Edit `extract_memory.py` and modify the `data_file` and `profile_scene` variables to point to your data file.
@@ -266,13 +266,14 @@ MONGODB_URI=mongodb://admin:memsys123@localhost:27017
 
 ## 🔗 Related Documentation
 
-- [Group Chat Format Specification](../data_format/group_chat/group_chat_format.md)
+- [Conversation Format Specification](../data_format/conversation/conversation_format.md)
 - [API Documentation](../docs/api_docs/memory_api.md)
 - [Data Documentation](../data/README.md)
+- [Internationalization Guide](../docs/dev_docs/chat_i18n_usage.md)
 
 ## 📖 Demo Data Overview
 
-### Group Chat Scenario (group_chat_en.json / group_chat_zh.json)
+### Group Chat Scenario (team_chat_en.json / team_chat_zh.json)
 
 **Project Context:** AI product work group documenting the complete development journey of "Smart Sales Assistant"
 
@@ -285,7 +286,7 @@ MONGODB_URI=mongodb://admin:memsys123@localhost:27017
 
 **Good for exploring:** Team collaboration patterns, project management, technical solution evolution
 
-### Assistant Scenario (assistant_chat_en.json / assistant_chat_zh.json)
+### Assistant Scenario (solo_chat_en.json / solo_chat_zh.json)
 
 **Conversation Context:** Personal health & lifestyle assistant documenting nearly 2 months of continuous interaction
 
@@ -314,7 +315,7 @@ MONGODB_URI=mongodb://admin:memsys123@localhost:27017
 
 ## 🔗 Related Documentation
 
-- 📋 [Group Chat Format Specification](../data_format/group_chat/group_chat_format.md) - Data file format
+- 📋 [Conversation Format Specification](../data_format/conversation/conversation_format.md) - Data file format
 - 🔌 [API Documentation](../docs/api_docs/memory_api.md) - API reference
 - 📦 [Data Documentation](../data/README.md) - Sample data details
 - 🏠 [Project Home](../README.md) - Project overview and architecture
@@ -331,7 +332,7 @@ MONGODB_URI=mongodb://admin:memsys123@localhost:27017
 ### Q: How to use custom data with extract_memory.py?
 **A**: Edit the script and modify these variables:
 - `data_file`: Point to your JSON data file
-- `profile_scene`: Set to `"assistant"` or `"group_chat"`
+- `profile_scene`: Set to `"solo"` or `"team"`
 - `base_url`: API server address (default `http://localhost:1995`)
 
 ### Q: Where is data stored?
@@ -343,11 +344,11 @@ MONGODB_URI=mongodb://admin:memsys123@localhost:27017
 
 ### Q: What scenarios are supported?
 **A**: Two scenarios are supported:
-- **Assistant mode (assistant)**: One-on-one conversations, extract personalized profiles
-- **Group chat mode (group_chat)**: Multi-participant conversations, extract group memories and member profiles
+- **Solo mode (solo)**: One-on-one conversations, extract personalized profiles
+- **Group chat mode (team)**: Multi-participant conversations, extract group memories and member profiles
 
 ### Q: What is the data file format?
-**A**: JSON format following the [GroupChatFormat](../data_format/group_chat/group_chat_format.md) specification. The project provides 4 sample files for reference.
+**A**: JSON format following the [ConversationFormat](../data_format/conversation/conversation_format.md) specification. The project provides 4 sample files for reference.
 
 ### Q: How to view data in databases?
 **A**: 

@@ -7,6 +7,7 @@ Provides tools required for LLM-guided multi-round retrieval:
 3. Document Formatting: Format documents for LLM usage
 """
 
+import os
 import json
 import asyncio
 import logging
@@ -88,7 +89,7 @@ class AgenticConfig:
     round1_emb_top_n: int = 50  # Number of embedding candidates
     round1_bm25_top_n: int = 50  # Number of BM25 candidates
     round1_top_n: int = 20  # Number returned after RRF fusion
-    round1_rerank_top_n: int = 5  # Number after reranking used for LLM judgment
+    round1_rerank_top_n: int = int(os.getenv("AGENTIC_ROUND1_RERANK_TOP_N", "10"))  # Number after reranking used for LLM judgment
 
     # LLM configuration
     llm_temperature: float = 0.0  # Low temperature for judgment

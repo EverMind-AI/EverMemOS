@@ -1,38 +1,38 @@
-# Metrics Library Design
+# Metrics Library 设计方案
 
-## 🎯 Design Goals
+## 🎯 设计目标
 
-1. **Business isolation from third-party dependencies**: Business code only references its own metrics library, no direct dependency on `prometheus_client`
-2. **Lightweight auto-refresh**: Each Gauge instance manages its own refresh task, no global scheduler needed
-3. **Unified inheritance pattern**: All Gauges inherit from BaseGauge and override the refresh method
-4. **Unified interface**: Counter, Histogram, and Gauge use consistent wrappers
+1. **业务隔离第三方依赖**：业务代码只引用自己的 metrics library，不直接依赖 `prometheus_client`
+2. **轻量级自动刷新**：每个 Gauge 实例自己管理刷新任务，无需全局调度器
+3. **统一继承方式**：所有 Gauge 都继承 BaseGauge 并重写 refresh 方法
+4. **接口统一**：Counter、Histogram、Gauge 使用统一的封装
 
 ---
 
-## 📐 Core Architecture
+## 📐 核心架构
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│              src/core/metrics/ (wrapper layer)               │
+│              src/core/metrics/ (封装层)                      │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
 │  │   Counter   │  │  Histogram  │  │  BaseGauge  │         │
-│  │  (wrapper)  │  │  (wrapper)  │  │(wrapper+ref)│         │
+│  │  (封装)     │  │   (封装)    │  │  (封装+刷新)│         │
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
 │         │                │                  │                │
 │         └────────────────┴──────────────────┘                │
 │                          │                                   │
-│                 wraps prometheus_client                      │
+│                 封装 prometheus_client                       │
 └─────────────────────────────────────────────────────────────┘
-                          ↑ imports
+                          ↑ 引用
 ┌─────────────────────────────────────────────────────────────┐
-│           Business code (only imports core.metrics)          │
+│           业务代码 (只引用 core.metrics)                     │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
 │  from core.metrics import Counter, Histogram, BaseGauge     │
 │                                                               │
-│  # Unified inheritance pattern                               │
+│  # 统一继承方式                                              │
 │  class QueueSizeGauge(BaseGauge):                           │
 │      def __init__(self, queue):                             │
 │          super().__init__('queue_size', 'Queue size')       │
@@ -41,10 +41,10 @@
 │      def refresh(self, labels: dict) -> float:              │
 │          return self.queue.qsize()                          │
 │                                                               │
-│  # Usage                                                     │
+│  # 使用                                                       │
 │  gauge = QueueSizeGauge(queue)                              │
-│  gauge.labels(name='main').start_refresh()  # default 5 sec │
-│  # or manual set                                             │
+│  gauge.labels(name='main').start_refresh()  # 默认 5 秒     │
+│  # 或手动 set                                                │
 │  gauge.labels(name='main').set(42)                          │
 │                                                               │
 └─────────────────────────────────────────────────────────────┘
@@ -52,17 +52,17 @@
 
 ---
 
-## 💻 Core Implementation
+## 💻 核心实现
 
-### 1. Counter Wrapper
+### 1. Counter 封装
 
-**File: `src/core/metrics/counter.py`**
+**文件：`src/core/metrics/counter.py`**
 
 ```python
 """
-Counter Wrapper
+Counter 封装
 
-Provides a unified Counter interface, isolating prometheus_client
+提供统一的 Counter 接口，隔离 prometheus_client
 """
 from prometheus_client import Counter as PrometheusCounter
 from typing import Sequence
@@ -71,26 +71,26 @@ from .registry import get_metrics_registry
 
 class Counter:
     """
-    Counter metric wrapper
-
-    Features:
-    - Monotonically increasing counter
-    - Suitable for total requests, total errors, etc.
-    - Business code doesn't need to import prometheus_client directly
-
-    Usage example:
+    Counter 指标封装
+    
+    特点：
+    - 只增不减的累加计数器
+    - 适用于请求总数、错误总数等
+    - 业务代码不需要直接导入 prometheus_client
+    
+    使用示例：
         from core.metrics import Counter
-
+        
         requests_total = Counter(
             name='http_requests_total',
             description='Total HTTP requests',
             labelnames=['method', 'path', 'status']
         )
-
-        # Usage
+        
+        # 使用
         requests_total.labels(method='GET', path='/api', status='200').inc()
     """
-
+    
     def __init__(
         self,
         name: str,
@@ -102,12 +102,12 @@ class Counter:
     ):
         """
         Args:
-            name: Metric name
-            description: Metric description
-            labelnames: List of label names
-            namespace: Namespace (optional)
-            subsystem: Subsystem (optional)
-            unit: Unit (optional)
+            name: 指标名称
+            description: 指标描述
+            labelnames: 标签名称列表
+            namespace: 命名空间（可选）
+            subsystem: 子系统（可选）
+            unit: 单位（可选）
         """
         registry = get_metrics_registry()
         
@@ -123,51 +123,51 @@ class Counter:
     
     def labels(self, **labels):
         """
-        Return a labeled Counter
-
+        返回带标签的 Counter
+        
         Returns:
-            LabeledCounter instance
+            LabeledCounter 实例
         """
         labeled = self._counter.labels(**labels)
         return LabeledCounter(labeled)
     
     def inc(self, amount: float = 1) -> None:
         """
-        Increment counter (unlabeled version)
-
+        增加计数（无标签版本）
+        
         Args:
-            amount: Increment amount, default 1
+            amount: 增加量，默认 1
         """
         self._counter.inc(amount)
 
 
 class LabeledCounter:
-    """Labeled Counter"""
-
+    """带标签的 Counter"""
+    
     def __init__(self, labeled_counter):
         self._counter = labeled_counter
-
+    
     def inc(self, amount: float = 1) -> None:
         """
-        Increment counter
-
+        增加计数
+        
         Args:
-            amount: Increment amount, default 1
+            amount: 增加量，默认 1
         """
         self._counter.inc(amount)
 ```
 
 ---
 
-### 2. Histogram Wrapper
+### 2. Histogram 封装
 
-**File: `src/core/metrics/histogram.py`**
+**文件：`src/core/metrics/histogram.py`**
 
 ```python
 """
-Histogram Wrapper
+Histogram 封装
 
-Provides a unified Histogram interface, isolating prometheus_client
+提供统一的 Histogram 接口，隔离 prometheus_client
 """
 from prometheus_client import Histogram as PrometheusHistogram
 from typing import Sequence
@@ -176,14 +176,14 @@ from .registry import get_metrics_registry
 
 class Histogram:
     """
-    Histogram metric wrapper
-
-    Features:
-    - Distribution statistics of observed values
-    - Suitable for latency, size, and other distribution data
-    - Automatically calculates quantiles, mean, and sum
-
-    Usage example:
+    Histogram 指标封装
+    
+    特点：
+    - 观测值的分布统计
+    - 适用于延迟、大小等分布数据
+    - 自动计算分位数、均值、总和
+    
+    使用示例:
         from core.metrics import Histogram
         
         request_duration = Histogram(
@@ -193,10 +193,10 @@ class Histogram:
             buckets=(0.01, 0.05, 0.1, 0.5, 1.0, 5.0)
         )
         
-        # Usage
+        # 使用
         request_duration.labels(method='GET', path='/api').observe(0.123)
     """
-
+    
     def __init__(
         self,
         name: str,
@@ -212,13 +212,13 @@ class Histogram:
     ):
         """
         Args:
-            name: Metric name
-            description: Metric description
-            labelnames: List of label names
-            namespace: Namespace (optional)
-            subsystem: Subsystem (optional)
-            unit: Unit (optional)
-            buckets: Histogram bucket boundaries
+            name: 指标名称
+            description: 指标描述
+            labelnames: 标签名称列表
+            namespace: 命名空间（可选）
+            subsystem: 子系统（可选）
+            unit: 单位（可选）
+            buckets: 直方图桶边界
         """
         registry = get_metrics_registry()
         
@@ -235,51 +235,51 @@ class Histogram:
     
     def labels(self, **labels):
         """
-        Return a labeled Histogram
-
+        返回带标签的 Histogram
+        
         Returns:
-            LabeledHistogram instance
+            LabeledHistogram 实例
         """
         labeled = self._histogram.labels(**labels)
         return LabeledHistogram(labeled)
     
     def observe(self, amount: float) -> None:
         """
-        Record an observation (unlabeled version)
-
+        记录观测值（无标签版本）
+        
         Args:
-            amount: Observed value
+            amount: 观测值
         """
         self._histogram.observe(amount)
 
 
 class LabeledHistogram:
-    """Labeled Histogram"""
-
+    """带标签的 Histogram"""
+    
     def __init__(self, labeled_histogram):
         self._histogram = labeled_histogram
-
+    
     def observe(self, amount: float) -> None:
         """
-        Record an observation
-
+        记录观测值
+        
         Args:
-            amount: Observed value
+            amount: 观测值
         """
         self._histogram.observe(amount)
 ```
 
 ---
 
-### 3. BaseGauge Base Class (Core)
+### 3. BaseGauge 基类（核心）
 
-**File: `src/core/metrics/gauge.py`**
+**文件：`src/core/metrics/gauge.py`**
 
 ```python
 """
-Gauge Wrapper
+Gauge 封装
 
-Provides a unified Gauge interface with built-in auto-refresh capability
+提供统一的 Gauge 接口，内置自动刷新能力
 """
 from prometheus_client import Gauge as PrometheusGauge
 from typing import Sequence, Optional, Callable, Any
@@ -292,16 +292,16 @@ logger = logging.getLogger(__name__)
 
 class BaseGauge(ABC):
     """
-    Gauge base class
-
-    Features:
-    - Instant value that can increase or decrease
-    - Built-in auto-refresh capability (default 5 seconds)
-    - Must inherit and override refresh() method
-    - Each instance manages its own refresh task
-    - Supports manual set() method
-
-    Usage - inherit and override refresh method:
+    Gauge 基类
+    
+    特点：
+    - 可增可减的瞬时值
+    - 内置自动刷新能力（默认 5 秒）
+    - 必须继承并重写 refresh() 方法
+    - 每个实例独立管理刷新任务
+    - 支持手动 set() 方法
+    
+    使用方式 - 继承并重写 refresh 方法:
         class KafkaPendingMessagesGauge(BaseGauge):
             def __init__(self, kafka_consumer):
                 super().__init__(
@@ -312,20 +312,20 @@ class BaseGauge(ABC):
                 self.kafka_consumer = kafka_consumer
             
             def refresh(self, labels: dict) -> float:
-                '''Return current value'''
+                '''返回当前值'''
                 return len(self.kafka_consumer.pending_messages)
-
-        # Usage 1: Auto-refresh (default 5 seconds)
+        
+        # 使用方式1：自动刷新（默认 5 秒）
         gauge = KafkaPendingMessagesGauge(kafka_consumer)
         gauge.labels(job_name='tanka').start_refresh()
-
-        # Usage 2: Custom refresh interval
+        
+        # 使用方式2：自定义刷新间隔
         gauge.labels(job_name='tanka').start_refresh(interval_seconds=10)
-
-        # Usage 3: Manual set (no auto-refresh)
+        
+        # 使用方式3：手动设置（不启动自动刷新）
         gauge.labels(job_name='tanka').set(42)
     """
-
+    
     def __init__(
         self,
         name: str,
@@ -337,12 +337,12 @@ class BaseGauge(ABC):
     ):
         """
         Args:
-            name: Metric name
-            description: Metric description
-            labelnames: List of label names
-            namespace: Namespace (optional)
-            subsystem: Subsystem (optional)
-            unit: Unit (optional)
+            name: 指标名称
+            description: 指标描述
+            labelnames: 标签名称列表
+            namespace: 命名空间（可选）
+            subsystem: 子系统（可选）
+            unit: 单位（可选）
         """
         from .registry import get_metrics_registry
         registry = get_metrics_registry()
@@ -360,13 +360,13 @@ class BaseGauge(ABC):
         self._name = name
         self._labelnames = labelnames
         
-        # Store refresh task for each label combination
+        # 存储每个标签组合的刷新任务
         # key: label 值的 tuple, value: RefreshTask
         self._refresh_tasks: dict[tuple, 'RefreshTask'] = {}
     
     def labels(self, **labels) -> 'LabeledGauge':
         """
-        Return a labeled Gauge
+        返回带标签的 Gauge
         
         Returns:
             LabeledGauge 实例
@@ -382,15 +382,15 @@ class BaseGauge(ABC):
         )
     
     def set(self, value: float) -> None:
-        """Set value (unlabeled version)"""
+        """设置值（无标签版本）"""
         self._gauge.set(value)
     
     def inc(self, amount: float = 1) -> None:
-        """Increment value (unlabeled version)"""
+        """增加值（无标签版本）"""
         self._gauge.inc(amount)
     
     def dec(self, amount: float = 1) -> None:
-        """Decrement value (unlabeled version)"""
+        """减少值（无标签版本）"""
         self._gauge.dec(amount)
     
     def refresh(self, labels: dict) -> float:
@@ -422,13 +422,13 @@ class BaseGauge(ABC):
         )
     
     def _make_label_key(self, **labels) -> tuple:
-        """Generate label key"""
+        """生成标签 key"""
         if self._labelnames:
             return tuple(labels.get(name, '') for name in self._labelnames)
         return ()
     
     async def _stop_all_refresh_tasks(self) -> None:
-        """Stop all refresh tasks"""
+        """停止所有刷新任务"""
         for task in self._refresh_tasks.values():
             await task.stop()
         self._refresh_tasks.clear()
@@ -454,19 +454,19 @@ class LabeledGauge:
         self._label_dict = label_dict
     
     def set(self, value: float) -> None:
-        """Set value"""
+        """设置值"""
         self._labeled_gauge.set(value)
     
     def inc(self, amount: float = 1) -> None:
-        """Increment value"""
+        """增加值"""
         self._labeled_gauge.inc(amount)
     
     def dec(self, amount: float = 1) -> None:
-        """Decrement value"""
+        """减少值"""
         self._labeled_gauge.dec(amount)
     
     def set_to_current_time(self) -> None:
-        """Set to current timestamp"""
+        """设置为当前时间戳"""
         self._labeled_gauge.set_to_current_time()
     
     def start_refresh(
@@ -485,7 +485,7 @@ class LabeledGauge:
             self（支持链式调用）
         
         示例：
-            # default 5 second refresh
+            # 默认 5 秒刷新
             gauge.labels(job='tanka').start_refresh()
             
             # 自定义刷新间隔
@@ -520,7 +520,7 @@ class LabeledGauge:
         return self
     
     async def stop_refresh(self) -> None:
-        """Stop auto-refresh"""
+        """停止自动刷新"""
         task = self._base_gauge._refresh_tasks.get(self._label_key)
         if task:
             await task.stop()
@@ -553,7 +553,7 @@ class RefreshTask:
         self._error_count = 0
     
     def start(self) -> None:
-        """Start refresh task"""
+        """启动刷新任务"""
         if self._running:
             logger.warning(f"Refresh task already running for {self.label_key}")
             return
@@ -566,7 +566,7 @@ class RefreshTask:
         )
     
     async def stop(self) -> None:
-        """Stop refresh task"""
+        """停止刷新任务"""
         if not self._running:
             return
         
@@ -583,19 +583,19 @@ class RefreshTask:
         logger.info(f"Stopped refresh task: label_key={self.label_key}")
     
     async def _refresh_loop(self) -> None:
-        """Refresh loop"""
+        """刷新循环"""
         while self._running:
             try:
-                # Call refresh function
+                # 调用刷新函数
                 if self.enable_async and asyncio.iscoroutinefunction(self.refresh_func):
                     value = await self.refresh_func()
                 else:
                     value = self.refresh_func()
                 
-                # Update Gauge
+                # 更新 Gauge
                 self.labeled_gauge.set(value)
                 
-                # Reset error count
+                # 重置错误计数
                 self._error_count = 0
                 
             except asyncio.CancelledError:
@@ -608,7 +608,7 @@ class RefreshTask:
                     exc_info=True
                 )
             
-            # Wait for next refresh
+            # 等待下一次刷新
             try:
                 await asyncio.sleep(self.interval_seconds)
             except asyncio.CancelledError:
@@ -617,15 +617,15 @@ class RefreshTask:
 
 ---
 
-### 4. Unified Export
+### 4. 统一导出
 
-**File:`src/core/metrics/__init__.py`**
+**文件：`src/core/metrics/__init__.py`**
 
 ```python
 """
 Metrics Library
 
-Business code imports metric classes from here, no direct dependency on prometheus_client needed
+业务代码统一从这里导入指标类，不需要直接依赖 prometheus_client
 
 使用示例：
     from core.metrics import Counter, Histogram, BaseGauge
@@ -638,7 +638,7 @@ Business code imports metric classes from here, no direct dependency on promethe
     request_duration = Histogram('http_request_duration_seconds', 'Request duration', ['method'])
     request_duration.labels(method='GET').observe(0.123)
     
-    # Gauge - inheritance pattern
+    # Gauge - 继承方式
     class QueueSizeGauge(BaseGauge):
         def __init__(self, queue):
             super().__init__('queue_size', 'Queue size', ['queue_name'])
@@ -647,10 +647,10 @@ Business code imports metric classes from here, no direct dependency on promethe
         def refresh(self, labels: dict) -> float:
             return self.queue.qsize()
     
-    # Using Gauge
+    # 使用 Gauge
     gauge = QueueSizeGauge(queue)
-    gauge.labels(queue_name='main').start_refresh()  # default 5 second refresh
-    # or manual set
+    gauge.labels(queue_name='main').start_refresh()  # 默认 5 秒刷新
+    # 或手动设置
     gauge.labels(queue_name='main').set(42)
 """
 
@@ -670,23 +670,23 @@ __all__ = [
 
 ---
 
-## 💡 Usage Examples
+## 💡 使用示例
 
-### Example 1: Kafka Metrics
+### 示例 1：Kafka Metrics
 
-**File:`src/infra_layer/adapters/input/mq/metrics/kafka_metrics.py`**
+**文件：`src/infra_layer/adapters/input/mq/metrics/kafka_metrics.py`**
 
 ```python
 """
-Kafka metrics definition
+Kafka 指标定义
 
-Only imports core.metrics, no direct prometheus_client import
+只引用 core.metrics，不引用 prometheus_client
 """
 from core.metrics import Counter, Histogram, BaseGauge
 
 
 # ============================================================
-# Counter and Histogram - direct usage
+# Counter 和 Histogram - 直接使用
 # ============================================================
 
 KAFKA_PROCESSED_MESSAGES_TOTAL = Counter(
@@ -704,11 +704,11 @@ KAFKA_MESSAGE_PROCESSING_DURATION = Histogram(
 
 
 # ============================================================
-# Gauge - unified inheritance pattern
+# Gauge - 统一继承方式
 # ============================================================
 
 class KafkaPendingMessagesGauge(BaseGauge):
-    """Kafka pending messages Gauge"""
+    """Kafka 待处理消息数 Gauge"""
     
     def __init__(self, kafka_consumer):
         super().__init__(
@@ -719,12 +719,12 @@ class KafkaPendingMessagesGauge(BaseGauge):
         self.kafka_consumer = kafka_consumer
     
     def refresh(self, labels: dict) -> float:
-        """Return current pending message count"""
+        """返回当前待处理消息数"""
         return len(self.kafka_consumer.prefill_pending_messages)
 
 
 class KafkaActiveConsumersGauge(BaseGauge):
-    """Kafka active consumers Gauge"""
+    """Kafka 活跃消费者数 Gauge"""
     
     def __init__(self, kafka_consumer):
         super().__init__(
@@ -735,12 +735,12 @@ class KafkaActiveConsumersGauge(BaseGauge):
         self.kafka_consumer = kafka_consumer
     
     def refresh(self, labels: dict) -> float:
-        """Return current active consumer count"""
+        """返回当前活跃消费者数"""
         return len(self.kafka_consumer.consumer_tasks)
 
 
 class KafkaRedisQueueSizeGauge(BaseGauge):
-    """Redis queue size Gauge"""
+    """Redis 队列大小 Gauge"""
     
     def __init__(self, redis_queue_manager):
         super().__init__(
@@ -751,7 +751,7 @@ class KafkaRedisQueueSizeGauge(BaseGauge):
         self.redis_queue_manager = redis_queue_manager
     
     def refresh(self, labels: dict) -> float:
-        """Return total Redis queue size"""
+        """返回 Redis 队列总大小"""
         if not self.redis_queue_manager:
             return 0
         
@@ -764,7 +764,7 @@ class KafkaRedisQueueSizeGauge(BaseGauge):
 
 
 class KafkaMemoryQueueSizeGauge(BaseGauge):
-    """Memory queue size Gauge"""
+    """内存队列大小 Gauge"""
     
     def __init__(self, memory_queue_manager):
         super().__init__(
@@ -775,7 +775,7 @@ class KafkaMemoryQueueSizeGauge(BaseGauge):
         self.memory_queue_manager = memory_queue_manager
     
     def refresh(self, labels: dict) -> float:
-        """Return total memory queue size"""
+        """返回内存队列总大小"""
         if not self.memory_queue_manager:
             return 0
         
@@ -785,13 +785,13 @@ class KafkaMemoryQueueSizeGauge(BaseGauge):
         )
 ```
 
-### Example 2: Business Code Usage
+### 示例 2：业务代码使用
 
-**File:`src/infra_layer/adapters/input/mq/tanka_kafka_consumer.py`**
+**文件：`src/infra_layer/adapters/input/mq/tanka_kafka_consumer.py`**
 
 ```python
 """
-Kafka consumer - using wrapped metrics library
+Kafka 消费者 - 使用封装的 metrics library
 """
 import time
 from .metrics.kafka_metrics import (
@@ -805,7 +805,7 @@ from .metrics.kafka_metrics import (
 
 
 class TankaKafkaConsumer:
-    """Kafka consumer"""
+    """Kafka 消费者"""
     
     def __init__(
         self,
@@ -818,25 +818,25 @@ class TankaKafkaConsumer:
         self.redis_queue_manager = redis_queue_manager
         self.memory_queue_manager = memory_queue_manager
         
-        # Business properties
+        # 业务属性
         self.prefill_pending_messages = []
         self.consumer_tasks = []
         
-        # ... other initialization ...
+        # ... 其他初始化 ...
         
-        # ✅ Set up Gauge auto-refresh
+        # ✅ 设置 Gauge 自动刷新
         self._setup_metrics()
     
     def _setup_metrics(self) -> None:
-        """Set up metric auto-refresh"""
+        """设置指标自动刷新"""
         
-        # 1. Pending message count（default 5 second refresh）
+        # 1. 待处理消息数（默认 5 秒刷新）
         pending_gauge = KafkaPendingMessagesGauge(self)
         pending_gauge.labels(
             job_name=self.job_id
         ).start_refresh()  # 默认 5 秒
         
-        # 2. Active consumer count（default 5 second refresh）
+        # 2. 活跃消费者数（默认 5 秒刷新）
         active_gauge = KafkaActiveConsumersGauge(self)
         active_gauge.labels(
             job_name=self.job_id
@@ -849,7 +849,7 @@ class TankaKafkaConsumer:
                 job_name=self.job_id
             ).start_refresh(interval_seconds=10)
         
-        # 4. 内存队列大小（default 5 second refresh）
+        # 4. 内存队列大小（默认 5 秒刷新）
         if self.memory_queue_manager:
             memory_gauge = KafkaMemoryQueueSizeGauge(self.memory_queue_manager)
             memory_gauge.labels(
@@ -861,7 +861,7 @@ class TankaKafkaConsumer:
         start_time = time.time()
         
         try:
-            # Business logic
+            # 业务逻辑
             await self._do_process(message)
             
             # ✅ Counter
@@ -888,7 +888,7 @@ class TankaKafkaConsumer:
 
 ### 示例 3：Memory Metrics
 
-**File:`src/agentic_layer/metrics/memory_metrics.py`**
+**文件：`src/agentic_layer/metrics/memory_metrics.py`**
 
 ```python
 """
@@ -912,7 +912,7 @@ RETRIEVE_DURATION_SECONDS = Histogram(
 )
 
 
-# Gauge - unified inheritance pattern
+# Gauge - 统一继承方式
 class MemoryCacheSizeGauge(BaseGauge):
     """Memory Cache 大小 Gauge"""
     
@@ -952,7 +952,7 @@ class MemoryActiveRequestsGauge(BaseGauge):
         return 0
 ```
 
-**File:`src/agentic_layer/memory_manager.py`**
+**文件：`src/agentic_layer/memory_manager.py`**
 
 ```python
 """
@@ -975,11 +975,11 @@ class MemoryManager:
         self.active_retrieve_count = 0
         self.active_memorize_count = 0
         
-        # ✅ Set up Gauge auto-refresh
+        # ✅ 设置 Gauge 自动刷新
         self._setup_metrics()
     
     def _setup_metrics(self) -> None:
-        """Set up metric auto-refresh"""
+        """设置指标自动刷新"""
         
         # Embedding cache 大小（10 秒刷新）
         embedding_cache_gauge = MemoryCacheSizeGauge(
@@ -1017,7 +1017,7 @@ class MemoryManager:
         retrieve_method = request.retrieve_method
         
         try:
-            # Business logic
+            # 业务逻辑
             memories = await self._do_retrieve(request)
             
             # ✅ Counter
@@ -1055,12 +1055,12 @@ class MemoryManager:
    - 无需全局调度器协调
 
 4. **灵活的刷新间隔**
-   - default 5 second refresh
+   - 默认 5 秒刷新
    - 可自定义刷新间隔（3秒、10秒、30秒等）
    - 不同的标签可以有不同的间隔
 
 5. **支持手动 set()**
-   - 可以随时手动 `set()` Set value
+   - 可以随时手动 `set()` 设置值
    - 手动设置和自动刷新互不干扰
    - 灵活应对各种场景
 
@@ -1109,7 +1109,7 @@ class MemoryManager:
    - 必须重写 `refresh()` 方法
    - 不支持 `set_refresher()` 方式
 
-2. **default 5 second refresh**
+2. **默认 5 秒刷新**
    - `start_refresh()` 默认 5 秒间隔
    - 可通过 `interval_seconds` 参数自定义
    - 符合大部分业务场景
@@ -1133,7 +1133,7 @@ class MemoryManager:
 
 ## 🔧 配置示例
 
-**File:`src/core/config.py`**
+**文件：`src/core/config.py`**
 
 ```python
 from pydantic_settings import BaseSettings

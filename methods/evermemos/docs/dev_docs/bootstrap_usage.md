@@ -7,7 +7,7 @@
 ## Basic Usage
 
 ```bash
-python src/bootstrap.py [script_path] [script_arguments...]
+uv run python src/bootstrap.py [script_path] [script_arguments...]
 ```
 
 The script path can be:
@@ -21,40 +21,40 @@ The script path can be:
 
 ```bash
 # Run memory manager test
-python src/bootstrap.py unit_test/memory_manager_single_test.py
+uv run python src/bootstrap.py unit_test/memory_manager_single_test.py
 
 # Run test with relative path
-python src/bootstrap.py ../tests/test_convert_rest.py
+uv run python src/bootstrap.py ../tests/test_convert_rest.py
 
 # Run test with arguments
-python src/bootstrap.py unit_test/memory_manager_single_test.py --verbose
+uv run python src/bootstrap.py unit_test/memory_manager_single_test.py --verbose
 ```
 
 ### 2. Run Evaluation Scripts
 
 ```bash
 # Run dynamic memory evaluation
-python src/bootstrap.py evaluation/dynamic_memory_evaluation/locomo_eval.py
+uv run python src/bootstrap.py evaluation/dynamic_memory_evaluation/locomo_eval.py
 
 # Run evaluation with dataset argument
-python src/bootstrap.py evaluation/dynamic_memory_evaluation/locomo_eval.py --dataset small
+uv run python src/bootstrap.py evaluation/dynamic_memory_evaluation/locomo_eval.py --dataset small
 ```
 
 ### 3. Run Algorithm Debugging Scripts
 
 ```bash
 # Run algorithm debugging script
-python src/bootstrap.py tests/algorithms/debug_my_model.py
+uv run python src/bootstrap.py tests/algorithms/debug_my_model.py
 
 # Run script with config file
-python src/bootstrap.py tests/algorithms/debug_my_model.py --config config.json
+uv run python src/bootstrap.py tests/algorithms/debug_my_model.py --config config.json
 ```
 
 ### 4. Run Test Template
 
 ```bash
 # Run Bootstrap test template to learn how to use DI and MongoDB
-python src/bootstrap.py tests/bootstrap_test_template.py
+uv run python src/bootstrap.py tests/bootstrap_test_template.py
 ```
 
 ## Command Line Options
@@ -63,14 +63,14 @@ python src/bootstrap.py tests/bootstrap_test_template.py
 Specify the environment variable file to load (default: `.env`)
 
 ```bash
-python src/bootstrap.py your_script.py --env-file .env.test
+uv run python src/bootstrap.py your_script.py --env-file .env.test
 ```
 
 ### `--mock`
 Enable Mock mode (for testing and development)
 
 ```bash
-python src/bootstrap.py your_script.py --mock
+uv run python src/bootstrap.py your_script.py --mock
 ```
 
 ## Environment Variables
@@ -106,25 +106,25 @@ total_count = await repo.count_all()
 ### 1. Daily Usage
 Run your scripts directly:
 ```bash
-python src/bootstrap.py your_script.py
+uv run python src/bootstrap.py your_script.py
 ```
 
 ### 2. Learning Development
 Start by running the test template to understand the project structure:
 ```bash
-python src/bootstrap.py tests/bootstrap_test_template.py
+uv run python src/bootstrap.py tests/bootstrap_test_template.py
 ```
 
 ### 3. Development and Testing
 Use Mock mode during development:
 ```bash
-python src/bootstrap.py your_script.py --mock
+uv run python src/bootstrap.py your_script.py --mock
 ```
 
 ### 4. CI/CD Integration
 Specify different environment files in continuous integration:
 ```bash
-python src/bootstrap.py test_script.py --env-file .env.ci
+uv run python src/bootstrap.py test_script.py --env-file .env.ci
 ```
 
 ## Troubleshooting

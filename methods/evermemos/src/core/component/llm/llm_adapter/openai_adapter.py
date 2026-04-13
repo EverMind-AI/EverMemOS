@@ -7,6 +7,8 @@ from core.component.llm.llm_adapter.completion import (
 )
 from core.component.llm.llm_adapter.llm_backend_adapter import LLMBackendAdapter
 from core.constants.errors import ErrorMessage
+from core.di.utils import get_bean_by_type
+from core.component.token_usage_collector import TokenUsageCollector
 
 
 class OpenAIAdapter(LLMBackendAdapter):
@@ -55,19 +57,55 @@ class OpenAIAdapter(LLMBackendAdapter):
         try:
             if final_params.get("stream"):
                 # Streaming response, return async generator
+                # Enable usage reporting in the final streaming chunk
+                final_params["stream_options"] = {"include_usage": True}
+
                 async def stream_gen():
-                    response_stream = await self.client.chat.completions.create(
-                        **final_params
-                    )
-                    async for chunk in response_stream:
-                        content = getattr(chunk.choices[0].delta, "content", None)
-                        if content:
-                            yield content
+                    usage_data = None
+                    try:
+                        response_stream = await self.client.chat.completions.create(
+                            **final_params
+                        )
+                        async for chunk in response_stream:
+                            # Final chunk carries usage data (no choices)
+                            if hasattr(chunk, 'usage') and chunk.usage:
+                                usage_data = chunk.usage
+                            if chunk.choices:
+                                content = getattr(
+                                    chunk.choices[0].delta, "content", None
+                                )
+                                if content:
+                                    yield content
+                    finally:
+                        # Report usage even if client disconnects mid-stream
+                        if usage_data:
+                            try:
+                                collector = get_bean_by_type(TokenUsageCollector)
+                                collector.add(
+                                    final_params.get("model", "unknown"),
+                                    usage_data.prompt_tokens or 0,
+                                    usage_data.completion_tokens or 0,
+                                    call_type="llm",
+                                )
+                            except Exception:
+                                pass
 
                 return stream_gen()
             else:
                 # Non-streaming response
                 response = await self.client.chat.completions.create(**final_params)
+                # Report token usage
+                if hasattr(response, 'usage') and response.usage:
+                    try:
+                        collector = get_bean_by_type(TokenUsageCollector)
+                        collector.add(
+                            final_params.get("model", "unknown"),
+                            response.usage.prompt_tokens or 0,
+                            response.usage.completion_tokens or 0,
+                            call_type="llm",
+                        )
+                    except Exception:
+                        pass
                 return ChatCompletionResponse.from_dict(response.model_dump())
         except Exception as e:
             raise RuntimeError(f"OpenAI chat completion request failed: {e}")

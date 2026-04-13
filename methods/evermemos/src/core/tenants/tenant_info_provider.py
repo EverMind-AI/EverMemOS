@@ -7,10 +7,12 @@ used to retrieve tenant information based on tenant_id (typically single_tenant_
 Uses DI mechanism to manage TenantInfoService implementations.
 """
 
+import os
 from abc import ABC, abstractmethod
 from typing import Optional
 
 from core.tenants.tenant_models import TenantInfo, TenantDetail
+from core.tenants.tenant_constants import ISOLATION_MODE_EXCLUSIVE
 from core.di.decorators import component
 
 
@@ -54,29 +56,45 @@ class DefaultTenantInfoService(TenantInfoService):
 
     def get_tenant_info(self, tenant_id: str) -> Optional[TenantInfo]:
         """
-        Create a basic tenant information object by tenant ID
+        Create tenant information for single-tenant (local dev) mode.
 
-        This implementation creates a TenantInfo object containing only the tenant_id,
-        without any storage configuration information.
+        Builds a complete TenantInfo with explicit storage_info read from
+        environment variables, so the behavior is identical to a multi-tenant
+        exclusive deployment — no "fallback coincidence" relied upon.
 
         Args:
             tenant_id: Unique identifier of the tenant
 
         Returns:
-            TenantInfo object containing basic information
+            TenantInfo object with storage_info populated from env
 
         Examples:
             >>> from core.di.container import get_container
             >>> service = get_container().get_bean_by_type(TenantInfoService)
-            >>> tenant_info = service.get_tenant_info("tenant_001")
-            >>> print(tenant_info.tenant_id)
-            tenant_001
+            >>> tenant_info = service.get_tenant_info("dev")
+            >>> print(tenant_info.tenant_detail.isolation_mode)
+            exclusive
         """
-        # Return None if tenant_id is empty
         if not tenant_id:
             return None
 
-        # Create basic tenant information containing only tenant_id
+        # Build resource names with tenant_id as prefix, same pattern as
+        # EnterpriseTenantRouter._build_storage_info() in exclusive mode.
+        # e.g. tenant_id="dev" → database="dev_memsys", index_prefix="dev"
+        base_db = os.getenv("MONGODB_DATABASE", "memsys")
+
+        storage_info = {
+            "mongodb": {"database": f"{tenant_id}_{base_db}"},
+            "elasticsearch": {"index_prefix": tenant_id},
+            "milvus": {"collection_prefix": tenant_id},
+        }
+
+        tenant_detail = TenantDetail(
+            tenant_info={"tenant_id": tenant_id},
+            storage_info=storage_info,
+            isolation_mode=ISOLATION_MODE_EXCLUSIVE,
+        )
+
         return TenantInfo(
-            tenant_id=tenant_id, tenant_detail=TenantDetail(), origin_tenant_data={}
+            tenant_id=tenant_id, tenant_detail=tenant_detail, origin_tenant_data={}
         )

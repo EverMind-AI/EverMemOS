@@ -1,26 +1,22 @@
 """
 Episodic Memory Milvus Repository
 
-Specialized repository class for episodic memory based on BaseMilvusRepository, providing efficient vector storage and retrieval functions.
-Main features include vector storage, similarity search, filtered queries, and document management.
+V1 simplified repository for vector semantic retrieval.
+Only maps search-essential fields. Full data retrieved from MongoDB using parent_id.
 """
 
-from datetime import datetime
-from typing import List, Optional, Dict, Any, Union
 import json
+from datetime import datetime
+from typing import List, Optional, Dict, Any
 from core.oxm.milvus.base_repository import BaseMilvusRepository
 from core.oxm.constants import MAGIC_ALL
 from infra_layer.adapters.out.search.milvus.memory.episodic_memory_collection import (
     EpisodicMemoryCollection,
 )
 from core.observation.logger import get_logger
-from common_utils.datetime_utils import get_now_with_timezone
 from core.di.decorators import repository
 
 logger = get_logger(__name__)
-
-# Milvus retrieval configuration (None means radius filtering is disabled)
-MILVUS_SIMILARITY_RADIUS = None  # COSINE similarity threshold, optional range [-1, 1]
 
 
 @repository("episodic_memory_milvus_repository", primary=False)
@@ -28,11 +24,9 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
     """
     Episodic Memory Milvus Repository
 
-    Specialized repository class based on BaseMilvusRepository, providing:
-    - Efficient vector storage and retrieval
-    - Similarity search and filtering functions
-    - Document creation and management
-    - Vector index management
+    V1 simplified repository for vector semantic retrieval.
+    Only stores search-essential fields in Milvus.
+    Full data is retrieved from MongoDB using parent_id.
     """
 
     def __init__(self):
@@ -49,84 +43,40 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
         episode: str,
         search_content: List[str],
         vector: List[float],
-        user_name: Optional[str] = None,
         title: Optional[str] = None,
         summary: Optional[str] = None,
         group_id: Optional[str] = None,
         participants: Optional[List[str]] = None,
+        sender_ids: Optional[List[str]] = None,
         event_type: Optional[str] = None,
-        keywords: Optional[List[str]] = None,
-        linked_entities: Optional[List[str]] = None,
         subject: Optional[str] = None,
-        memcell_event_id_list: Optional[List[str]] = None,
-        extend: Optional[Dict[str, Any]] = None,
-        created_at: Optional[datetime] = None,
-        updated_at: Optional[datetime] = None,
         parent_type: Optional[str] = None,
         parent_id: Optional[str] = None,
-        metadata: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create and save episodic memory document
 
         Args:
-            event_id: Event unique identifier
+            id: Event unique identifier
             user_id: User ID (required)
             timestamp: Event occurrence time (required)
             episode: Episode description (required)
             search_content: List of search content (required)
             vector: Text vector (required, dimension must be VECTORIZE_DIMENSIONS)
-            user_name: User name
             title: Event title
             summary: Event summary
             group_id: Group ID
             participants: List of participants
+            sender_ids: List of sender IDs
             event_type: Event type (e.g., conversation, email, etc.)
-            keywords: List of keywords
-            linked_entities: List of linked entity IDs
             subject: Event subject
-            memcell_event_id_list: List of memory cell event IDs
-            extend: Extension fields
-            created_at: Creation time
-            updated_at: Update time
-            parent_event_id: Parent event ID (used to associate split records)
-            metadata: Metadata JSON string (optional, automatically constructed if not provided)
+            parent_type: Parent type
+            parent_id: Parent ID (used to associate split records)
 
         Returns:
             Saved document information
         """
         try:
-            # Set default timestamps
-            now = get_now_with_timezone()
-            if created_at is None:
-                created_at = now
-            if updated_at is None:
-                updated_at = now
-
-            # Prepare metadata (automatically build if not provided externally)
-            if metadata is None:
-                metadata_dict = {
-                    "user_name": user_name or "",
-                    "title": title or "",
-                    "summary": summary or "",
-                    "participants": participants or [],
-                    "keywords": keywords or [],
-                    "linked_entities": linked_entities or [],
-                    "subject": subject or "",
-                    "memcell_event_id_list": memcell_event_id_list or [],
-                    "extend": extend or {},
-                    "created_at": created_at.isoformat(),
-                    "updated_at": updated_at.isoformat(),
-                }
-                metadata_json = json.dumps(metadata_dict, ensure_ascii=False)
-            else:
-                # Use externally provided metadata
-                metadata_json = metadata
-                try:
-                    metadata_dict = json.loads(metadata)
-                except:
-                    metadata_dict = {}
-
             # Prepare entity data
             entity = {
                 "id": id,
@@ -135,22 +85,20 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
                 or "",  # Milvus VARCHAR does not accept None, convert to empty string
                 "group_id": group_id or "",
                 "participants": participants or [],
+                "sender_ids": sender_ids or [],
                 "parent_type": parent_type or "",
                 "parent_id": parent_id or "",
-                "event_type": event_type or "",
-                "timestamp": int(timestamp.timestamp()),
+                "type": event_type or "",
+                "timestamp": int(timestamp.timestamp() * 1000),
                 "episode": episode,
                 "search_content": json.dumps(search_content, ensure_ascii=False),
-                "metadata": metadata_json,
-                "created_at": int(created_at.timestamp()),
-                "updated_at": int(updated_at.timestamp()),
             }
 
             # Insert data
             await self.insert(entity)
 
             logger.debug(
-                "✅ Episodic memory document created successfully: id=%s, user_id=%s",
+                "Episodic memory document created successfully: id=%s, user_id=%s",
                 id,
                 user_id,
             )
@@ -161,12 +109,11 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
                 "timestamp": timestamp,
                 "episode": episode,
                 "search_content": search_content,
-                "metadata": metadata_dict,
             }
 
         except Exception as e:
             logger.error(
-                "❌ Failed to create episodic memory document: id=%s, error=%s", id, e
+                "Failed to create episodic memory document: id=%s, error=%s", id, e
             )
             raise
 
@@ -176,14 +123,15 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
         self,
         query_vector: List[float],
         user_id: Optional[str] = None,
-        group_id: Optional[str] = None,
-        event_type: Optional[str] = None,
+        group_ids: Optional[List[str]] = None,
+        session_id: Optional[str] = None,
+        parent_type: Optional[str] = None,
+        parent_id: Optional[str] = None,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
         limit: int = 10,
         score_threshold: float = 0.0,
         radius: Optional[float] = None,
-        participant_user_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Vector similarity search
@@ -191,13 +139,15 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
         Args:
             query_vector: Query vector
             user_id: User ID filter
-            group_id: Group ID filter
-            event_type: Event type filter (e.g., conversation, email, etc.)
+            group_ids: List of Group IDs to filter
+            session_id: Session ID filter
+            parent_type: Parent type filter
+            parent_id: Parent memory ID filter
             start_time: Start timestamp filter
             end_time: End timestamp filter
             limit: Number of results to return
-            score_threshold: Similarity threshold
-            radius: COSINE similarity threshold (optional, defaults to MILVUS_SIMILARITY_RADIUS)
+            score_threshold: Similarity score threshold
+            radius: COSINE similarity threshold
 
         Returns:
             List of search results
@@ -206,51 +156,44 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
             # Build filter expression
             filter_expr = []
 
-            # Handle user_id filter: MAGIC_ALL means no filter
+            # Handle user_id filter
             if user_id != MAGIC_ALL:
                 if user_id:
                     filter_expr.append(f'user_id == "{user_id}"')
                 else:
-                    # Explicitly filter for null or empty
                     filter_expr.append('user_id == ""')
 
-            # Handle group_id filter: MAGIC_ALL means no filter
-            if group_id != MAGIC_ALL:
-                if group_id:
-                    filter_expr.append(f'group_id == "{group_id}"')
-                else:
-                    # Explicitly filter for null or empty
-                    filter_expr.append('group_id == ""')
+            # Handle group_ids filter
+            if group_ids is not None and len(group_ids) > 0:
+                group_ids_str = ', '.join(f'"{g}"' for g in group_ids)
+                filter_expr.append(f'group_id in [{group_ids_str}]')
 
-            if participant_user_id:
-                filter_expr.append(
-                    f'array_contains(participants, "{participant_user_id}")'
-                )
-            if event_type:
-                filter_expr.append(f'event_type == "{event_type}"')
+            # Handle session_id filter
+            if session_id:
+                filter_expr.append(f'session_id == "{session_id}"')
+
+            # Handle parent_type filter
+            if parent_type:
+                filter_expr.append(f'parent_type == "{parent_type}"')
+
+            # Handle parent_id filter
+            if parent_id:
+                filter_expr.append(f'parent_id == "{parent_id}"')
+
+            # Handle time filters
             if start_time:
-                filter_expr.append(f'timestamp >= {int(start_time.timestamp())}')
+                filter_expr.append(f"timestamp >= {int(start_time.timestamp() * 1000)}")
             if end_time:
-                filter_expr.append(f'timestamp <= {int(end_time.timestamp())}')
+                filter_expr.append(f"timestamp <= {int(end_time.timestamp() * 1000)}")
 
             filter_str = " and ".join(filter_expr) if filter_expr else None
 
-            # Get collection
-
             # Execute search
-            # Dynamically adjust ef parameter: must be >= limit, typically set to 1.5-2 times limit
-            ef_value = max(128, limit * 2)  # Ensure ef >= limit, minimum 128
-            # Use COSINE similarity, radius indicates returning only results with similarity >= threshold
-            # Prioritize passed radius parameter, otherwise use default configuration
-            similarity_radius = (
-                radius if radius is not None else MILVUS_SIMILARITY_RADIUS
-            )
+            ef_value = max(128, limit * 2)
             search_params = {"metric_type": "COSINE", "params": {"ef": ef_value}}
-            # Do not set radius parameter!
-            # Milvus radius is the similarity lower bound; setting too low a value may cause issues
-            # Only set when explicitly specified and > -1.0
-            if similarity_radius is not None and similarity_radius > -1.0:
-                search_params["params"]["radius"] = similarity_radius
+
+            if radius is not None and radius > -1.0:
+                search_params["params"]["radius"] = radius
 
             results = await self.collection.search(
                 data=[query_vector],
@@ -263,85 +206,44 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
 
             # Process results
             search_results = []
-            raw_hit_count = sum(len(hits) for hits in results)
-            logger.info(
-                f"Milvus raw return: {raw_hit_count} results, "
-                f"limit={limit}, filter_str={filter_str}, "
-            )
-
             for hits in results:
                 for hit in hits:
                     if hit.score >= score_threshold:
-                        # Parse metadata
-                        metadata_json = hit.entity.get("metadata", "{}")
-                        metadata = json.loads(metadata_json) if metadata_json else {}
-
-                        # Parse search_content (unified as JSON array format)
-                        search_content_raw = hit.entity.get("search_content", "[]")
-                        search_content = (
-                            json.loads(search_content_raw) if search_content_raw else []
-                        )
-
                         result = {
                             "id": hit.entity.get("id"),
                             "score": float(hit.score),
                             "user_id": hit.entity.get("user_id"),
                             "group_id": hit.entity.get("group_id"),
-                            "event_type": hit.entity.get("event_type"),
-                            "timestamp": datetime.fromtimestamp(
-                                hit.entity.get("timestamp", 0)
-                            ),
+                            "session_id": hit.entity.get("session_id"),
+                            "participants": hit.entity.get("participants"),
+                            "timestamp": hit.entity.get("timestamp"),
+                            "parent_type": hit.entity.get("parent_type"),
+                            "parent_id": hit.entity.get("parent_id"),
+                            "type": hit.entity.get("type"),
                             "episode": hit.entity.get("episode"),
-                            "search_content": search_content,
-                            "metadata": metadata,
                         }
                         search_results.append(result)
 
             logger.debug(
-                "✅ Vector search successful: Found %d results", len(search_results)
+                "Vector search succeeded: found %d results", len(search_results)
             )
             return search_results
 
         except Exception as e:
-            logger.error("❌ Vector search failed: %s", e)
+            logger.error("Vector search failed: %s", e)
             raise
 
     # ==================== Deletion Functionality ====================
 
-    async def delete_by_event_id(self, event_id: str) -> bool:
-        """
-        Delete episodic memory document by event_id
-
-        Args:
-            event_id: Event unique identifier
-
-        Returns:
-            Returns True if deletion succeeds, otherwise False
-        """
-        try:
-            success = await self.delete_by_id(event_id)
-            if success:
-                logger.debug(
-                    "✅ Deleted episodic memory by event_id: event_id=%s", event_id
-                )
-            return success
-        except Exception as e:
-            logger.error(
-                "❌ Failed to delete episodic memory by event_id: event_id=%s, error=%s",
-                event_id,
-                e,
-            )
-            return False
-
     async def delete_by_filters(
         self,
-        user_id: Optional[str] = None,
-        group_id: Optional[str] = None,
+        user_id: Optional[str] = MAGIC_ALL,
+        group_id: Optional[str] = MAGIC_ALL,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
     ) -> int:
         """
-        Batch delete episodic memory documents based on filter conditions
+        Batch delete episodic memory documents by filter conditions
 
         Args:
             user_id: User ID filter
@@ -353,40 +255,41 @@ class EpisodicMemoryMilvusRepository(BaseMilvusRepository[EpisodicMemoryCollecti
             Number of deleted documents
         """
         try:
-            # Build filter expression
             filter_expr = []
             # Handle user_id filter: MAGIC_ALL means no filter
-            if user_id != MAGIC_ALL and user_id:
-                filter_expr.append(f'user_id == "{user_id}"')
+            if user_id != MAGIC_ALL:
+                if (
+                    not user_id
+                ):  # None or "" -> match empty string (null mapped to "" by converter)
+                    filter_expr.append('user_id == ""')
+                else:
+                    filter_expr.append(f'user_id == "{user_id}"')
             # Handle group_id filter: MAGIC_ALL means no filter
-            if group_id != MAGIC_ALL and group_id:
-                filter_expr.append(f'group_id == "{group_id}"')
+            if group_id != MAGIC_ALL:
+                if not group_id:  # None or "" -> match empty string
+                    filter_expr.append('group_id == ""')
+                else:
+                    filter_expr.append(f'group_id == "{group_id}"')
             if start_time:
-                filter_expr.append(f'timestamp >= {int(start_time.timestamp())}')
+                filter_expr.append(f"timestamp >= {int(start_time.timestamp() * 1000)}")
             if end_time:
-                filter_expr.append(f'timestamp <= {int(end_time.timestamp())}')
+                filter_expr.append(f"timestamp <= {int(end_time.timestamp() * 1000)}")
 
             if not filter_expr:
                 raise ValueError("At least one filter condition must be provided")
 
             expr = " and ".join(filter_expr)
 
-            # First query the number of documents to delete
             results = await self.collection.query(expr=expr, output_fields=["id"])
             delete_count = len(results)
 
-            # Execute deletion
             await self.collection.delete(expr)
 
             logger.debug(
-                "✅ Batch deletion of episodic memory by filter conditions successful: Deleted %d records",
-                delete_count,
+                "Batch deleted episodic memories: deleted %d records", delete_count
             )
             return delete_count
 
         except Exception as e:
-            logger.error(
-                "❌ Batch deletion of episodic memory by filter conditions failed: %s",
-                e,
-            )
+            logger.error("Failed to batch delete episodic memories: %s", e)
             raise

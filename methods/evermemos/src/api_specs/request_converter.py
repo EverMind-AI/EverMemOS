@@ -6,179 +6,24 @@ This module contains various functions to convert external request formats to in
 
 from __future__ import annotations
 
-from datetime import datetime
 import hashlib
-from typing import Any, Dict, List, Optional
-from zoneinfo import ZoneInfo
+from typing import Any, Dict, Optional
+from datetime import datetime
 
-from api_specs.dtos import FetchMemRequest, MemorizeRequest, RawData, RetrieveMemRequest
 from api_specs.memory_models import MemoryType, RetrieveMethod
-from api_specs.memory_types import RawDataType
-from common_utils.datetime_utils import from_iso_format
-from core.observation.logger import get_logger
+from api_specs.dtos import RetrieveMemRequest, MemorizeRequest, RawData
+from api_specs.memory_types import RawDataType, ScenarioType
+from api_specs.id_generator import (
+    DEFAULT_SESSION_ID,
+    generate_single_user_group_id,
+    generate_message_id,
+    generate_assistant_sender_id,
+    validate_input_id,
+)
 from core.oxm.constants import MAGIC_ALL
+from core.observation.logger import get_logger
 
 logger = get_logger(__name__)
-
-
-def generate_single_user_group_id(sender: str) -> str:
-    """
-    Generate a group_id for single-user mode based on sender (user_id) hash.
-
-    This function creates a deterministic group_id by hashing the sender
-    and appending '_group' suffix. This is used when group_id is not provided,
-    representing single-user mode where each user's messages are extracted
-    into separate memory spaces.
-
-    Args:
-        sender: The sender user ID (equivalent to user_id internally)
-
-    Returns:
-        str: Generated group_id in format: {hash(sender)[:16]}_group
-    """
-    # Use MD5 hash for deterministic and compact result
-    hash_value = hashlib.md5(sender.encode('utf-8')).hexdigest()[:16]
-    return f"{hash_value}_group"
-
-
-class DataFields:
-    """Data field constants"""
-
-    MESSAGES = "messages"
-    RAW_DATA_TYPE = "raw_data_type"
-    GROUP_ID = "group_id"
-
-
-def _strip_if_str(value: Any) -> Any:
-    """Normalize string input by trimming leading/trailing whitespace."""
-    if isinstance(value, str):
-        return value.strip()
-    return value
-
-
-def _parse_memory_type(value: Any) -> MemoryType:
-    """Parse input value into MemoryType with string normalization."""
-    if isinstance(value, MemoryType):
-        return value
-    return MemoryType(_strip_if_str(value))
-
-
-def _parse_retrieve_method(value: Any) -> RetrieveMethod:
-    """Parse input value into RetrieveMethod with a descriptive error."""
-    if isinstance(value, RetrieveMethod):
-        return value
-    normalized = _strip_if_str(value)
-    try:
-        return RetrieveMethod(normalized)
-    except ValueError as exc:
-        raise ValueError(
-            f"Invalid retrieve_method: {normalized}. "
-            f"Supported methods: {[m.value for m in RetrieveMethod]}"
-        ) from exc
-
-
-def _parse_int(value: Any, default: int) -> int:
-    """Parse integer values from query/body payloads."""
-    if value is None:
-        return default
-    normalized = _strip_if_str(value)
-    return int(normalized)
-
-
-def _parse_float(value: Any) -> Optional[float]:
-    """Parse optional float values from query/body payloads."""
-    if value is None:
-        return None
-    normalized = _strip_if_str(value)
-    return float(normalized)
-
-
-def _parse_bool(value: Any, default: bool) -> bool:
-    """Parse optional bool values from query/body payloads."""
-    if value is None:
-        return default
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        normalized = value.strip().lower()
-        return normalized in ("true", "1", "yes")
-    return bool(value)
-
-
-def _parse_memory_types(raw_memory_types: Any) -> List[MemoryType]:
-    """Parse memory_types payload into a normalized MemoryType list."""
-    if raw_memory_types is None:
-        raw_items: List[Any] = []
-    elif isinstance(raw_memory_types, str):
-        raw_items = [
-            mt.strip() for mt in raw_memory_types.split(",") if mt and mt.strip()
-        ]
-    elif isinstance(raw_memory_types, list):
-        raw_items = raw_memory_types
-    else:
-        raw_items = [raw_memory_types]
-
-    memory_types: List[MemoryType] = []
-    for raw_item in raw_items:
-        if isinstance(raw_item, MemoryType):
-            memory_types.append(raw_item)
-            continue
-        if not isinstance(raw_item, str):
-            continue
-
-        normalized = raw_item.strip()
-        if not normalized:
-            continue
-
-        try:
-            memory_types.append(MemoryType(normalized))
-        except ValueError:
-            logger.error(f"Invalid memory_type: {raw_item}, skipping")
-
-    if not memory_types:
-        return [MemoryType.EPISODIC_MEMORY]
-    return memory_types
-
-
-def convert_dict_to_fetch_mem_request(data: Dict[str, Any]) -> FetchMemRequest:
-    """
-    Convert dictionary to FetchMemRequest object
-
-    Args:
-        data: Dictionary containing FetchMemRequest fields
-
-    Returns:
-        FetchMemRequest object
-
-    Raises:
-        ValueError: When required fields are missing or have incorrect types
-    """
-    try:
-        memory_type = _parse_memory_type(
-            data.get("memory_type", MemoryType.EPISODIC_MEMORY.value)
-        )
-        logger.debug(f"version_range: {data.get('version_range', None)}")
-
-        limit = _parse_int(data.get("limit"), default=10)
-        offset = _parse_int(data.get("offset"), default=0)
-
-        # Build FetchMemRequest object
-        return FetchMemRequest(
-            user_id=data.get(
-                "user_id", MAGIC_ALL
-            ),  # User ID, use MAGIC_ALL to skip user filtering
-            group_id=data.get(
-                "group_id", MAGIC_ALL
-            ),  # Group ID, use MAGIC_ALL to skip group filtering
-            memory_type=memory_type,
-            limit=limit,
-            offset=offset,
-            version_range=data.get("version_range", None),
-            start_time=data.get("start_time"),
-            end_time=data.get("end_time"),
-        )
-    except Exception as exc:
-        raise ValueError(f"FetchMemRequest conversion failed: {exc}") from exc
 
 
 def convert_dict_to_retrieve_mem_request(
@@ -198,24 +43,91 @@ def convert_dict_to_retrieve_mem_request(
         ValueError: When required fields are missing or have incorrect types
     """
     try:
-        retrieve_method = _parse_retrieve_method(
-            data.get("retrieve_method", RetrieveMethod.KEYWORD.value)
-        )
-        logger.debug(f"[DEBUG] converted retrieve_method: {retrieve_method}")
+        # Validate required fields: user_id or group_id at least one is required
+        # if not data.get("user_id") and not data.get("group_id"):
+        #     raise ValueError("user_id or group_id at least one is required")
 
-        top_k = _parse_int(data.get("top_k"), default=10)
-        include_metadata = _parse_bool(data.get("include_metadata"), default=True)
-        radius = _parse_float(data.get("radius"))
-        memory_types = _parse_memory_types(data.get("memory_types", []))
+        # Handle retrieve_method, use default keyword if not provided
+
+        retrieve_method_str = data.get("retrieve_method", RetrieveMethod.KEYWORD.value)
+        logger.debug(f"[DEBUG] retrieve_method_str from data: {retrieve_method_str!r}")
+
+        # Convert string to RetrieveMethod enum
+        try:
+            retrieve_method = RetrieveMethod(retrieve_method_str)
+            logger.debug(f"[DEBUG] converted to: {retrieve_method}")
+        except ValueError:
+            raise ValueError(
+                f"Invalid retrieve_method: {retrieve_method_str}. "
+                f"Supported methods: {[m.value for m in RetrieveMethod]}"
+            )
+
+        # Convert top_k to integer type (all obtained from query_params are strings)
+        # Default to -1 means return all results that meet the threshold
+        top_k = data.get("top_k", -1)
+        if isinstance(top_k, str):
+            top_k = int(top_k)
+
+        # Convert include_metadata to boolean type
+        include_metadata = data.get("include_metadata", True)
+        if isinstance(include_metadata, str):
+            include_metadata = include_metadata.lower() in ("true", "1", "yes")
+
+        # Convert radius to float type (if exists)
+        radius = data.get("radius", None)
+        if radius is not None and isinstance(radius, str):
+            radius = float(radius)
+
+        # Convert memory_types string list to MemoryType enum list
+        raw_memory_types = data.get("memory_types", [])
+        # Handle comma-separated string (from query_params)
+        if isinstance(raw_memory_types, str):
+            raw_memory_types = [
+                mt.strip() for mt in raw_memory_types.split(",") if mt.strip()
+            ]
+        memory_types = []
+        for mt in raw_memory_types:
+            if isinstance(mt, str):
+                try:
+                    memory_types.append(MemoryType(mt))
+                except ValueError:
+                    logger.error(f"Invalid memory_type: {mt}, skipping")
+            elif isinstance(mt, MemoryType):
+                memory_types.append(mt)
+
+        # Default: profile + episodic_memory if not specified
+        if not memory_types:
+            memory_types = [MemoryType.PROFILE, MemoryType.EPISODIC_MEMORY]
+
+        # Handle group_ids: support both string and array for backward compatibility
+        # Priority: group_ids (new) > group_id (old, for backward compatibility)
+        group_ids_raw = data.get("group_ids", None)
+        if group_ids_raw is None:
+            # Try legacy group_id parameter for backward compatibility
+            group_id_legacy = data.get("group_id", None)
+            if isinstance(group_id_legacy, str):
+                group_ids = [group_id_legacy]  # Convert string to array
+            elif isinstance(group_id_legacy, list):
+                group_ids = group_id_legacy
+            else:
+                group_ids = None
+        elif isinstance(group_ids_raw, str):
+            # Support comma-separated string to array (Query Param scenario)
+            group_ids = [g.strip() for g in group_ids_raw.split(",") if g.strip()]
+            # If parsed result is empty array, set to None
+            if not group_ids:
+                group_ids = None
+        elif isinstance(group_ids_raw, list):
+            group_ids = group_ids_raw if group_ids_raw else None
+        else:
+            group_ids = None
 
         return RetrieveMemRequest(
             retrieve_method=retrieve_method,
             user_id=data.get(
                 "user_id", MAGIC_ALL
             ),  # User ID, use MAGIC_ALL to skip user filtering
-            group_id=data.get(
-                "group_id", MAGIC_ALL
-            ),  # Group ID, use MAGIC_ALL to skip group filtering
+            group_ids=group_ids,  # Group IDs array (List[str] or None)
             query=query or data.get("query", None),
             memory_types=memory_types,
             top_k=top_k,
@@ -224,200 +136,555 @@ def convert_dict_to_retrieve_mem_request(
             end_time=data.get("end_time", None),
             radius=radius,  # COSINE similarity threshold
         )
-    except Exception as exc:
-        raise ValueError(f"RetrieveMemRequest conversion failed: {exc}") from exc
+    except Exception as e:
+        raise ValueError(f"RetrieveMemRequest conversion failed: {e}")
 
 
 # =========================================
 
 
-def normalize_refer_list(refer_list: List[Any]) -> List[str]:
+def _normalize_content_items(content_items: list) -> list:
+    """Normalize ContentItem dicts: rename 'content' to 'text' for type='text' items.
+
+    Accepts both legacy {type: "text", content: "..."} and canonical
+    {type: "text", text: "..."} formats. Output always uses 'text'.
     """
-    Normalize refer_list format to a list of message IDs
-
-    Supports two formats:
-    1. String list: ["msg_id_1", "msg_id_2"]
-    2. MessageReference object list: [{"message_id": "msg_id_1", ...}, ...]
-
-    Args:
-        refer_list: Original reference list
-
-    Returns:
-        List[str]: Normalized list of message IDs
-    """
-    if not refer_list:
-        return []
-
-    normalized: List[str] = []
-    for refer in refer_list:
-        if isinstance(refer, str):
-            normalized.append(refer)
-        elif isinstance(refer, dict):
-            ref_msg_id = refer.get("message_id")
-            if ref_msg_id:
-                normalized.append(str(ref_msg_id))
+    normalized = []
+    for item in content_items:
+        if not isinstance(item, dict):
+            normalized.append(item)
+            continue
+        if item.get("type") == "text" and "content" in item and "text" not in item:
+            content_value = item["content"]
+            item = {k: v for k, v in item.items() if k != "content"}
+            item["text"] = content_value
+        normalized.append(item)
     return normalized
 
 
-def build_raw_data_from_simple_message(
+def build_raw_data_from_message(
     message_id: str,
-    sender: str,
-    content: str,
+    sender_id: str,
+    content_items: list,
     timestamp: datetime,
     sender_name: Optional[str] = None,
     role: Optional[str] = None,
-    group_id: Optional[str] = None,
-    group_name: Optional[str] = None,
-    refer_list: Optional[List[str]] = None,
-    extra_metadata: Optional[Dict[str, Any]] = None,
+    tool_calls: Optional[list] = None,
+    tool_call_id: Optional[str] = None,
 ) -> RawData:
     """
-    Build RawData object from simple message fields.
+    Build RawData object from message fields.
 
-    This is the canonical function for creating RawData from simple message format.
-    All code that needs to create RawData from simple messages should use this function
-    to ensure consistency.
+    This is the canonical function for creating RawData from messages.
+    The content dict mirrors the v1 API message format, with content as
+    a list of content items [{type: "text", text: "..."}].
 
     Args:
         message_id: Message ID (required)
-        sender: Sender user ID (required)
-        content: Message content (required)
+        sender_id: Sender user ID (required)
+        content_items: Content items list [{type, text}] in v1 format (required)
         timestamp: Message timestamp as datetime object (required)
-        sender_name: Sender display name (defaults to sender if not provided)
-        role: Message sender role, "user" for human or "assistant" for AI (optional)
-        group_id: Group ID (optional)
-        group_name: Group name (optional)
-        refer_list: Normalized list of referenced message IDs (optional)
-        extra_metadata: Additional metadata to merge (optional)
+        sender_name: Sender display name (defaults to sender_id if not provided)
+        role: Message sender role, "user", "assistant", or "tool" (required)
+        tool_calls: Tool calls from assistant (OpenAI format, optional)
+        tool_call_id: Tool call ID this message responds to (role=tool, optional)
 
     Returns:
         RawData: Fully constructed RawData object
     """
-    # Use sender as sender_name if not provided
     if sender_name is None:
-        sender_name = sender
+        sender_name = sender_id
 
-    # Ensure refer_list is a list
-    if refer_list is None:
-        refer_list = []
-
-    # Build content dictionary with all required fields
     raw_content = {
-        "speaker_name": sender_name,
-        "role": role,  # Message sender role: "user" or "assistant"
-        "receiverId": None,
-        "roomId": group_id,
-        "groupName": group_name,
-        "userIdList": [],
-        "referList": refer_list,
-        "content": content,
+        "message_id": message_id,
+        "sender_id": sender_id,
+        "sender_name": sender_name,
+        "role": role,
+        "content": content_items,
         "timestamp": timestamp,
-        "createBy": sender,
-        "updateTime": timestamp,
-        "orgId": None,
-        "speaker_id": sender,
-        "msgType": 1,  # TEXT
-        "data_id": message_id,
     }
 
-    # Build metadata
-    metadata = {
-        "original_id": message_id,
-        "createTime": timestamp,
-        "updateTime": timestamp,
-        "createBy": sender,
-        "orgId": None,
-    }
+    # Add OpenAI-format agent fields if present
+    if tool_calls:
+        raw_content["tool_calls"] = tool_calls
+    if tool_call_id:
+        raw_content["tool_call_id"] = tool_call_id
 
-    # Merge extra metadata if provided
-    if extra_metadata:
-        metadata.update(extra_metadata)
+    metadata = {"original_id": message_id}
 
     return RawData(content=raw_content, data_id=message_id, metadata=metadata)
 
 
-async def convert_simple_message_to_memorize_request(
-    message_data: Dict[str, Any],
-) -> MemorizeRequest:
-    """
-    Convert simple direct single message format directly to MemorizeRequest
+def _unix_ms_to_datetime(unix_ms: int) -> datetime:
+    """Convert unix milliseconds timestamp to timezone-aware datetime.
 
-    This is a unified conversion function that combines the previous two-step conversion
-    (convert_simple_message_to_memorize_input + handle_conversation_format) into one.
+    Uses project timezone from TZ env var (default: UTC).
 
     Args:
-        message_data: Simple single message data, containing:
-            - sender (required): Sender user ID (also used as user_id internally)
-            - group_id (optional): Group ID. If not provided, will auto-generate based on
-              hash(sender) + '_group' suffix for single-user mode
-            - group_name (optional): Group name
-            - message_id (required): Message ID
-            - create_time (required): Creation time (ISO 8601 format)
-            - sender_name (optional): Sender name
-            - role (optional): Message sender role ("user" for human, "assistant" for AI)
-            - content (required): Message content
-            - refer_list (optional): List of referenced message IDs
+        unix_ms: Unix timestamp in milliseconds
 
     Returns:
-        MemorizeRequest: Ready-to-use memorize request object
-
-    Raises:
-        ValueError: When required fields are missing
+        datetime: Timezone-aware datetime
     """
-    # Extract fields
-    group_id = message_data.get("group_id")
-    group_name = message_data.get("group_name")
-    message_id = message_data.get("message_id")
-    create_time_str = message_data.get("create_time")
-    sender = message_data.get("sender")
-    sender_name = message_data.get("sender_name", sender)
-    role = message_data.get("role")  # "user" or "assistant"
-    content = message_data.get("content", "")
-    refer_list = message_data.get("refer_list", [])
+    from common_utils.datetime_utils import from_timestamp
 
-    # Validate required fields
-    if not sender:
-        raise ValueError("Missing required field: sender")
-    if not message_id:
-        raise ValueError("Missing required field: message_id")
-    if not create_time_str:
-        raise ValueError("Missing required field: create_time")
-    if not content:
-        raise ValueError("Missing required field: content")
+    return from_timestamp(unix_ms)
 
-    # Auto-generate group_id if not provided (single-user mode)
-    if not group_id:
-        group_id = generate_single_user_group_id(sender)
-        logger.debug(
-            f"Auto-generated group_id for single-user mode: {group_id} (sender: {sender})"
+
+def convert_personal_add_to_memorize_request(
+    request_data: Dict[str, Any]
+) -> MemorizeRequest:
+    """
+    Convert POST /api/v1/memories (personal add) request to MemorizeRequest.
+
+    Personal add: user_id is the owner. group_id = hash(user_id).
+    session_id is propagated through for conversation isolation.
+
+    Args:
+        request_data: Personal add request body with fields:
+            - user_id (required): Owner user ID
+            - session_id (optional): Session identifier
+            - messages (required): List of message objects
+
+    Returns:
+        MemorizeRequest
+    """
+    user_id = request_data.get("user_id")
+    session_id = request_data.get("session_id", DEFAULT_SESSION_ID)
+    messages = request_data.get("messages", [])
+
+    if not user_id:
+        raise ValueError("Missing required field: user_id")
+    if "session_id" in request_data and request_data["session_id"] is not None:
+        validate_input_id("session_id", session_id)
+    if not messages:
+        raise ValueError("Missing required field: messages")
+
+    # Personal scene: group_id = hash(user_id)
+    group_id = generate_single_user_group_id(user_id)
+
+    raw_data_list = []
+    latest_timestamp = None
+
+    for msg in messages:
+        # Validate content field: accept plain string or array (v1 format)
+        content_items = msg.get("content", [])
+        if isinstance(content_items, str):
+            if not content_items:
+                raise ValueError("Missing required field: messages[].content")
+            content_items = [{"type": "text", "text": content_items}]
+        elif not content_items or not isinstance(content_items, list):
+            raise ValueError(
+                "Missing required field: messages[].content (must be a non-empty string or array)"
+            )
+        content_items = _normalize_content_items(content_items)
+
+        # Parse timestamp from unix ms
+        created_at_ms = msg.get("timestamp")
+        if not created_at_ms:
+            raise ValueError("Missing required field: messages[].timestamp")
+        timestamp = _unix_ms_to_datetime(created_at_ms)
+        if latest_timestamp is None or timestamp > latest_timestamp:
+            latest_timestamp = timestamp
+
+        user_message_id = msg.get("message_id")
+        if user_message_id:
+            validate_input_id("message_id", user_message_id)
+        message_id = user_message_id or generate_message_id(user_id, created_at_ms)
+
+        role = msg.get("role")
+        if not role:
+            raise ValueError("Missing required field: messages[].role")
+        if role not in ("user", "assistant"):
+            raise ValueError(
+                f"Invalid value for messages[].role: '{role}'. Must be 'user' or 'assistant'"
+            )
+        sender_id = msg.get("sender_id")
+        if sender_id:
+            validate_input_id("sender_id", sender_id)
+
+        # Personal scene: role determines sender_id
+        if role == "user":
+            if sender_id and sender_id != user_id:
+                raise ValueError(
+                    f"sender_id mismatch: role=user requires sender_id={user_id}, got {sender_id}"
+                )
+            sender_id = user_id
+        else:
+            # role is assistant
+            if sender_id and sender_id == user_id:
+                raise ValueError(
+                    f"sender_id conflict: role={role} cannot use user_id as sender_id"
+                )
+            if not sender_id:
+                sender_id = generate_assistant_sender_id(user_id)
+
+        sender_name = msg.get("sender_name", sender_id)
+
+        raw_data = build_raw_data_from_message(
+            message_id=message_id,
+            sender_id=sender_id,
+            content_items=content_items,
+            timestamp=timestamp,
+            sender_name=sender_name,
+            role=role,
         )
+        raw_data_list.append(raw_data)
 
-    # Normalize refer_list
-    normalized_refer_list = normalize_refer_list(refer_list)
-
-    # Parse timestamp
-    timestamp = from_iso_format(create_time_str, ZoneInfo("UTC"))
-
-    # Build RawData using the canonical function
-    raw_data = build_raw_data_from_simple_message(
-        message_id=message_id,
-        sender=sender,
-        content=content,
-        timestamp=timestamp,
-        sender_name=sender_name,
-        role=role,
-        group_id=group_id,
-        group_name=group_name,
-        refer_list=normalized_refer_list,
-    )
-
-    # Create and return MemorizeRequest
     return MemorizeRequest(
         history_raw_data_list=[],
-        new_raw_data_list=[raw_data],
+        new_raw_data_list=raw_data_list,
         raw_data_type=RawDataType.CONVERSATION,
-        user_id_list=[],
         group_id=group_id,
-        group_name=group_name,
-        current_time=timestamp,
+        current_time=latest_timestamp,
+        flush=False,
+        session_id=session_id,
+        scene=ScenarioType.SOLO.value,
+    )
+
+
+def convert_group_add_to_memorize_request(
+    request_data: Dict[str, Any]
+) -> MemorizeRequest:
+    """
+    Convert POST /api/v1/memories/group (group add) request to MemorizeRequest.
+
+    Group add: group_id is provided directly. sender_id = user_id internally.
+
+    Args:
+        request_data: Group add request body with fields:
+            - group_id (required): Group identifier
+            - group_meta (optional): Group metadata (name, description)
+            - messages (required): List of message objects
+
+    Returns:
+        MemorizeRequest
+    """
+    group_id = request_data.get("group_id")
+    messages = request_data.get("messages", [])
+
+    if not group_id:
+        raise ValueError("Missing required field: group_id")
+    validate_input_id("group_id", group_id)
+    if not messages:
+        raise ValueError("Missing required field: messages")
+
+    raw_data_list = []
+    latest_timestamp = None
+
+    for msg in messages:
+        # Validate content field: accept plain string or array (v1 format)
+        content_items = msg.get("content", [])
+        if isinstance(content_items, str):
+            if not content_items:
+                raise ValueError("Missing required field: messages[].content")
+            content_items = [{"type": "text", "text": content_items}]
+        elif not content_items or not isinstance(content_items, list):
+            raise ValueError(
+                "Missing required field: messages[].content (must be a non-empty string or array)"
+            )
+        content_items = _normalize_content_items(content_items)
+
+        created_at_ms = msg.get("timestamp")
+        if not created_at_ms:
+            raise ValueError("Missing required field: messages[].timestamp")
+        timestamp = _unix_ms_to_datetime(created_at_ms)
+        if latest_timestamp is None or timestamp > latest_timestamp:
+            latest_timestamp = timestamp
+
+        user_message_id = msg.get("message_id")
+        if user_message_id:
+            validate_input_id("message_id", user_message_id)
+        message_id = user_message_id or generate_message_id(group_id, created_at_ms)
+
+        sender_id = msg.get("sender_id")
+        if not sender_id:
+            raise ValueError(
+                "Missing required field: messages[].sender_id (required for group)"
+            )
+        validate_input_id("sender_id", sender_id)
+        sender_name = msg.get("sender_name", sender_id)
+        role = msg.get("role")
+        if not role:
+            raise ValueError("Missing required field: messages[].role")
+        if role not in ("user", "assistant"):
+            raise ValueError(
+                f"Invalid value for messages[].role: '{role}'. Must be 'user' or 'assistant'"
+            )
+
+        raw_data = build_raw_data_from_message(
+            message_id=message_id,
+            sender_id=sender_id,
+            content_items=content_items,
+            timestamp=timestamp,
+            sender_name=sender_name,
+            role=role,
+        )
+        raw_data_list.append(raw_data)
+
+    # Group scene: no session isolation
+    return MemorizeRequest(
+        history_raw_data_list=[],
+        new_raw_data_list=raw_data_list,
+        raw_data_type=RawDataType.CONVERSATION,
+        group_id=group_id,
+        current_time=latest_timestamp,
+        flush=False,
+        session_id=DEFAULT_SESSION_ID,
+        scene=ScenarioType.TEAM.value,
+    )
+
+
+def convert_personal_flush_to_memorize_request(
+    request_data: Dict[str, Any]
+) -> MemorizeRequest:
+    """
+    Convert POST /api/v1/memories/flush (personal flush) to MemorizeRequest.
+
+    Flush sends no messages, just triggers boundary detection on accumulated data.
+
+    Args:
+        request_data: Personal flush request body with fields:
+            - user_id (required): Owner user ID
+            - session_id (optional): Target session
+
+    Returns:
+        MemorizeRequest with empty new_raw_data_list and flush=True
+    """
+    user_id = request_data.get("user_id")
+    session_id = request_data.get("session_id", DEFAULT_SESSION_ID)
+
+    if not user_id:
+        raise ValueError("Missing required field: user_id")
+    if "session_id" in request_data and request_data["session_id"] is not None:
+        validate_input_id("session_id", session_id)
+
+    group_id = generate_single_user_group_id(user_id)
+
+    from common_utils.datetime_utils import get_now_with_timezone
+
+    return MemorizeRequest(
+        history_raw_data_list=[],
+        new_raw_data_list=[],
+        raw_data_type=RawDataType.CONVERSATION,
+        group_id=group_id,
+        current_time=get_now_with_timezone(),
+        flush=True,
+        session_id=session_id,
+        scene=ScenarioType.SOLO.value,
+    )
+
+
+def convert_agent_flush_to_memorize_request(
+    request_data: Dict[str, Any]
+) -> MemorizeRequest:
+    """
+    Convert POST /api/v1/memories/agent/flush (agent flush) to MemorizeRequest.
+
+    Same as personal flush but with raw_data_type = AGENTCONVERSATION,
+    so flush uses AgentMemCellExtractor for boundary detection.
+
+    Args:
+        request_data: Agent flush request body with fields:
+            - user_id (required): Owner user ID
+            - session_id (optional): Target session
+
+    Returns:
+        MemorizeRequest with flush=True and raw_data_type=AGENTCONVERSATION
+    """
+    user_id = request_data.get("user_id")
+    session_id = request_data.get("session_id", DEFAULT_SESSION_ID)
+
+    if not user_id:
+        raise ValueError("Missing required field: user_id")
+    if "session_id" in request_data and request_data["session_id"] is not None:
+        validate_input_id("session_id", session_id)
+
+    group_id = generate_single_user_group_id(user_id)
+
+    from common_utils.datetime_utils import get_now_with_timezone
+
+    return MemorizeRequest(
+        history_raw_data_list=[],
+        new_raw_data_list=[],
+        raw_data_type=RawDataType.AGENTCONVERSATION,
+        group_id=group_id,
+        current_time=get_now_with_timezone(),
+        flush=True,
+        session_id=session_id,
+        scene=ScenarioType.SOLO.value,
+    )
+
+
+def convert_group_flush_to_memorize_request(
+    request_data: Dict[str, Any]
+) -> MemorizeRequest:
+    """
+    Convert POST /api/v1/memories/group/flush (group flush) to MemorizeRequest.
+
+    Flush sends no messages, just triggers boundary detection on accumulated data.
+
+    Args:
+        request_data: Group flush request body with fields:
+            - group_id (required): Target group
+
+    Returns:
+        MemorizeRequest with empty new_raw_data_list and flush=True
+    """
+    group_id = request_data.get("group_id")
+
+    if not group_id:
+        raise ValueError("Missing required field: group_id")
+    validate_input_id("group_id", group_id)
+
+    from common_utils.datetime_utils import get_now_with_timezone
+
+    return MemorizeRequest(
+        history_raw_data_list=[],
+        new_raw_data_list=[],
+        raw_data_type=RawDataType.CONVERSATION,
+        group_id=group_id,
+        current_time=get_now_with_timezone(),
+        flush=True,
+        session_id=DEFAULT_SESSION_ID,
+        scene=ScenarioType.TEAM.value,
+    )
+
+
+def convert_agent_add_to_memorize_request(
+    request_data: Dict[str, Any]
+) -> MemorizeRequest:
+    """
+    Convert POST /api/v1/memories/agent (agent add) request to MemorizeRequest.
+
+    Mirrors personal add logic with agent-specific extensions:
+    - role supports "user", "assistant", "tool"
+    - tool_calls / tool_call_id stored in RawData content
+    - raw_data_type = AGENTCONVERSATION
+
+    Args:
+        request_data: Agent add request body with fields:
+            - user_id (required): Owner user ID
+            - session_id (optional): Session identifier
+            - messages (required): List of agent trajectory messages
+
+    Returns:
+        MemorizeRequest
+    """
+    user_id = request_data.get("user_id")
+    session_id = request_data.get("session_id", DEFAULT_SESSION_ID)
+    messages = request_data.get("messages", [])
+
+    if not user_id:
+        raise ValueError("Missing required field: user_id")
+    if "session_id" in request_data and request_data["session_id"] is not None:
+        validate_input_id("session_id", session_id)
+    if not messages:
+        raise ValueError("Missing required field: messages")
+
+    # Same as personal: group_id = hash(user_id)
+    group_id = generate_single_user_group_id(user_id)
+
+    raw_data_list = []
+    latest_timestamp = None
+
+    for msg in messages:
+        # Parse timestamp
+        created_at_ms = msg.get("timestamp")
+        if not created_at_ms:
+            raise ValueError("Missing required field: messages[].timestamp")
+        timestamp = _unix_ms_to_datetime(created_at_ms)
+        if latest_timestamp is None or timestamp > latest_timestamp:
+            latest_timestamp = timestamp
+
+        # Validate role
+        role = msg.get("role")
+        if not role:
+            raise ValueError("Missing required field: messages[].role")
+        if role not in ("user", "assistant", "tool"):
+            raise ValueError(
+                f"Invalid value for messages[].role: '{role}'. "
+                "Must be 'user', 'assistant', or 'tool'"
+            )
+
+        # Validate content - accept plain string or array (v1 format)
+        content_items = msg.get("content", [])
+        tool_calls = msg.get("tool_calls")
+        tool_call_id = msg.get("tool_call_id")
+
+        if role == "tool" and not tool_call_id:
+            raise ValueError(
+                "Missing required field: messages[].tool_call_id (required when role='tool')"
+            )
+
+        # assistant messages with tool_calls may have empty/null content
+        if isinstance(content_items, str):
+            if not content_items:
+                if role == "assistant" and tool_calls:
+                    content_items = [{"type": "text", "text": ""}]
+                else:
+                    raise ValueError("Missing required field: messages[].content")
+            else:
+                content_items = [{"type": "text", "text": content_items}]
+        elif not content_items or not isinstance(content_items, list):
+            if role == "assistant" and tool_calls:
+                content_items = [{"type": "text", "text": ""}]
+            else:
+                raise ValueError(
+                    "Missing required field: messages[].content (must be a non-empty string or array)"
+                )
+        content_items = _normalize_content_items(content_items)
+
+        # Message ID
+        user_message_id = msg.get("message_id")
+        if user_message_id:
+            validate_input_id("message_id", user_message_id)
+        message_id = user_message_id or generate_message_id(user_id, created_at_ms)
+
+        # sender_id logic
+        sender_id = msg.get("sender_id")
+        if role == "user":
+            if sender_id and sender_id != user_id:
+                raise ValueError(
+                    f"sender_id mismatch: role=user requires sender_id={user_id}, got {sender_id}"
+                )
+            sender_id = user_id
+        elif role == "assistant":
+            if sender_id and sender_id == user_id:
+                raise ValueError(
+                    f"sender_id conflict: role=assistant cannot use user_id as sender_id"
+                )
+            if not sender_id:
+                hash_val = hashlib.md5(f"{user_id}_assistant".encode()).hexdigest()[:12]
+                sender_id = f"{hash_val}_assistant"
+        elif role == "tool":
+            if not sender_id:
+                hash_val = hashlib.md5(
+                    f"{user_id}_tool_{tool_call_id}".encode()
+                ).hexdigest()[:12]
+                sender_id = f"{hash_val}_tool"
+
+        sender_name = msg.get("sender_name", sender_id)
+
+        raw_data = build_raw_data_from_message(
+            message_id=message_id,
+            sender_id=sender_id,
+            content_items=content_items,
+            timestamp=timestamp,
+            sender_name=sender_name,
+            role=role,
+            tool_calls=tool_calls,
+            tool_call_id=tool_call_id,
+        )
+        raw_data_list.append(raw_data)
+
+    return MemorizeRequest(
+        history_raw_data_list=[],
+        new_raw_data_list=raw_data_list,
+        raw_data_type=RawDataType.AGENTCONVERSATION,
+        group_id=group_id,
+        current_time=latest_timestamp,
+        flush=False,
+        session_id=session_id,
+        scene=ScenarioType.SOLO.value,
     )

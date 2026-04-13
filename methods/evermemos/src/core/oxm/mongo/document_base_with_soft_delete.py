@@ -207,6 +207,41 @@ class DocumentBaseWithSoftDelete(DocumentBase):
             return {}
         return {"deleted_at": None}
 
+    @classmethod
+    async def count(cls, include_deleted: bool = False, **kwargs) -> int:
+        """
+        Count documents in the collection, with soft delete awareness
+
+        By default, excludes soft-deleted documents (deleted_at is not None).
+        Set include_deleted=True to count all documents including deleted ones.
+
+        Performance notes:
+            - When include_deleted=True: uses estimated_document_count() (fast, ~1ms)
+            - When include_deleted=False: uses count_documents() with filter (requires deleted_at index)
+
+        Args:
+            include_deleted: Whether to include soft-deleted documents, default False
+
+        Returns:
+            int: Document count
+
+        Example:
+            # Count only non-deleted documents (default)
+            active_count = await User.count()
+
+            # Count all documents including deleted
+            total_count = await User.count(include_deleted=True)
+        """
+        collection = cls.get_pymongo_collection()
+
+        if include_deleted:
+            # Fast estimation for all documents
+            return await collection.estimated_document_count()
+        else:
+            # Precise count excluding soft-deleted documents
+            # Requires index on deleted_at field for performance
+            return await collection.count_documents({"deleted_at": None})
+
     async def delete(
         self,
         session: Optional[AsyncClientSession] = None,

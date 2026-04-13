@@ -1,20 +1,20 @@
 """
 Foresight Elasticsearch Repository
 
-Foresight-specific repository class based on BaseRepository, providing efficient BM25 text retrieval and complex query capabilities.
-Reuses EpisodicMemoryDoc, filtering by type field as foresight.
+V1 simplified repository for BM25 text retrieval.
+Only maps search-essential fields. Full data retrieved from MongoDB using parent_id.
 """
 
-from datetime import datetime
 import pprint
+from datetime import datetime
 from typing import List, Optional, Dict, Any
 from elasticsearch.dsl import Q
 from core.oxm.es.base_repository import BaseRepository
 from core.oxm.constants import MAGIC_ALL
 from infra_layer.adapters.out.search.elasticsearch.memory.foresight import ForesightDoc
 from core.observation.logger import get_logger
-from common_utils.datetime_utils import get_now_with_timezone
 from common_utils.text_utils import SmartTextParser
+from common_utils.datetime_utils import get_now_with_timezone
 from core.di.decorators import repository
 
 logger = get_logger(__name__)
@@ -25,43 +25,26 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
     """
     Foresight Elasticsearch Repository
 
-    Specialized repository class based on BaseRepository, providing:
-    - Efficient BM25 text retrieval
-    - Multi-term query and filtering capabilities
-    - Document creation and management
-    - Manual index refresh control
-
-    Note: Reuses EpisodicMemoryDoc, filtering by type field as foresight.
+    V1 simplified repository for BM25 text retrieval.
+    Only stores search-essential fields in ES.
+    Full data is retrieved from MongoDB using parent_id.
     """
 
     def __init__(self):
         """Initialize foresight repository"""
         super().__init__(ForesightDoc)
-        # Initialize smart text parser for calculating intelligent length of query terms
         self._text_parser = SmartTextParser()
 
     def _calculate_text_score(self, text: str) -> float:
-        """
-        Calculate intelligent score of text
-
-        Uses SmartTextParser to compute total score of text, considering weights of different types such as CJK characters, English words, etc.
-
-        Args:
-            text: Text to calculate score for
-
-        Returns:
-            float: Intelligent score of the text
-        """
+        """Calculate intelligent score of text"""
         if not text:
             return 0.0
-
         try:
             tokens = self._text_parser.parse_tokens(text)
             return self._text_parser.calculate_total_score(tokens)
         except (ValueError, TypeError, AttributeError) as e:
             logger.warning(
-                "Failed to calculate text score, using character length as fallback: %s",
-                e,
+                "Failed to calculate text score, using character length: %s", e
             )
             return float(len(text))
 
@@ -77,14 +60,36 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
         """
         pprint.pprint(explanation, indent=indent)
 
+    def _parse_datetime(self, value: Any) -> Optional[datetime]:
+        """
+        Parse a datetime value from various formats
+
+        Args:
+            value: Value to parse (string, datetime, or None)
+
+        Returns:
+            Parsed datetime or None
+        """
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value)
+            except ValueError:
+                try:
+                    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+                except ValueError:
+                    return None
+        return None
+
     # ==================== Document creation and management ====================
 
     async def create_and_save_foresight(
         self,
         id: str,
         user_id: str,
-        user_name: str,
-        timestamp: datetime,
         content: str,
         search_content: List[str],
         parent_id: str,
@@ -92,11 +97,11 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
         event_type: Optional[str] = None,
         group_id: Optional[str] = None,
         participants: Optional[List[str]] = None,
+        sender_ids: Optional[List[str]] = None,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
         duration_days: Optional[int] = None,
         evidence: Optional[str] = None,
-        extend: Optional[Dict[str, Any]] = None,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,
     ) -> ForesightDoc:
@@ -106,7 +111,6 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
         Args:
             id: Unique identifier for memory
             user_id: User ID (required)
-            timestamp: Event occurrence time (required)
             content: Foresight content (required)
             search_content: List of search content (supports multiple search terms, required)
             parent_id: Parent memory ID
@@ -117,7 +121,6 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
             end_time: Validity end time
             duration_days: Duration in days
             evidence: Evidence (original factual basis)
-            extend: Extension fields
             created_at: Creation time
             updated_at: Update time
 
@@ -132,31 +135,19 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
             if updated_at is None:
                 updated_at = now
 
-            # Build extend field, including foresight-specific information
-            foresight_extend = extend or {}
-            foresight_extend.update(
-                {
-                    "start_time": start_time.isoformat() if start_time else None,
-                    "end_time": end_time.isoformat() if end_time else None,
-                    "duration_days": duration_days,
-                }
-            )
-
             # Create document instance
             doc = ForesightDoc(
                 id=id,
                 type=event_type,
                 user_id=user_id,
-                user_name=user_name or '',
-                timestamp=timestamp,
                 foresight=content,
                 search_content=search_content,
                 evidence=evidence or '',
                 group_id=group_id,
                 participants=participants or [],
+                sender_ids=sender_ids or [],
                 parent_type=parent_type,
                 parent_id=parent_id,
-                extend=foresight_extend,
                 created_at=created_at,
                 updated_at=updated_at,
             )
@@ -166,16 +157,14 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
             await doc.save(using=client)
 
             logger.debug(
-                "✅ Created foresight document successfully: id=%s, user_id=%s",
+                "Created foresight document successfully: id=%s, user_id=%s",
                 id,
                 user_id,
             )
             return doc
 
         except Exception as e:
-            logger.error(
-                "❌ Failed to create foresight document: id=%s, error=%s", id, e
-            )
+            logger.error("Failed to create foresight document: id=%s, error=%s", id, e)
             raise
 
     # ==================== Search functionality ====================
@@ -184,66 +173,63 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
         self,
         query: List[str],
         user_id: Optional[str] = None,
-        group_id: Optional[str] = None,
+        group_ids: Optional[List[str]] = None,
+        sender_id: Optional[str] = None,
+        session_id: Optional[str] = None,
         parent_type: Optional[str] = None,
         parent_id: Optional[str] = None,
-        keywords: Optional[List[str]] = None,
         date_range: Optional[Dict[str, Any]] = None,
         size: int = 10,
         from_: int = 0,
-        explain: bool = False,
-        participant_user_id: Optional[str] = None,
-        current_time: Optional[datetime] = None,
-    ) -> Dict[str, Any]:
+    ) -> List[Dict[str, Any]]:
         """
-        Unified search interface using elasticsearch-dsl, supporting multi-term queries and comprehensive filtering
-
-        Uses function_score query to achieve cumulative scoring based on number of matching terms.
-        Automatically filters documents with type="foresight".
+        BM25 text search for foresight records
 
         Args:
-            query: List of search terms, supports multiple terms
+            query: List of search terms
             user_id: User ID filter
-            group_id: Group ID filter
-            parent_type: Parent type filter (e.g., "memcell", "episode")
+            group_ids: List of Group IDs to filter
+            sender_id: Sender ID filter
+            session_id: Session ID filter
+            parent_type: Parent type filter
             parent_id: Parent memory ID filter
-            keywords: Keyword filter
-            date_range: Time range filter, format: {"gte": "2024-01-01", "lte": "2024-12-31"}
+            date_range: Time range filter
             size: Number of results
-            from_: Pagination starting position
-            explain: Whether to enable score explanation mode
-            participant_user_id: When retrieving group data, additionally require this user to be a participant
-            current_time: Current time (only used when filtering by start/end validity period)
+            from_: Pagination start position
 
         Returns:
-            Hits portion of search results, containing matched document data
+            List of search hits with matched document data
         """
         try:
-            # Create AsyncSearch object
             search = ForesightDoc.search()
 
             # Build filter conditions
             filter_queries = []
 
-            # Handle user_id filter: MAGIC_ALL means no filter
+            # Handle user_id filter
             if user_id != MAGIC_ALL:
                 if user_id and user_id != "":
                     filter_queries.append(Q("term", user_id=user_id))
-                elif user_id is None or user_id == "":
-                    # Explicitly filter for null or empty: documents where user_id does not exist
+                else:
+                    # user_id must not exist: match docs where field is missing or ""
                     filter_queries.append(
-                        Q("bool", must_not=Q("exists", field="user_id"))
+                        Q("bool", should=[
+                            Q("bool", must_not=[Q("exists", field="user_id")]),
+                            Q("term", user_id=""),
+                        ], minimum_should_match=1)
                     )
 
-            # Handle group_id filter: MAGIC_ALL means no filter
-            if group_id != MAGIC_ALL:
-                if group_id and group_id != "":
-                    filter_queries.append(Q("term", group_id=group_id))
-                elif group_id is None or group_id == "":
-                    # Explicitly filter for null or empty: documents where group_id does not exist
-                    filter_queries.append(
-                        Q("bool", must_not=Q("exists", field="group_id"))
-                    )
+            # Handle group_ids filter
+            if group_ids is not None and len(group_ids) > 0:
+                filter_queries.append(Q("terms", group_id=group_ids))
+
+            # Handle sender_id filter (match against sender_ids array)
+            if sender_id:
+                filter_queries.append(Q("term", sender_ids=sender_id))
+
+            # Handle session_id filter
+            if session_id:
+                filter_queries.append(Q("term", session_id=session_id))
 
             # Handle parent_id filter
             if parent_id:
@@ -253,14 +239,12 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
             if parent_type:
                 filter_queries.append(Q("term", parent_type=parent_type))
 
-            if keywords:
-                filter_queries.append(Q("terms", keywords=keywords))
             if date_range:
-                filter_queries.append(Q("range", timestamp=date_range))
+                filter_queries.append(Q("range", created_at=date_range))
 
-            # Use different query templates based on whether there are query terms
+            # Build query
             if query:
-                # Filter query terms by intelligent score, keep top 10 highest scoring terms
+                # Filter query terms by intelligent score
                 query_with_scores = [
                     (word, self._calculate_text_score(word)) for word in query
                 ]
@@ -268,144 +252,131 @@ class ForesightEsRepository(BaseRepository[ForesightDoc]):
                     query_with_scores, key=lambda x: x[1], reverse=True
                 )[:10]
 
-                # Build should clauses
+                # Build should clauses - no text fields in ForesightDoc for BM25
+                # Only filtering is supported, rely on Milvus for vector search
                 should_queries = []
                 for word, word_score in sorted_query_with_scores:
                     should_queries.append(
                         Q("match", search_content={"query": word, "boost": word_score})
                     )
 
-                # Build bool query parameters
                 bool_query_params = {
                     "should": should_queries,
                     "minimum_should_match": 1,
                 }
 
-                # If there are filter conditions, add to must clause
                 if filter_queries:
                     bool_query_params["must"] = filter_queries
 
-                # Use bool query
                 search = search.query(Q("bool", **bool_query_params))
             else:
-                # Case without query terms: pure filtering query
+                # Pure filtering query
                 if filter_queries:
                     search = search.query(Q("bool", filter=filter_queries))
                 else:
                     search = search.query(Q("match_all"))
 
-                # Sort by timestamp descending when no query terms
-                search = search.sort({"timestamp": {"order": "desc"}})
+                search = search.sort({"created_at": {"order": "desc"}})
 
-            # Set pagination parameters
             search = search[from_ : from_ + size]
 
             logger.debug("foresight search query: %s", search.to_dict())
 
-            # Execute search
-            if explain and query:
-                # explain mode
-                client = await self.get_client()
-                index_name = self.get_index_name()
+            response = await search.execute()
 
-                search_body = search.to_dict()
-                search_response = await client.search(
-                    index=index_name, body=search_body, explain=True
-                )
+            hits = []
+            for hit in response.hits:
+                hit_data = {
+                    "_id": hit.meta.id,
+                    "_score": hit.meta.score,
+                    "_source": hit.to_dict(),
+                }
+                hits.append(hit_data)
 
-                # Convert to standard format and output explanation
-                hits = []
-                for hit_data in search_response["hits"]["hits"]:
-                    hits.append(hit_data)
+            logger.debug(
+                "Foresight search succeeded: query=%s, user_id=%s, found %d results",
+                query,
+                user_id,
+                len(hits),
+            )
 
-                    # Output explanation information
-                    if "_explanation" in hit_data:
-                        explanation = hit_data["_explanation"]
-                        self._log_explanation_details(explanation, indent=2)
-
-                logger.debug(
-                    "✅ Foresight DSL multi-term search succeeded (explain mode): query=%s, user_id=%s, found %d results",
-                    search.to_dict(),
-                    user_id,
-                    len(hits),
-                )
-            else:
-                # Normal mode
-                response = await search.execute()
-
-                # Convert to standard format
-                hits = []
-                for hit in response.hits:
-                    hit_data = {
-                        "_index": hit.meta.index,
-                        "_id": hit.meta.id,
-                        "_score": hit.meta.score,
-                        "_source": hit.to_dict(),
-                    }
-                    hits.append(hit_data)
-
-            # Filter by validity period based on current_time
-            if current_time:
-                current_dt = current_time
-                if isinstance(current_dt, str):
-                    try:
-                        current_dt = datetime.fromisoformat(current_dt)
-                    except ValueError:
-                        try:
-                            current_dt = datetime.fromisoformat(
-                                current_dt.replace("Z", "+00:00")
-                            )
-                        except ValueError:
-                            current_dt = None
-                filtered_hits = []
-                for hit_data in hits:
-                    source = hit_data.get("_source", {}) or {}
-                    extend = source.get("extend") or {}
-                    start_dt = self._parse_datetime(extend.get("start_time"))
-                    end_dt = self._parse_datetime(extend.get("end_time"))
-                    if start_dt and current_dt and start_dt > current_dt:
-                        continue
-                    if end_dt and current_dt and end_dt < current_dt:
-                        continue
-                    filtered_hits.append(hit_data)
-                hits = filtered_hits
-
-                logger.debug(
-                    "✅ Foresight DSL multi-term search succeeded: query=%s, user_id=%s, found %d results",
-                    search.to_dict(),
-                    user_id,
-                    len(hits),
-                )
-
-            # Return only hits portion
             return hits
 
-        except (ConnectionError, TimeoutError, ValueError) as e:
-            logger.error(
-                "❌ Foresight DSL multi-term search failed: query=%s, user_id=%s, error=%s",
-                query,
-                user_id,
-                e,
-            )
-            raise
         except Exception as e:
             logger.error(
-                "❌ Foresight DSL multi-term search failed (unknown error): query=%s, user_id=%s, error=%s",
+                "Foresight search failed: query=%s, user_id=%s, error=%s",
                 query,
                 user_id,
                 e,
             )
             raise
 
-    @staticmethod
-    def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
-        """Parse ISO date string"""
-        if not value:
-            return None
+    # ==================== Deletion functionality ====================
+
+    async def delete_by_filters(
+        self,
+        user_id: Optional[str] = MAGIC_ALL,
+        group_id: Optional[str] = MAGIC_ALL,
+        date_range: Optional[Dict[str, Any]] = None,
+        refresh: bool = False,
+    ) -> int:
+        """
+        Batch delete foresight documents by filter conditions
+
+        Args:
+            user_id: User ID filter
+            group_id: Group ID filter
+            date_range: Time range filter
+            refresh: Whether to refresh index immediately
+
+        Returns:
+            Number of deleted documents
+        """
         try:
-            return datetime.fromisoformat(value)
-        except ValueError:
-            try:
-                return datetime.fromisoformat(value.replace("Z", "+00:00"))
-            except ValueError:
-                return None
+            filter_queries = []
+            # Handle user_id filter: MAGIC_ALL means no filter
+            if user_id != MAGIC_ALL:
+                if not user_id:  # None or "" -> match empty string
+                    filter_queries.append({"term": {"user_id": ""}})
+                else:
+                    filter_queries.append({"term": {"user_id": user_id}})
+            # Handle group_id filter: MAGIC_ALL means no filter
+            if group_id != MAGIC_ALL:
+                if not group_id:  # None or "" -> match empty string
+                    filter_queries.append({"term": {"group_id": ""}})
+                else:
+                    filter_queries.append({"term": {"group_id": group_id}})
+            if date_range:
+                filter_queries.append({"range": {"created_at": date_range}})
+
+            if not filter_queries:
+                raise ValueError(
+                    "At least one filter condition (user_id, group_id or date_range) must be provided"
+                )
+
+            delete_query = {"bool": {"must": filter_queries}}
+
+            client = await self.get_client()
+            index_name = self.get_index_name()
+
+            response = await client.delete_by_query(
+                index=index_name, body={"query": delete_query}, refresh=refresh
+            )
+
+            deleted_count = response.get('deleted', 0)
+            logger.info(
+                "Batch deleted foresights: user_id=%s, group_id=%s, deleted %d records",
+                user_id,
+                group_id,
+                deleted_count,
+            )
+            return deleted_count
+
+        except Exception as e:
+            logger.error(
+                "Failed to batch delete foresights: user_id=%s, group_id=%s, error=%s",
+                user_id,
+                group_id,
+                e,
+            )
+            raise

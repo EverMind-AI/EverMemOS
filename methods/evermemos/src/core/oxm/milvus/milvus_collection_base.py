@@ -1,4 +1,3 @@
-
 import os
 import logging
 from typing import Optional, Dict, Any, List
@@ -174,6 +173,29 @@ class MilvusCollectionBase:
     def using(self) -> str:
         """Get connection alias"""
         return self._DB_USING if self._DB_USING is not None else "default"
+
+    def ensure_connection_registered(self) -> None:
+        """
+        Ensure the pymilvus connection for self.using is established.
+
+        Uses MilvusClientFactory to create a client, which internally registers
+        the pymilvus connection alias needed by Collection().
+
+        Subclasses (e.g., TenantAwareCollectionWithSuffix) may override this
+        to handle tenant-specific connection registration.
+        """
+        from core.di.utils import get_bean
+
+        using = self.using
+        try:
+            connections._fetch_handler(using)
+            return
+        except Exception:
+            pass
+
+        factory = get_bean("milvus_client_factory")
+        factory.get_named_client(using)
+        logger.info("Connection registered for using='%s'", using)
 
     def load_collection(self) -> Collection:
         """Load Collection (internal method)"""
@@ -424,12 +446,20 @@ class MilvusCollectionWithSuffix(MilvusCollectionBase):
             )
 
             # Create Collection
-            Collection(
-                name=_collection_name,
-                schema=self._SCHEMA,
-                using=self._using,
-                consistency_level=ConsistencyLevel.Bounded,  # Default bounded consistency
+            create_kwargs = {
+                "name": _collection_name,
+                "schema": self._SCHEMA,
+                "using": self._using,
+                "consistency_level": ConsistencyLevel.Bounded,
+            }
+            num_partitions = getattr(self, "_NUM_PARTITIONS", None)
+            if num_partitions is not None:
+                create_kwargs["num_partitions"] = num_partitions
+            logger.info(
+                "Creating Collection with kwargs: %s",
+                {k: v for k, v in create_kwargs.items() if k != "schema"},
             )
+            Collection(**create_kwargs)
 
             # Create alias pointing to new Collection
             # When deleting the actual Collection, the alias is not automatically deleted, so delete alias first
@@ -500,12 +530,16 @@ class MilvusCollectionWithSuffix(MilvusCollectionBase):
 
         # Create new collection
         new_real_name = generate_new_collection_name(alias_name)
-        Collection(
-            name=new_real_name,
-            schema=self._SCHEMA,
-            using=self._using,
-            consistency_level=ConsistencyLevel.Bounded,
-        )
+        create_kwargs = {
+            "name": new_real_name,
+            "schema": self._SCHEMA,
+            "using": self._using,
+            "consistency_level": ConsistencyLevel.Bounded,
+        }
+        num_partitions = getattr(self, "_NUM_PARTITIONS", None)
+        if num_partitions is not None:
+            create_kwargs["num_partitions"] = num_partitions
+        Collection(**create_kwargs)
 
         # Create indexes for new collection
         try:

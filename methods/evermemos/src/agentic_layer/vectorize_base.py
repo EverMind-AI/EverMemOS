@@ -16,6 +16,8 @@ from agentic_layer.vectorize_interface import (
     VectorizeError,
     UsageInfo,
 )
+from core.di.utils import get_bean_by_type
+from core.component.token_usage_collector import TokenUsageCollector
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ logger = logging.getLogger(__name__)
 class BaseVectorizeService(VectorizeServiceInterface):
     """
     Base class for OpenAI-compatible embedding services
-    
+
     Subclasses only need to implement:
     - _get_config_params(): return (api_key, base_url, model)
     - _should_pass_dimensions(): return True/False
@@ -34,7 +36,7 @@ class BaseVectorizeService(VectorizeServiceInterface):
         self.config = config
         self.client: Optional[AsyncOpenAI] = None
         self._semaphore = asyncio.Semaphore(config.max_concurrent_requests)
-        
+
         api_key, base_url, model = self._get_config_params()
         logger.info(
             f"Initialized {self.__class__.__name__} | model={model} | base_url={base_url}"
@@ -116,6 +118,21 @@ class BaseVectorizeService(VectorizeServiceInterface):
                         request_kwargs["dimensions"] = self.config.dimensions
 
                     response = await self.client.embeddings.create(**request_kwargs)
+
+                    # Report embedding call to token usage collector
+                    try:
+                        collector = get_bean_by_type(TokenUsageCollector)
+                        prompt_tokens = (
+                            getattr(response.usage, 'prompt_tokens', 0) or 0
+                            if response.usage
+                            else 0
+                        )
+                        collector.add(
+                            self.config.model, prompt_tokens, 0, call_type="embedding"
+                        )
+                    except Exception:
+                        pass
+
                     return response
 
                 except Exception as e:
@@ -123,13 +140,13 @@ class BaseVectorizeService(VectorizeServiceInterface):
                     logger.error(
                         f"{self.__class__.__name__} API error (attempt {attempt + 1}/{self.config.max_retries}): {error_msg}"
                     )
-                    
+
                     # Log detailed error for debugging
                     if "Connection" in error_msg or "timeout" in error_msg.lower():
                         logger.warning(
                             f"Network issue connecting to {self.config.base_url}: {error_msg}"
                         )
-                    
+
                     if attempt < self.config.max_retries - 1:
                         await asyncio.sleep(2**attempt)
                         continue
@@ -233,4 +250,3 @@ class BaseVectorizeService(VectorizeServiceInterface):
     def get_model_name(self) -> str:
         """Get the current model name"""
         return self.config.model
-

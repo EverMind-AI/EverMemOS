@@ -20,10 +20,10 @@ class MemCellExtractRequest:
     # user id list of the entire group
     user_id_list: List[str]
     group_id: Optional[str] = None
-    group_name: Optional[str] = None
 
     old_memory_list: Optional[List[BaseMemory]] = None
-    smart_mask_flag: Optional[bool] = False
+    # Force boundary trigger - when True, skip boundary detection and create MemCell directly
+    flush: bool = False
 
 
 @dataclass
@@ -42,5 +42,5 @@ class MemCellExtractor(ABC):
     @abstractmethod
     async def extract_memcell(
         self, request: MemCellExtractRequest
-    ) -> tuple[Optional[MemCell], Optional[StatusResult]]:
+    ) -> tuple[List[MemCell], StatusResult]:
         pass

@@ -54,7 +54,7 @@ def build_searchable_text(doc: dict) -> str:
     Build searchable text from a document with weighted fields.
 
     Priority:
-    1. If event_log exists, use atomic_fact for indexing
+    1. If atomic fact data exists (atomic_fact key), use atomic_fact for indexing
     2. Otherwise, fall back to original fields:
        - "subject" corresponds to "title" (weight * 3)
        - "summary" corresponds to "summary" (weight * 2)
@@ -62,9 +62,9 @@ def build_searchable_text(doc: dict) -> str:
     """
     parts = []
 
-    # Prefer event_log's atomic_fact (if exists)
-    if doc.get("event_log") and doc["event_log"].get("atomic_fact"):
-        atomic_facts = doc["event_log"]["atomic_fact"]
+    # Prefer atomic_fact from atomic_fact key (if exists)
+    if doc.get("atomic_fact") and doc["atomic_fact"].get("atomic_fact"):
+        atomic_facts = doc["atomic_fact"]["atomic_fact"]
         if isinstance(atomic_facts, list):
             # Handle nested atomic_fact structure
             # atomic_fact can be list of strings or list of dicts (containing "fact" and "embedding")
@@ -206,9 +206,9 @@ async def build_emb_index(config: ExperimentConfig, data_dir: Path, emb_save_dir
         texts_to_embed = []
         doc_field_map = []
         for doc_idx, doc in enumerate(original_docs):
-            # Prefer event_log (if exists)
-            if doc.get("event_log") and doc["event_log"].get("atomic_fact"):
-                atomic_facts = doc["event_log"]["atomic_fact"]
+            # Prefer atomic fact data from atomic_fact key (if exists)
+            if doc.get("atomic_fact") and doc["atomic_fact"].get("atomic_fact"):
+                atomic_facts = doc["atomic_fact"]["atomic_fact"]
                 if isinstance(atomic_facts, list) and atomic_facts:
                     # calculate embedding for each atomic_fact separately (MaxSim strategy)
                     # This precisely matches specific atomic facts, avoiding semantic dilution

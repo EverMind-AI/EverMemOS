@@ -6,7 +6,7 @@
 
 The Memory API provides RESTful endpoints for storing, retrieving, searching, and managing conversational memories.
 
-**Base URL:** `http://localhost:1995/api/v1/memories`
+**Base URL:** `http://localhost:8001/api/v0/memories`
 
 ## API Endpoints
 
@@ -15,9 +15,8 @@ The Memory API provides RESTful endpoints for storing, retrieving, searching, an
 | POST | `/memories` | Store a single message |
 | GET | `/memories` | Fetch memories by type |
 | GET | `/memories/search` | Search memories |
-| GET | `/memories/conversation-meta` | Get conversation metadata |
-| POST | `/memories/conversation-meta` | Save conversation metadata |
-| PATCH | `/memories/conversation-meta` | Partial update metadata |
+| GET | `/api/v1/settings` | Get global settings |
+| PUT | `/api/v1/settings` | Update global settings |
 | DELETE | `/memories` | Soft delete memories |
 
 ---
@@ -34,7 +33,7 @@ Store a single message into memory.
   "create_time": "2025-01-15T10:00:00+00:00",
   "sender": "user_001",
   "content": "Let's discuss the technical solution for the new feature today",
-  "group_id": "group_123",
+  "group_ids": "group_123",
   "group_name": "Project Discussion Group",
   "sender_name": "John",
   "role": "user",
@@ -70,12 +69,12 @@ When `group_id` and `group_name` are not provided (null), the API automatically 
 - **User + AI assistant** - Conversations between a user and AI where context correlation matters
 - **Project/topic-based organization** - When you want to query memories by logical groupings
 
-Providing a `group_id` enables better episodic memory extraction by giving the system context about related messages across multiple senders. See the [Group Chat Guide](../advanced/GROUP_CHAT_GUIDE.md) for detailed guidance.
+Providing a `group_id` enables better episodic memory extraction by giving the system context about related messages across multiple senders. See the [Team Chat Guide](../advanced/TEAM_CHAT_GUIDE.md) for detailed guidance.
 
 ### Example
 
 ```bash
-curl -X POST "http://localhost:1995/api/v1/memories" \
+curl -X POST "http://localhost:8001/api/v0/memories" \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
@@ -84,7 +83,7 @@ curl -X POST "http://localhost:1995/api/v1/memories" \
     "sender_name": "John",
     "role": "user",
     "content": "Let us discuss the technical solution for the new feature today",
-    "group_id": "group_123",
+    "group_ids": "group_123",
     "group_name": "Project Discussion Group",
     "refer_list": []
   }'
@@ -135,7 +134,6 @@ Retrieve memories by type with optional filters.
 | `offset` | integer | No | 0 | Pagination offset |
 | `start_time` | string | No | - | Filter start time (ISO 8601) |
 | `end_time` | string | No | - | Filter end time (ISO 8601) |
-| `version_range` | array | No | - | Version range `[start, end]` |
 
 *At least one of `user_id` or `group_id` must be provided (cannot both be `__all__`).
 
@@ -146,12 +144,12 @@ Retrieve memories by type with optional filters.
 | `profile` | User profile information |
 | `episodic_memory` | Conversation episodes (default) |
 | `foresight` | Prospective memory |
-| `event_log` | Atomic facts |
+| `atomic_fact` | Atomic facts |
 
 ### Example
 
 ```bash
-curl "http://localhost:1995/api/v1/memories?user_id=user_123&memory_type=episodic_memory&limit=20"
+curl "http://localhost:8001/api/v0/memories?user_id=user_123&memory_type=episodic_memory&limit=20"
 ```
 
 ### Response
@@ -193,7 +191,7 @@ Search memories using keyword, vector, or hybrid retrieval methods.
 {
   "query": "coffee preference",
   "user_id": "user_123",
-  "group_id": "group_456",
+  "group_ids": ["group_456", "group_789"],
   "retrieve_method": "keyword",
   "memory_types": ["episodic_memory"],
   "top_k": 10,
@@ -210,17 +208,24 @@ Search memories using keyword, vector, or hybrid retrieval methods.
 |-------|------|----------|---------|-------------|
 | `query` | string | No | - | Search query text |
 | `user_id` | string | No* | - | User ID |
-| `group_id` | string | No* | - | Group ID |
+| `group_ids` | array | No* | - | **Group IDs array** (max 10 items, None = search all groups) |
 | `retrieve_method` | string | No | `keyword` | Retrieval method |
 | `memory_types` | array | No | `[]` (defaults to `episodic_memory`) | Memory types to search |
-| `top_k` | integer | No | 40 | Max results (max: 100) |
+| `top_k` | integer | No | 40 | Max results (max: 100, -1 = unlimited) |
 | `start_time` | string | No | - | Filter start time (ISO 8601) |
 | `end_time` | string | No | - | Filter end time (ISO 8601) |
 | `radius` | float | No | - | Cosine similarity threshold (0.0-1.0, for vector/hybrid only) |
 | `include_metadata` | boolean | No | true | Include metadata in response |
 | `current_time` | string | No | - | Current time for filtering foresight events |
 
-*At least one of `user_id` or `group_id` must be provided (cannot both be `__all__`).
+*At least one of `user_id` or `group_ids` must be provided (cannot both be empty).
+
+### Group Filtering Behavior
+
+| Scenario | Behavior |
+|----------|----------|
+| `group_ids` is an array | Search in all specified groups |
+| `group_ids` not provided | Search all groups for the user |
 
 **Note:** `profile` memory type is not supported in the search interface.
 
@@ -234,15 +239,45 @@ Search memories using keyword, vector, or hybrid retrieval methods.
 | `rrf` | RRF fusion (keyword + vector + RRF ranking) |
 | `agentic` | LLM-guided multi-round intelligent retrieval |
 
-### Example
+### Examples
+
+**Search in multiple groups:**
 
 ```bash
-curl -X GET "http://localhost:1995/api/v1/memories/search" \
+curl -X GET "http://localhost:8001/api/v1/memories/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "coffee preference",
     "user_id": "user_123",
+    "group_ids": ["group_456", "group_789"],
+    "retrieve_method": "vector",
+    "top_k": 10
+  }'
+```
+
+**Search in a single group:**
+
+```bash
+curl -X GET "http://localhost:8001/api/v1/memories/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "coffee preference",
+    "user_id": "user_123",
+    "group_ids": ["group_456"],
     "retrieve_method": "keyword",
+    "top_k": 10
+  }'
+```
+
+**Search all groups for a user:**
+
+```bash
+curl -X GET "http://localhost:8001/api/v0/memories/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "coffee preference",
+    "user_id": "user_123",
+    "retrieve_method": "vector",
     "top_k": 10
   }'
 ```
@@ -252,25 +287,25 @@ curl -X GET "http://localhost:1995/api/v1/memories/search" \
 ```json
 {
   "status": "ok",
-  "message": "Memory search successful, retrieved 1 groups",
+  "message": "Memory search successful",
   "result": {
     "memories": [
       {
-        "episodic_memory": [
-          {
-            "memory_type": "episodic_memory",
-            "user_id": "user_123",
-            "timestamp": "2024-01-15T10:30:00",
-            "summary": "Discussed coffee choices",
-            "group_id": "group_456"
-          }
-        ]
+        "memory_type": "episodic_memory",
+        "user_id": "user_123",
+        "timestamp": "2024-01-15T10:30:00",
+        "subject": "Coffee preferences",
+        "summary": "Discussed coffee choices",
+        "episode": "Alice mentioned she prefers latte, Bob likes americano",
+        "group_id": "group_456",
+        "score": 0.95,
+        "original_data": [],
+        "extend": {
+          "_search_source": "vector"
+        }
       }
     ],
-    "scores": [{"episodic_memory": [0.95]}],
-    "importance_scores": [0.85],
-    "original_data": [],
-    "total_count": 45,
+    "total_count": 1,
     "has_more": false,
     "query_metadata": {
       "source": "episodic_memory_es_repository",
@@ -292,149 +327,63 @@ curl -X GET "http://localhost:1995/api/v1/memories/search" \
 | Field | Description |
 |-------|-------------|
 | `memories` | List of memory groups, organized by memory type |
-| `scores` | Relevance scores for each memory |
-| `importance_scores` | Group importance scores for sorting |
-| `original_data` | Original data associated with memories |
 | `total_count` | Total number of memories found |
 | `has_more` | Whether more results are available |
 | `query_metadata` | Metadata about the query execution |
 | `metadata` | Additional response metadata |
 | `pending_messages` | Messages waiting for memory extraction |
 
----
-
-## GET `/memories/conversation-meta` - Get Metadata
-
-Retrieve conversation metadata by group_id with fallback to default config.
-
-### Request Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `group_id` | string | No | Group ID (omit for default config) |
-
-### Example
-
-```bash
-curl "http://localhost:1995/api/v1/memories/conversation-meta?group_id=group_123"
-```
-
-### Response
-
-```json
-{
-  "status": "ok",
-  "message": "Conversation metadata retrieved successfully",
-  "result": {
-    "id": "...",
-    "group_id": "group_123",
-    "scene": "group_chat",
-    "name": "Engineering Team",
-    "user_details": {...},
-    "is_default": false
-  }
-}
-```
-
----
-
-## POST `/memories/conversation-meta` - Save Metadata
-
-Save or update conversation metadata (upsert behavior).
-
-### Request Body
-
-```json
-{
-  "version": "1.0.0",
-  "scene": "group_chat",
-  "scene_desc": {
-    "description": "Project discussion group chat",
-    "type": "project_discussion"
-  },
-  "name": "Engineering Team",
-  "description": "Backend team discussions",
-  "group_id": "group_123",
-  "created_at": "2025-01-15T10:00:00Z",
-  "default_timezone": "America/New_York",
-  "user_details": {
-    "alice": {
-      "full_name": "Alice Smith",
-      "role": "user",
-      "custom_role": "Tech Lead"
-    }
-  },
-  "tags": ["engineering", "backend"]
-}
-```
-
-### Request Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `version` | string | Yes | Metadata version |
-| `scene` | string | Yes | Scene identifier: `assistant` or `group_chat` |
-| `scene_desc` | object | Yes | Scene description object |
-| `name` | string | Yes | Conversation name |
-| `description` | string | No | Conversation description |
-| `group_id` | string | No | Group identifier (omit for default config) |
-| `created_at` | string | Yes | Conversation creation time (ISO 8601 format) |
-| `default_timezone` | string | No | Default timezone (defaults to system timezone) |
-| `user_details` | object | No | Participant details, key is user ID |
-| `tags` | array | No | Tag list |
-
-### User Details Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `full_name` | string | Display name |
-| `role` | string | `user` or `assistant` |
-| `custom_role` | string | Job title/position |
-| `extra` | object | Additional metadata |
-
----
-
-## PATCH `/memories/conversation-meta` - Update Metadata
-
-Partially update conversation metadata.
-
-### Request Body
-
-```json
-{
-  "group_id": "group_123",
-  "name": "Updated Team Name",
-  "tags": ["engineering", "python"]
-}
-```
-
-### Updatable Fields
+#### Memory extend fields
 
 | Field | Description |
 |-------|-------------|
-| `name` | Conversation name |
-| `description` | Conversation description |
-| `scene_desc` | Scene description |
-| `tags` | Tag list |
-| `user_details` | User details (replaces entire object) |
-| `default_timezone` | Default timezone |
+| `_search_source` | Search source type: `keyword` or `vector` |
 
-### Response
+---
 
+## V1 Settings API
+
+### GET `/api/v1/settings` - Get Settings
+
+Retrieve the global settings singleton.
+
+**Response (200):**
 ```json
 {
-  "status": "ok",
-  "message": "Conversation metadata updated successfully, 2 fields updated",
-  "result": {
-    "id": "...",
-    "group_id": "group_123",
-    "scene": "group_chat",
-    "name": "Updated Team Name",
-    "updated_fields": ["name", "tags"],
-    "updated_at": "2025-01-15T12:00:00Z"
+  "data": {
+    "scene": "solo",
+    "scene_desc": {"description": "..."},
+    "llm_custom_setting": null,
+    "timezone": "UTC",
+    "boundary_detection_timeout": 3600,
+    "extraction_mode": "default",
+    "offline_profile_extraction_interval": 86400,
+    "created_at": "2026-03-05T07:30:39.944590+00:00",
+    "updated_at": "2026-03-05T07:30:39.944590+00:00"
   }
 }
 ```
+
+**Error (404):** Settings not initialized.
+
+### PUT `/api/v1/settings` - Update Settings
+
+Initialize or update global settings (upsert).
+
+**Request Body:**
+```json
+{
+  "scene": "solo",
+  "scene_desc": {"description": "..."},
+  "llm_custom_setting": null,
+  "timezone": "Asia/Shanghai",
+  "boundary_detection_timeout": 3600,
+  "extraction_mode": "default",
+  "offline_profile_extraction_interval": 86400
+}
+```
+
+**Response (200):** Same format as GET.
 
 ---
 
@@ -448,7 +397,7 @@ Soft delete memories based on filter criteria (AND logic).
 {
   "event_id": "evt_001",
   "user_id": "user_123",
-  "group_id": "group_456"
+  "group_ids": "group_456"
 }
 ```
 
@@ -466,9 +415,9 @@ At least one filter must be provided (not all `__all__`).
 
 ```bash
 # Delete all memories for a user in a group
-curl -X DELETE "http://localhost:1995/api/v1/memories" \
+curl -X DELETE "http://localhost:8001/api/v0/memories" \
   -H "Content-Type: application/json" \
-  -d '{"user_id": "user_123", "group_id": "group_456"}'
+  -d '{"user_id": "user_123", "group_ids": "group_456"}'
 ```
 
 ### Response
@@ -478,7 +427,7 @@ curl -X DELETE "http://localhost:1995/api/v1/memories" \
   "status": "ok",
   "message": "Successfully deleted 10 memories",
   "result": {
-    "filters": ["user_id", "group_id"],
+    "filters": ["user_id", "group_ids"],
     "count": 10
   }
 }
@@ -488,19 +437,19 @@ curl -X DELETE "http://localhost:1995/api/v1/memories" \
 
 ## Batch Processing with run_memorize.py
 
-For batch processing GroupChatFormat JSON files:
+For batch processing ConversationFormat JSON files:
 
 ```bash
 # Process a group chat file
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --scene group_chat \
-  --api-url http://localhost:1995/api/v1/memories
+  --input data/team_chat.json \
+  --scene team \
+  --api-url http://localhost:8001/api/v0/memories
 
 # Validate format only
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --scene group_chat \
+  --input data/team_chat.json \
+  --scene team \
   --validate-only
 ```
 
@@ -508,8 +457,8 @@ uv run python src/bootstrap.py src/run_memorize.py \
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `--input` | Yes | Path to GroupChatFormat JSON file |
-| `--scene` | Yes | `group_chat` or `assistant` |
+| `--input` | Yes | Path to ConversationFormat JSON file |
+| `--scene` | Yes | `team` or `solo` |
 | `--api-url` | Yes* | Memory API endpoint |
 | `--validate-only` | No | Only validate format, skip processing |
 
@@ -527,7 +476,7 @@ All error responses follow this format:
   "code": "ERROR_CODE",
   "message": "Human-readable error message",
   "timestamp": "2025-01-15T10:30:00+00:00",
-  "path": "/api/v1/memories"
+  "path": "/api/v0/memories"
 }
 ```
 
@@ -543,6 +492,6 @@ All error responses follow this format:
 
 ## See Also
 
-- [Group Chat Guide](../advanced/GROUP_CHAT_GUIDE.md) - Multi-participant conversations
+- [Team Chat Guide](../advanced/TEAM_CHAT_GUIDE.md) - Multi-participant conversations
 - [Metadata Control Guide](../advanced/METADATA_CONTROL.md) - Conversation metadata management
-- [GroupChatFormat Specification](../../data_format/group_chat/group_chat_format.md) - Data format reference
+- [Conversation Format Specification](../../data_format/conversation/conversation_format.md) - Data format reference

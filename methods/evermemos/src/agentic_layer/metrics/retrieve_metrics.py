@@ -53,7 +53,7 @@ RETRIEVE_REQUESTS_TOTAL = Counter(
 Memory retrieval requests counter
 
 Labels:
-- memory_type: episodic_memory, profile, foresight, event_log, entity, relation, etc.
+- memory_type: episodic_memory, profile, foresight, atomic_fact, entity, relation, etc.
 - retrieve_method: vector, id_lookup, keyword, hybrid, rrf, agentic
 - status: success, error, timeout, empty_result
 """
@@ -92,7 +92,7 @@ RETRIEVE_DURATION_SECONDS = Histogram(
 End-to-end retrieval duration histogram
 
 Labels:
-- memory_type: episodic_memory, profile, foresight, event_log, etc.
+- memory_type: episodic_memory, profile, foresight, atomic_fact, etc.
 - retrieve_method: vector, id_lookup, keyword, hybrid, rrf, agentic
 
 Buckets: 10ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s, 30s
@@ -113,7 +113,7 @@ Stage-specific duration histogram
 Labels:
 - retrieve_method: keyword, vector, hybrid, rrf, agentic
 - stage: keyword, vector, embedding, milvus_search, rerank, rrf_fusion
-- memory_type: episodic_memory, profile, foresight, event_log, etc.
+- memory_type: episodic_memory, profile, foresight, atomic_fact, etc.
 
 Buckets: 1ms, 5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s
 """
@@ -131,7 +131,7 @@ RETRIEVE_RESULTS_COUNT = Histogram(
 Retrieval results count histogram
 
 Labels:
-- memory_type: episodic_memory, profile, foresight, event_log, etc.
+- memory_type: episodic_memory, profile, foresight, atomic_fact, etc.
 - retrieve_method: vector, id_lookup, keyword, hybrid, rrf, agentic
 
 Buckets: 0, 1, 5, 10, 20, 50, 100, 200, 500, 1000 results

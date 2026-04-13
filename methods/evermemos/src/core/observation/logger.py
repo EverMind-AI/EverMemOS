@@ -7,6 +7,22 @@ import sys
 import os
 from datetime import datetime
 
+from core.context.context import get_current_app_info
+
+
+class RequestIdFilter(logging.Filter):
+    """Injects request_id from app_info_context into every LogRecord.
+
+    Reads from the ContextVar-based app_info dict. Falls back to "-"
+    when no request context is available (startup, background tasks
+    without inherited context, etc.).
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        app_info = get_current_app_info()
+        record.request_id = app_info.get("request_id", "-") if app_info else "-"
+        return True
+
 
 class LogLevel(Enum):
     """Log level enumeration"""
@@ -42,15 +58,24 @@ class LoggerProvider:
         log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
 
         # Configure root logger
+        # force=True ensures handlers are replaced even if root logger
+        # was already configured (e.g. by a library imported before us)
         logging.basicConfig(
             level=getattr(logging, log_level),
-            format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
+            format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - [%(request_id)s] - %(message)s',
             handlers=[
                 logging.StreamHandler(sys.stdout),
                 # Can add file handler
                 # logging.FileHandler('app.log', encoding='utf-8')
             ],
+            force=True,
         )
+
+        # Register RequestIdFilter on all root handlers so child loggers
+        # inherit it via propagation
+        request_id_filter = RequestIdFilter()
+        for handler in logging.root.handlers:
+            handler.addFilter(request_id_filter)
 
     def _setup_logging(self):
         """Set up logging configuration"""

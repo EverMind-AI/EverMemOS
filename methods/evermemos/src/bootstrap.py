@@ -110,17 +110,20 @@ async def setup_project_context(env_file=".env", mock_mode=False):
     setup_all()
 
     # Asynchronously start application lifespan
-    try:
-        from app import app
+    if os.getenv("SKIP_LIFESPAN", "").lower() == "true":
+        logger.info("⏭️ SKIP_LIFESPAN=true — skipping lifespan startup")
+    else:
+        try:
+            from app import app
 
-        if hasattr(app, "start_lifespan"):
-            await app.start_lifespan()
-            logger.info("✅ Application lifespan started successfully")
-        else:
-            logger.warning("⚠️ app instance has no start_lifespan method")
-    except Exception as e:
-        logger.warning(f"⚠️ Error starting application lifespan: {e}")
-        # Do not raise exception, continue execution
+            if hasattr(app, "start_lifespan"):
+                await app.start_lifespan()
+                logger.info("✅ Application lifespan started successfully")
+            else:
+                logger.warning("⚠️ app instance has no start_lifespan method")
+        except Exception as e:
+            logger.warning(f"⚠️ Error starting application lifespan: {e}")
+            # Do not raise exception, continue execution
 
 
 async def async_main():

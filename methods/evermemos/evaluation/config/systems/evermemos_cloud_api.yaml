@@ -6,8 +6,8 @@ description: "EverMemOS via HTTP Memory API"
 adapter: "evermemos_api"
 
 # EverMemOS API configuration
-# base_url can be either host base (https://api.evermind.ai) or full endpoint (.../api/v1/memories)
-base_url: "${EVERMEMOS_API_URL:https://api.evermind.ai/api/v1/memories}"
+# base_url can be either host base (https://api.evermind.ai) or full endpoint (.../api/v0/memories)
+base_url: "${EVERMEMOS_API_URL:https://api.evermind.ai/api/v0/memories}"
 # Hosted API requires Bearer token in Authorization header.
 api_key: "${EVERMEMOS_API_KEY}"
 sync_mode: true
@@ -18,7 +18,7 @@ request_interval: 0.0
 # Concurrency (conversation-level)
 num_workers: 10
 
-# Search configuration (maps to GET /api/v1/memories/search)
+# Search configuration (maps to GET /api/v0/memories/search)
 search:
   scope: "group"
   top_k: 10

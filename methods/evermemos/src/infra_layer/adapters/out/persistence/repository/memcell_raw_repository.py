@@ -14,6 +14,7 @@ from pymongo.asynchronous.client_session import AsyncClientSession
 from core.observation.logger import get_logger
 from core.di.decorators import repository
 from core.oxm.mongo.base_repository import BaseRepository
+from core.oxm.constants import MAGIC_ALL
 
 from infra_layer.adapters.out.persistence.document.memory.memcell import (
     MemCell,
@@ -133,7 +134,7 @@ class MemCellRawRepository(BaseRepository[MemCell]):
         """
         try:
             await memcell.insert(session=session)
-            print(f"✅ Successfully appended MemCell: {memcell.event_id}")
+            logger.debug("Successfully appended MemCell: %s", memcell.event_id)
             return memcell
         except Exception as e:
             logger.error("❌ Failed to append MemCell: %s", e)
@@ -424,9 +425,7 @@ class MemCellRawRepository(BaseRepository[MemCell]):
             return results
         except Exception as e:
             logger.error("❌ Failed to query MemCell by time range: %s", e)
-            import traceback
-
-            logger.error("Detailed error information: %s", traceback.format_exc())
+            logger.error("Detailed error information:", exc_info=True)
             return []
 
     async def find_by_participants(
@@ -552,6 +551,96 @@ class MemCellRawRepository(BaseRepository[MemCell]):
         except Exception as e:
             logger.error("❌ Failed to soft delete all MemCell of user: %s", e)
             return 0
+
+    async def delete_by_group_id(
+        self,
+        group_id: str,
+        deleted_by: Optional[str] = None,
+        session: Optional[AsyncClientSession] = None,
+    ) -> int:
+        """
+        Soft delete all MemCell of a group
+
+        Args:
+            group_id: Group ID
+            deleted_by: Deleter (optional)
+            session: Optional MongoDB session, for transaction support
+
+        Returns:
+            Number of soft deleted records
+        """
+        try:
+            result = await self.model.delete_many(
+                {"group_id": group_id}, deleted_by=deleted_by, session=session
+            )
+            count = result.modified_count if result else 0
+            logger.info(
+                "✅ Successfully soft deleted all MemCell of group: %s, deleted %d records",
+                group_id,
+                count,
+            )
+            return count
+        except Exception as e:
+            logger.error("❌ Failed to soft delete all MemCell of group: %s", e)
+            return 0
+
+    async def delete_by_filters(
+        self,
+        memcell_id: Optional[str] = None,
+        group_id: Optional[str] = MAGIC_ALL,
+        session_id: Optional[str] = MAGIC_ALL,
+        deleted_by: Optional[str] = None,
+        session: Optional[AsyncClientSession] = None,
+    ) -> int:
+        """
+        Soft delete MemCells by combined filter conditions
+
+        Three-state filter semantics (group_id, session_id):
+        - MAGIC_ALL (default): skip this filter
+        - None or "": match null/empty records
+        - other value: exact match
+
+        Args:
+            memcell_id: MemCell ID filter
+            group_id: Group ID filter
+            session_id: Session ID filter
+            deleted_by: Deleter (optional)
+            session: Optional MongoDB session, for transaction support
+
+        Returns:
+            Number of soft deleted records
+        """
+        filter_dict = {}
+
+        if memcell_id is not None:
+            filter_dict["_id"] = ObjectId(memcell_id)
+
+        if group_id != MAGIC_ALL:
+            if group_id is None or group_id == "":
+                filter_dict["group_id"] = {"$in": [None, ""]}
+            else:
+                filter_dict["group_id"] = group_id
+
+        if session_id != MAGIC_ALL:
+            if session_id is None or session_id == "":
+                filter_dict["session_id"] = {"$in": [None, ""]}
+            else:
+                filter_dict["session_id"] = session_id
+
+        if not filter_dict:
+            logger.warning("No filter conditions provided for delete_by_filters")
+            return 0
+
+        result = await self.model.delete_many(
+            filter_dict, deleted_by=deleted_by, session=session
+        )
+        count = result.modified_count if result else 0
+        logger.info(
+            "Soft deleted MemCells by filters: filter=%s, deleted %d records",
+            filter_dict,
+            count,
+        )
+        return count
 
     async def hard_delete_by_user_id(
         self, user_id: str, session: Optional[AsyncClientSession] = None

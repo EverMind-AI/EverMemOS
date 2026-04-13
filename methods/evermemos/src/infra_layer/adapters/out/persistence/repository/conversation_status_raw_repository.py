@@ -24,11 +24,17 @@ class ConversationStatusRawRepository(BaseRepository[ConversationStatus]):
     # ==================== Basic CRUD Operations ====================
 
     async def get_by_group_id(
-        self, group_id: str, session: Optional[AsyncClientSession] = None
+        self,
+        group_id: str,
+        session_id: Optional[str] = None,
+        session: Optional[AsyncClientSession] = None,
     ) -> Optional[ConversationStatus]:
-        """Get conversation status by group ID"""
+        """Get conversation status by group ID and session ID"""
         try:
-            result = await self.model.find_one({"group_id": group_id}, session=session)
+            query = {"group_id": group_id}
+            if session_id is not None:
+                query["session_id"] = session_id
+            result = await self.model.find_one(query, session=session)
             if result:
                 logger.debug(
                     "✅ Successfully retrieved conversation status by group ID: %s",
@@ -66,27 +72,32 @@ class ConversationStatusRawRepository(BaseRepository[ConversationStatus]):
         self,
         group_id: str,
         update_data: Dict[str, Any],
+        session_id: Optional[str] = None,
         session: Optional[AsyncClientSession] = None,
     ) -> Optional[ConversationStatus]:
-        """Update or insert conversation status by group ID
+        """Update or insert conversation status by group ID and session ID
 
         Uses MongoDB atomic upsert operation to avoid concurrency race conditions.
         If a matching record is found, it updates it; otherwise, it creates a new record.
-        Since group_id is unique, conversation_id will automatically use group_id as its value.
+        Unique key is (group_id, session_id).
 
         Args:
-            group_id: Group ID (will also be used as conversation_id)
+            group_id: Group ID
             update_data: Data to update
+            session_id: Session identifier for conversation isolation
             session: MongoDB session
 
         Returns:
             The updated or created conversation status record
         """
         try:
+            # Build query with session_id
+            query = {"group_id": group_id}
+            if session_id is not None:
+                query["session_id"] = session_id
+
             # 1. First try to find an existing record
-            existing_doc = await self.model.find_one(
-                {"group_id": group_id}, session=session
-            )
+            existing_doc = await self.model.find_one(query, session=session)
 
             if existing_doc:
                 # Record found, update directly
@@ -94,24 +105,23 @@ class ConversationStatusRawRepository(BaseRepository[ConversationStatus]):
                     setattr(existing_doc, key, value)
                 await existing_doc.save(session=session)
                 logger.debug(
-                    "✅ Successfully updated existing conversation status: group_id=%s",
+                    "Successfully updated existing conversation status: group_id=%s, session_id=%s",
                     group_id,
-                )
-                print(
-                    f"[ConversationStatusRawRepository] Successfully updated existing conversation status: {existing_doc}"
+                    session_id,
                 )
                 return existing_doc
 
             # 2. Record not found, try to create a new one
             try:
-                new_doc = ConversationStatus(group_id=group_id, **update_data)
+                create_data = {**update_data}
+                if session_id is not None:
+                    create_data["session_id"] = session_id
+                new_doc = ConversationStatus(group_id=group_id, **create_data)
                 await new_doc.create(session=session)
                 logger.info(
-                    "✅ Successfully created new conversation status: group_id=%s",
+                    "Successfully created new conversation status: group_id=%s, session_id=%s",
                     group_id,
-                )
-                print(
-                    f"[ConversationStatusRawRepository] Successfully created new conversation status: {new_doc}"
+                    session_id,
                 )
                 return new_doc
 
@@ -120,14 +130,13 @@ class ConversationStatusRawRepository(BaseRepository[ConversationStatus]):
                 error_str = str(create_error)
                 if "E11000" in error_str and "duplicate key" in error_str:
                     logger.warning(
-                        "⚠️  Concurrent creation conflict, re-lookup and update: group_id=%s",
+                        "Concurrent creation conflict, re-lookup and update: group_id=%s, session_id=%s",
                         group_id,
+                        session_id,
                     )
 
                     # Duplicate key error means another thread has already created the record, re-lookup and update
-                    retry_doc = await self.model.find_one(
-                        {"group_id": group_id}, session=session
-                    )
+                    retry_doc = await self.model.find_one(query, session=session)
 
                     if retry_doc:
                         # Found the record created by another thread, update it
@@ -135,17 +144,16 @@ class ConversationStatusRawRepository(BaseRepository[ConversationStatus]):
                             setattr(retry_doc, key, value)
                         await retry_doc.save(session=session)
                         logger.debug(
-                            "✅ Successfully updated after concurrency conflict: group_id=%s",
+                            "Successfully updated after concurrency conflict: group_id=%s, session_id=%s",
                             group_id,
-                        )
-                        print(
-                            f"[ConversationStatusRawRepository] Successfully updated after concurrency conflict: {retry_doc}"
+                            session_id,
                         )
                         return retry_doc
                     else:
                         logger.error(
-                            "❌ Still unable to find record after concurrency conflict: group_id=%s",
+                            "Still unable to find record after concurrency conflict: group_id=%s, session_id=%s",
                             group_id,
+                            session_id,
                         )
                         return None
                 else:
@@ -153,7 +161,7 @@ class ConversationStatusRawRepository(BaseRepository[ConversationStatus]):
                     raise create_error
 
         except Exception as e:
-            logger.error("❌ Failed to update or create conversation status: %s", e)
+            logger.error("Failed to update or create conversation status: %s", e)
             return None
 
     # ==================== Statistics Methods ====================

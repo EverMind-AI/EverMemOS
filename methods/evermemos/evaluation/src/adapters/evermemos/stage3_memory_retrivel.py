@@ -100,7 +100,7 @@ def compute_maxsim_score(
 
     Core idea of MaxSim strategy:
     - Find the single most relevant atomic_fact to the query
-    - If any atomic_fact is strongly related to query, consider the entire event_log relevant
+    - If any atomic_fact is strongly related to query, consider the entire atomic fact group relevant
     - Avoid score dilution by irrelevant facts
     - Suitable for memory retrieval where users typically focus on one aspect
 
@@ -907,7 +907,7 @@ async def reranker_search(
     """
     Rerank retrieval results using reranker model (supports batch concurrent processing + enhanced stability).
 
-    For documents containing event_log:
+    For documents containing atomic facts:
     - Format as multi-line text: time + each atomic_fact on separate line
     - Example:
       2024-10-31 14:30:00
@@ -948,11 +948,11 @@ async def reranker_search(
     original_indices = []  # Record original indices for restoration
 
     for idx, (doc, score) in enumerate(results):
-        # Prefer using event_log to format text (if exists)
-        if doc.get("event_log") and doc["event_log"].get("atomic_fact"):
-            event_log = doc["event_log"]
-            time_str = event_log.get("time", "")
-            atomic_facts = event_log.get("atomic_fact", [])
+        # Prefer using atomic fact data to format text (if exists)
+        if doc.get("atomic_fact") and doc["atomic_fact"].get("atomic_fact"):
+            atomic_fact_data = doc["atomic_fact"]
+            time_str = atomic_fact_data.get("time", "")
+            atomic_facts = atomic_fact_data.get("atomic_fact", [])
 
             if isinstance(atomic_facts, list) and atomic_facts:
                 # Format as multi-line text (time + each atomic_fact on separate line)

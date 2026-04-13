@@ -21,12 +21,9 @@ class MemoryExtractRequest:
     memcell: MemCell
     user_id: Optional[str] = None
     group_id: Optional[str] = None
-    group_name: Optional[str] = None
     participants: Optional[List[str]] = None
 
     old_memory_list: Optional[List[BaseMemory]] = None
-
-    user_organization: Optional[List] = None
 
 
 class MemoryExtractor(ABC):
@@ -47,7 +44,9 @@ class MemoryExtractor(ABC):
         self.memory_type = memory_type
 
     @abstractmethod
-    async def extract_memory(self, request: MemoryExtractRequest) -> Optional[BaseMemory]:
+    async def extract_memory(
+        self, request: MemoryExtractRequest
+    ) -> Optional[BaseMemory]:
         """
         Extract memory from a boundary detection result.
 

@@ -9,7 +9,7 @@ from typing import Optional, Dict, Any
 from functools import lru_cache
 from core.observation.logger import get_logger
 from core.tenants.tenant_contextvar import get_current_tenant
-from core.tenants.tenant_config import get_tenant_config
+
 
 logger = get_logger(__name__)
 
@@ -192,55 +192,45 @@ def get_default_database_name() -> str:
     return os.getenv("MONGODB_DATABASE", DEFAULT_DATABASE_NAME)
 
 
+def _base_prefixed_database_name(base_name: str) -> str:
+    """Apply the base resource prefix to a database name (e.g., "memsys" → "b0001_memsys")."""
+    from core.tenants.tenant_constants import get_base_resource_prefix
+
+    return f"{get_base_resource_prefix()}_{base_name}"
+
+
 def generate_tenant_database_name(base_name: str = "memsys") -> str:
     """
-    Generate tenant-aware database name
+    Get tenant-aware database name.
 
-    Add tenant prefix to database name based on current tenant context.
-    Return original name if in non-tenant mode or without tenant context.
-
-    Naming rules:
-    - Add tenant prefix: {tenant_id}_{base_name}
-    - Replace special characters: replace "-" and "." with "_" to comply with MongoDB naming conventions
+    Resolution order:
+    1. Tenant context exists → read from storage_info.mongodb.database
+    2. No tenant context (e.g., startup) → base resource prefix + base_name
 
     Args:
-        base_name: Base database name, default is "memsys"
+        base_name: Base database name (e.g., "memsys")
 
     Returns:
-        str: Tenant-aware database name
-
-    Examples:
-        >>> # In tenant mode
-        >>> set_current_tenant(TenantInfo(tenant_id="tenant-001", ...))
-        >>> generate_tenant_database_name("memsys")
-        'tenant_001_memsys'
-
-        >>> # In non-tenant mode or without tenant context
-        >>> generate_tenant_database_name("memsys")
-        'memsys'
+        str: Resolved database name (e.g., "dev_memsys", "b0001_memsys")
     """
     try:
-
-        # Check if in non-tenant mode
-        config = get_tenant_config()
-        if config.non_tenant_mode:
-            return base_name
-
-        # Get current tenant information
         tenant_info = get_current_tenant()
         if not tenant_info:
-            return base_name
+            return _base_prefixed_database_name(base_name)
 
-        # Generate tenant prefix (replace special characters to comply with MongoDB naming conventions)
-        tenant_prefix = tenant_info.tenant_id.replace("-", "_").replace(".", "_")
+        # Read database name from storage_info (set by routing layer)
+        mongo_config = tenant_info.get_storage_info("mongodb")
+        if mongo_config and mongo_config.get("database"):
+            return mongo_config["database"]
 
-        # Return tenant-aware database name
-        return f"{tenant_prefix}_{base_name}"
+        # No database configured in storage_info
+        logger.warning(
+            "Tenant [%s] storage_info has no mongodb.database configured, "
+            "using base prefix. Configure database in routing layer.",
+            tenant_info.tenant_id,
+        )
+        return _base_prefixed_database_name(base_name)
 
     except Exception as e:
-        logger.warning(
-            "Failed to generate tenant-aware database name, using original name [%s]: %s",
-            base_name,
-            e,
-        )
-        return base_name
+        logger.warning("Failed to get tenant database name, using base prefix: %s", e)
+        return _base_prefixed_database_name(base_name)

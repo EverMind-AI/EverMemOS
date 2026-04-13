@@ -5,12 +5,14 @@ MemCell data model definition based on Beanie ODM, supporting MongoDB sharded cl
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict
+from typing import List, Optional
 from enum import Enum
 
 from beanie import Indexed
-from core.oxm.mongo.document_base_with_soft_delete import DocumentBaseWithSoftDelete
-from pydantic import BaseModel, Field, ConfigDict
+from core.tenants.tenantize.oxm.mongo.tenant_aware_document import (
+    TenantAwareDocumentBaseWithSoftDelete,
+)
+from pydantic import Field, ConfigDict
 from pymongo import IndexModel, ASCENDING, DESCENDING
 from beanie import PydanticObjectId
 from core.oxm.mongo.audit_base import AuditBase
@@ -20,56 +22,10 @@ class DataTypeEnum(str, Enum):
     """Data type enumeration"""
 
     CONVERSATION = "Conversation"
+    AGENTCONVERSATION = "AgentConversation"
 
 
-class Message(BaseModel):
-    """Message structure"""
-
-    content: str = Field(..., description="Message text content")
-    files: Optional[List[str]] = Field(default=None, description="List of file links")
-    extend: Optional[Dict[str, str]] = Field(
-        default=None, description="Extended fields"
-    )
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "content": "Today's meeting discussed the design plan for the new feature",
-                "files": ["https://example.com/design_doc.pdf"],
-                "extend": {
-                    "sender": "Zhang San",
-                    "message_id": "msg_001",
-                    "platform": "WeChat",
-                },
-            }
-        }
-    )
-
-
-class RawData(BaseModel):
-    """Raw data structure"""
-
-    data_type: DataTypeEnum = Field(..., description="Data type enumeration")
-    messages: List[Message] = Field(..., min_length=1, description="List of messages")
-    meta: Optional[Dict[str, str]] = Field(default=None, description="Metadata")
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "data_type": "Conversation",
-                "messages": [
-                    {
-                        "content": "Team discussed new feature",
-                        "extend": {"sender": "Zhang San"},
-                    }
-                ],
-                "meta": {"chat_id": "chat_12345", "platform": "WeChat"},
-            }
-        }
-    )
-
-
-class MemCell(DocumentBaseWithSoftDelete, AuditBase):
+class MemCell(TenantAwareDocumentBaseWithSoftDelete, AuditBase):
     """
     MemCell document model
 
@@ -82,47 +38,32 @@ class MemCell(DocumentBaseWithSoftDelete, AuditBase):
     - Use hard_delete() for physical deletion
     """
 
-    # Core fields (required)
-    user_id: Optional[Indexed(str)] = Field(
-        None,
-        description="User ID, core query field. None for group memory, user ID for personal memory",
-    )
+    # Core fields
     timestamp: Indexed(datetime) = Field(..., description="Occurrence time, shard key")
-    summary: Optional[str] = Field(
-        default=None,
-        description="Memory unit summary, can be empty for force-split memcells",
-    )
 
     # Optional fields
     group_id: Optional[Indexed(str)] = Field(
         default=None, description="Group ID, empty means private chat"
     )
+    session_id: Optional[str] = Field(default=None, description="Session ID")
     original_data: Optional[List] = Field(
         default=None, description="Original information"
     )
+    # NOTE: participants and sender_ids currently hold the same values (both are sender_id).
+    # participants is not yet implemented as display names; it is populated with sender_ids
+    # as a placeholder. Once display-name resolution is available, participants will carry
+    # human-readable names while sender_ids will remain the raw identifiers.
     participants: Optional[List[str]] = Field(
         default=None, description="Names of event participants"
     )
+    sender_ids: Optional[List[str]] = Field(
+        default=None, description="Sender IDs of event participants"
+    )
     type: Optional[DataTypeEnum] = Field(default=None, description="Scenario type")
-
-    subject: Optional[str] = Field(default=None, description="Memory unit subject")
-
-    keywords: Optional[List[str]] = Field(default=None, description="Keywords")
-    linked_entities: Optional[List[str]] = Field(
-        default=None, description="Associated entity IDs"
-    )
-
-    # Possibly unused
-    episode: Optional[str] = Field(default=None, description="Scenario memory")
-    foresight_memories: Optional[List] = Field(default=None, description="Foresight")
-    event_log: Optional[Dict] = Field(
-        default=None, description="Event Log atomic facts"
-    )
-    extend: Optional[Dict] = Field(default=None, description="Extended fields")
 
     model_config = ConfigDict(
         # Collection name
-        collection="memcells",
+        collection="v1_memcells",
         # Validation configuration
         validate_assignment=True,
         # JSON serialization configuration
@@ -133,27 +74,26 @@ class MemCell(DocumentBaseWithSoftDelete, AuditBase):
                 "user_id": "user_12345",
                 "group_id": "group_67890",
                 "timestamp": "2024-12-01T10:30:00.000Z",
-                "summary": "Team discussed new feature design plan and received positive feedback",
                 "original_data": [
                     {
-                        "data_type": "Conversation",
-                        "messages": [
-                            {
-                                "content": "Today's meeting discussed the design plan for the new feature",
-                                "files": ["https://example.com/design_doc.pdf"],
-                                "extend": {
-                                    "sender": "Zhang San",
-                                    "message_id": "msg_001",
-                                },
-                            }
-                        ],
-                        "meta": {"chat_id": "chat_12345", "platform": "WeChat"},
+                        "message": {
+                            "message_id": "msg_001",
+                            "sender_id": "user_123",
+                            "sender_name": "Alice",
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "content": "Let's discuss the new feature design",
+                                }
+                            ],
+                            "timestamp": "2025-01-15T10:00:00+00:00",
+                        }
                     }
                 ],
-                "participants": ["Zhang San", "Li Si", "Wang Wu"],
+                "participants": ["user_123", "user_456"],
+                "sender_ids": ["user_123", "user_456"],
                 "type": "Conversation",
-                "keywords": ["New feature", "Design plan", "Meeting"],
-                "linked_entities": ["project_001", "feature_002"],
             }
         },
         extra="allow",
@@ -167,67 +107,71 @@ class MemCell(DocumentBaseWithSoftDelete, AuditBase):
         """Beanie settings"""
 
         # Collection name
-        name = "memcells"
+        name = "v1_memcells"
 
         # Index definitions
         indexes = [
-            # 1. Soft delete support - soft delete status index
             IndexModel(
-                [("deleted_at", ASCENDING)],
-                name="idx_deleted_at",
-                sparse=True,  # Only index documents that are deleted
+                [("tenant_id", ASCENDING), ("deleted_at", ASCENDING)],
+                name="idx_tenant_deleted_at",
+                sparse=True,
             ),
-            # 2. Composite index for user queries - core query pattern
-            # Includes deleted_at to optimize soft delete filtering
             IndexModel(
                 [
+                    ("tenant_id", ASCENDING),
                     ("user_id", ASCENDING),
                     ("deleted_at", ASCENDING),
                     ("timestamp", DESCENDING),
                 ],
-                name="idx_user_deleted_timestamp",
+                name="idx_tenant_user_deleted_timestamp",
             ),
-            # 3. Composite index for group queries - optimized for group chat scenarios
-            # Includes deleted_at to optimize soft delete filtering
             IndexModel(
                 [
+                    ("tenant_id", ASCENDING),
                     ("group_id", ASCENDING),
                     ("deleted_at", ASCENDING),
                     ("timestamp", DESCENDING),
                 ],
-                name="idx_group_deleted_timestamp",
+                name="idx_tenant_group_deleted_timestamp",
             ),
-            # 4. Index for time range queries (shard key, automatically created by MongoDB)
-            # Note: Shard key index is automatically created, no need to define manually
-            # IndexModel([("timestamp", ASCENDING)], name="idx_timestamp"),
-            # 5. Index for participant queries - indexing multi-value field
             IndexModel(
-                [("participants", ASCENDING)], name="idx_participants", sparse=True
+                [("tenant_id", ASCENDING), ("participants", ASCENDING)],
+                name="idx_tenant_participants",
+                sparse=True,
             ),
-            # 6. Composite index for user-type queries - optimized for user data type filtering
+            IndexModel(
+                [("tenant_id", ASCENDING), ("sender_ids", ASCENDING)],
+                name="idx_tenant_sender_ids",
+                sparse=True,
+            ),
             IndexModel(
                 [
+                    ("tenant_id", ASCENDING),
                     ("user_id", ASCENDING),
                     ("type", ASCENDING),
                     ("deleted_at", ASCENDING),
                     ("timestamp", DESCENDING),
                 ],
-                name="idx_user_type_deleted_timestamp",
+                name="idx_tenant_user_type_deleted_timestamp",
             ),
-            # 7. Composite index for group-type queries - optimized for group data type filtering
             IndexModel(
                 [
-                    ('group_id', ASCENDING),
+                    ("tenant_id", ASCENDING),
+                    ("group_id", ASCENDING),
                     ("type", ASCENDING),
                     ("deleted_at", ASCENDING),
                     ("timestamp", DESCENDING),
                 ],
-                name="idx_group_type_deleted_timestamp",
+                name="idx_tenant_group_type_deleted_timestamp",
             ),
-            # Creation time index
-            IndexModel([("created_at", DESCENDING)], name="idx_created_at"),
-            # Update time index
-            IndexModel([("updated_at", DESCENDING)], name="idx_updated_at"),
+            IndexModel(
+                [("tenant_id", ASCENDING), ("created_at", DESCENDING)],
+                name="idx_tenant_created_at",
+            ),
+            IndexModel(
+                [("tenant_id", ASCENDING), ("updated_at", DESCENDING)],
+                name="idx_tenant_updated_at",
+            ),
         ]
 
         # Validation settings
@@ -236,4 +180,4 @@ class MemCell(DocumentBaseWithSoftDelete, AuditBase):
 
 
 # Export models
-__all__ = ["MemCell", "RawData", "Message", "DataTypeEnum"]
+__all__ = ["MemCell", "DataTypeEnum"]

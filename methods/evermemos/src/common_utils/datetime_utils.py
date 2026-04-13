@@ -177,6 +177,9 @@ def _parse_datetime_core(
     # Handle datetime object
     if isinstance(time_value, datetime.datetime):
         dt = time_value
+    elif isinstance(time_value, (int, float)):
+        # Handle numeric timestamps (auto-detects seconds vs milliseconds)
+        dt = from_timestamp(time_value)
     elif isinstance(time_value, str):
         time_str = time_value.strip()
         # Handle "Z" suffix (UTC)

@@ -3,12 +3,10 @@
 Can be imported by other test scripts or run independently
 """
 
-
 import asyncio
 import time
 from typing import Dict, Any, List
 
-from pymilvus import utility, Collection
 from pymilvus import utility, Collection
 
 from infra_layer.adapters.out.search.milvus.memory.episodic_memory_collection import (
@@ -17,20 +15,31 @@ from infra_layer.adapters.out.search.milvus.memory.episodic_memory_collection im
 from infra_layer.adapters.out.search.milvus.memory.foresight_collection import (
     ForesightCollection,
 )
-from infra_layer.adapters.out.search.milvus.memory.event_log_collection import (
-    EventLogCollection,
+from infra_layer.adapters.out.search.milvus.memory.atomic_fact_collection import (
+    AtomicFactCollection,
+)
+from infra_layer.adapters.out.search.milvus.memory.agent_case_collection import (
+    AgentCaseCollection,
+)
+from infra_layer.adapters.out.search.milvus.memory.agent_skill_collection import (
+    AgentSkillCollection,
 )
 from infra_layer.adapters.out.search.elasticsearch.memory.episodic_memory import (
     EpisodicMemoryDoc,
 )
-from infra_layer.adapters.out.search.elasticsearch.memory.foresight import (
-    ForesightDoc,
+from infra_layer.adapters.out.search.elasticsearch.memory.foresight import ForesightDoc
+from infra_layer.adapters.out.search.elasticsearch.memory.atomic_fact import (
+    AtomicFactDoc,
 )
-from infra_layer.adapters.out.search.elasticsearch.memory.event_log import EventLogDoc
+from infra_layer.adapters.out.search.elasticsearch.memory.agent_case import (
+    AgentCaseDoc,
+)
+from infra_layer.adapters.out.search.elasticsearch.memory.agent_skill import (
+    AgentSkillDoc,
+)
 from core.di import get_bean_by_type
 from core.component.redis_provider import RedisProvider
 from core.component.mongodb_client_factory import MongoDBClientFactory
-
 
 
 async def _clear_mongodb(verbose: bool = True) -> Dict[str, Any]:
@@ -118,7 +127,9 @@ def _clear_milvus(
     collection_classes = [
         EpisodicMemoryCollection,
         ForesightCollection,
-        EventLogCollection,
+        AtomicFactCollection,
+        AgentCaseCollection,
+        AgentSkillCollection,
     ]
     for cls in collection_classes:
         collection = cls()
@@ -176,7 +187,9 @@ def _clear_milvus(
                 collection.ensure_all()
             except Exception as ensure_exc:
                 if verbose:
-                    print(f"      ⚠️  Recreate Milvus collection {alias} failed: {ensure_exc}")
+                    print(
+                        f"      ⚠️  Recreate Milvus collection {alias} failed: {ensure_exc}"
+                    )
         except Exception as exc:  # pylint: disable=broad-except
             stats["errors"].append(str(exc))
             if verbose:
@@ -197,7 +210,9 @@ async def _clear_elasticsearch(
         alias_names = [
             EpisodicMemoryDoc.get_index_name(),
             ForesightDoc.get_index_name(),
-            EventLogDoc.get_index_name(),
+            AtomicFactDoc.get_index_name(),
+            AgentCaseDoc.get_index_name(),
+            AgentSkillDoc.get_index_name(),
         ]
 
         if rebuild_index:
@@ -226,9 +241,10 @@ async def _clear_elasticsearch(
                 )
             # Recreate indices using EsIndexInitializer
             from core.oxm.es.es_utils import EsIndexInitializer
+
             initializer = EsIndexInitializer()
             await initializer.initialize_indices(
-                [EpisodicMemoryDoc, ForesightDoc, EventLogDoc]
+                [EpisodicMemoryDoc, ForesightDoc, AtomicFactDoc, AgentCaseDoc, AgentSkillDoc]
             )
             stats["recreated"] = True
             if verbose:
@@ -252,7 +268,9 @@ async def _clear_elasticsearch(
                 )
                 stats["cleared"].append({"alias": alias, "deleted": total_docs})
                 if verbose:
-                    print(f"      ✅ Elasticsearch {alias}: Deleted {total_docs} documents")
+                    print(
+                        f"      ✅ Elasticsearch {alias}: Deleted {total_docs} documents"
+                    )
             except Exception as inner_exc:  # pylint: disable=broad-except
                 stats["errors"].append(str(inner_exc))
                 if verbose:

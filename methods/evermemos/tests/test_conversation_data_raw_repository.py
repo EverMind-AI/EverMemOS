@@ -21,12 +21,10 @@ from common_utils.datetime_utils import get_now_with_timezone, to_iso_format
 from infra_layer.adapters.out.persistence.repository.conversation_data_raw_repository import (
     ConversationDataRepository,
 )
-from infra_layer.adapters.out.persistence.repository.memory_request_log_repository import (
-    MemoryRequestLogRepository,
+from infra_layer.adapters.out.persistence.repository.raw_message_repository import (
+    RawMessageRepository,
 )
-from infra_layer.adapters.out.persistence.document.request.memory_request_log import (
-    MemoryRequestLog,
-)
+from infra_layer.adapters.out.persistence.document.request.raw_message import RawMessage
 from memory_layer.memcell_extractor.base_memcell_extractor import RawData
 from core.observation.logger import get_logger
 
@@ -38,15 +36,15 @@ def generate_unique_id(prefix: str = "") -> str:
     return f"{prefix}{uuid.uuid4().hex[:8]}"
 
 
-async def create_test_memory_request_log(
+async def create_test_raw_message(
     group_id: str,
     message_id: str,
     content: str,
     sync_status: int = -1,
     created_at: datetime = None,
-) -> MemoryRequestLog:
+) -> RawMessage:
     """
-    Create a test MemoryRequestLog record
+    Create a test RawMessage record
 
     Args:
         group_id: Group ID
@@ -56,39 +54,39 @@ async def create_test_memory_request_log(
         created_at: Created time (default: now)
 
     Returns:
-        Created MemoryRequestLog object
+        Created RawMessage object
     """
-    log_repo = get_bean_by_type(MemoryRequestLogRepository)
+    repo = get_bean_by_type(RawMessageRepository)
 
-    log = MemoryRequestLog(
+    msg = RawMessage(
         group_id=group_id,
         request_id=generate_unique_id("req_"),
         message_id=message_id,
-        sender="test_user",
+        sender_id="test_user",
         sender_name="Test User",
         content=content,
-        message_create_time=to_iso_format(created_at or get_now_with_timezone()),
+        timestamp=to_iso_format(created_at or get_now_with_timezone()),
         sync_status=sync_status,
     )
 
     # Manually set created_at if provided
     if created_at:
-        log.created_at = created_at
+        msg.created_at = created_at
 
-    await log_repo.save(log)
-    return log
+    await repo.save(msg)
+    return msg
 
 
 async def cleanup_test_data(group_id: str):
     """Clean up test data for a group"""
-    log_repo = get_bean_by_type(MemoryRequestLogRepository)
-    await log_repo.delete_by_group_id(group_id)
+    repo = get_bean_by_type(RawMessageRepository)
+    await repo.delete_by_group_id(group_id)
 
 
-async def get_logs_by_group_id(group_id: str) -> List[MemoryRequestLog]:
+async def get_logs_by_group_id(group_id: str) -> List[RawMessage]:
     """Get all logs for a group (for verification)"""
-    log_repo = get_bean_by_type(MemoryRequestLogRepository)
-    return await log_repo.find_by_group_id(group_id, sync_status=None)
+    repo = get_bean_by_type(RawMessageRepository)
+    return await repo.find_by_group_id(group_id, sync_status=None)
 
 
 async def test_save_conversation_data_basic():
@@ -100,13 +98,13 @@ async def test_save_conversation_data_basic():
 
     try:
         # Create test log records with sync_status=-1
-        msg1 = await create_test_memory_request_log(
+        msg1 = await create_test_raw_message(
             group_id=group_id,
             message_id=generate_unique_id("msg_"),
             content="Test message 1",
             sync_status=-1,
         )
-        msg2 = await create_test_memory_request_log(
+        msg2 = await create_test_raw_message(
             group_id=group_id,
             message_id=generate_unique_id("msg_"),
             content="Test message 2",
@@ -164,13 +162,13 @@ async def test_save_conversation_data_precise():
         msg2_id = generate_unique_id("msg_")
         msg3_id = generate_unique_id("msg_")
 
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id, message_id=msg1_id, content="Message 1", sync_status=-1
         )
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id, message_id=msg2_id, content="Message 2", sync_status=-1
         )
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id, message_id=msg3_id, content="Message 3", sync_status=-1
         )
         logger.info("✅ Created 3 test log records with sync_status=-1")
@@ -227,19 +225,19 @@ async def test_get_conversation_data():
         msg2_id = generate_unique_id("msg_")
         msg3_id = generate_unique_id("msg_")
 
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=msg1_id,
             content="Pending message",
             sync_status=-1,  # pending
         )
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=msg2_id,
             content="Accumulating message",
             sync_status=0,  # accumulating
         )
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=msg3_id,
             content="Used message",
@@ -293,13 +291,13 @@ async def test_delete_conversation_data():
         msg1_id = generate_unique_id("msg_")
         msg2_id = generate_unique_id("msg_")
 
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=msg1_id,
             content="Pending message",
             sync_status=-1,
         )
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=msg2_id,
             content="Accumulating message",
@@ -347,13 +345,13 @@ async def test_delete_conversation_data_with_exclude():
         msg2_id = generate_unique_id("msg_")
         msg3_id = generate_unique_id("msg_")
 
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id, message_id=msg1_id, content="Message 1", sync_status=-1
         )
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id, message_id=msg2_id, content="Message 2", sync_status=0
         )
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id, message_id=msg3_id, content="Message 3", sync_status=-1
         )
         logger.info("✅ Created 3 logs")
@@ -408,28 +406,28 @@ async def test_fetch_unprocessed_conversation_data():
         now = get_now_with_timezone()
 
         # Create logs with different sync_status and timestamps
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=generate_unique_id("msg_"),
             content="Oldest pending",
             sync_status=-1,
             created_at=now - timedelta(hours=3),
         )
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=generate_unique_id("msg_"),
             content="Middle accumulating",
             sync_status=0,
             created_at=now - timedelta(hours=2),
         )
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=generate_unique_id("msg_"),
             content="Newest pending",
             sync_status=-1,
             created_at=now - timedelta(hours=1),
         )
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=generate_unique_id("msg_"),
             content="Used message",
@@ -486,7 +484,7 @@ async def test_sync_status_state_transitions():
         # Step 1: Create initial log (simulating RequestHistoryEvent listener)
         # New logs start with sync_status=-1
         msg_id = generate_unique_id("msg_")
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=msg_id,
             content="Test message for state flow",
@@ -547,13 +545,13 @@ async def test_empty_raw_data_list():
 
     try:
         # Create log records
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=generate_unique_id("msg_"),
             content="Message 1",
             sync_status=-1,
         )
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=generate_unique_id("msg_"),
             content="Message 2",
@@ -593,13 +591,13 @@ async def test_raw_data_list_without_data_id():
 
     try:
         # Create log records
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=generate_unique_id("msg_"),
             content="Message 1",
             sync_status=-1,
         )
-        await create_test_memory_request_log(
+        await create_test_raw_message(
             group_id=group_id,
             message_id=generate_unique_id("msg_"),
             content="Message 2",

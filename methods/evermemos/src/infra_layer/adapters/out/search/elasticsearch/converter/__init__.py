@@ -10,8 +10,8 @@ from infra_layer.adapters.out.search.elasticsearch.converter.episodic_memory_con
 from infra_layer.adapters.out.search.elasticsearch.converter.foresight_converter import (
     ForesightConverter,
 )
-from infra_layer.adapters.out.search.elasticsearch.converter.event_log_converter import (
-    EventLogConverter,
+from infra_layer.adapters.out.search.elasticsearch.converter.atomic_fact_converter import (
+    AtomicFactConverter,
 )
 
-__all__ = ["EpisodicMemoryConverter", "ForesightConverter", "EventLogConverter"]
+__all__ = ["EpisodicMemoryConverter", "ForesightConverter", "AtomicFactConverter"]

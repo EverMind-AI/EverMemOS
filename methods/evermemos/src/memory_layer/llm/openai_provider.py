@@ -1,7 +1,7 @@
 """
-OpenAI LLM provider implementation using OpenRouter.
+OpenAI-compatible LLM provider implementation.
 
-This provider uses OpenRouter API to access OpenAI models.
+This provider uses a caller-supplied API key and base URL.
 """
 
 from math import log
@@ -18,15 +18,17 @@ import random
 
 from memory_layer.llm.protocol import LLMProvider, LLMError
 from core.observation.logger import get_logger
+from core.di.utils import get_bean_by_type
+from core.component.token_usage_collector import TokenUsageCollector
 
 logger = get_logger(__name__)
 
 
 class OpenAIProvider(LLMProvider):
     """
-    OpenAI LLM provider using OpenRouter API.
+    OpenAI-compatible LLM provider.
 
-    This provider uses OpenRouter to access OpenAI models with environment variable configuration.
+    This provider expects the caller to supply API key and base URL.
     """
 
     def __init__(
@@ -37,6 +39,7 @@ class OpenAIProvider(LLMProvider):
         temperature: float = 0.3,
         max_tokens: int | None = 100 * 1024,
         enable_stats: bool = False,  # New: optional statistics feature, disabled by default
+        provider_type: str | None = None,  # Provider type: "openai" or "openrouter"
         **kwargs,
     ):
         """
@@ -44,25 +47,49 @@ class OpenAIProvider(LLMProvider):
 
         Args:
             model: Model name (e.g., "gpt-4o-mini", "gpt-4o")
-            api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
-            base_url: OpenRouter base URL (defaults to OpenRouter endpoint)
+            api_key: API key (required by caller)
+            base_url: API base URL (required by caller)
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
             enable_stats: Enable usage statistics accumulation (default: False)
+            provider_type: Provider type ("openai" or "openrouter")
             **kwargs: Additional arguments (ignored for now)
         """
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
-        self.enable_stats = enable_stats  # New
+        self.enable_stats = enable_stats
+        self.provider_type = (provider_type or "openrouter").lower()
+        self.api_key = api_key
+        self.base_url = base_url
 
-        # Use OpenRouter API key and base URL
-        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
-        self.base_url = base_url or "https://openrouter.ai/api/v1"
+        # Validate model whitelist from env: {PROVIDER}_WHITE_LIST
+        # If whitelist is empty or not set, no restriction is applied.
+        self._validate_model_whitelist(self.provider_type, model)
 
-        # New: optional per-call statistics (disabled by default, does not affect existing usage)
+        # Optional per-call statistics (disabled by default)
         if self.enable_stats:
             self.current_call_stats = None  # Store statistics for current call
+
+    @staticmethod
+    def _validate_model_whitelist(provider_type: str, model: str) -> None:
+        """
+        Validate model against the provider's whitelist from environment variable.
+
+        Reads {PROVIDER}_WHITE_LIST env var (comma-separated model names).
+        If the env var is not set or empty, no restriction is applied.
+        """
+        env_key = f"{provider_type.upper()}_WHITE_LIST"
+        raw = os.getenv(env_key, "").strip()
+        if not raw:
+            return
+        allowed_models = {m.strip() for m in raw.split(",") if m.strip()}
+        if not allowed_models:
+            return
+        if model not in allowed_models:
+            raise ValueError(
+                f"Provider '{provider_type}' only supports: {', '.join(sorted(allowed_models))}. Got: '{model}'."
+            )
 
     async def generate(
         self,
@@ -111,6 +138,10 @@ class OpenAIProvider(LLMProvider):
         elif self.max_tokens is not None:
             data["max_tokens"] = self.max_tokens
 
+        # Merge per-call extra_body into request data
+        if extra_body:
+            data.update(extra_body)
+
         # Use asynchronous aiohttp instead of synchronous urllib
         headers = {
             'Content-Type': 'application/json',
@@ -139,13 +170,21 @@ class OpenAIProvider(LLMProvider):
                                 f"❌ [OpenAI-{self.model}] HTTP error {response.status}:"
                             )
                             logger.error(f"   💬 Error message: {error_msg}")
-                            # Debug: 429 Too Many Requests breakpoint debugging
-                            if response.status == 429:
+
+                            # Retryable errors: rate limit, server errors
+                            if response.status in (429, 500, 502, 503, 504):
                                 logger.warning(
-                                    f"429 Too Many Requests, waiting for 10 seconds"
+                                    f"Retryable error {response.status}, retry {retry_num + 1}/{max_retries}"
                                 )
                                 await asyncio.sleep(random.randint(5, 20))
+                                if retry_num < max_retries - 1:
+                                    continue  # Retry
+                                # Last retry failed
+                                raise LLMError(
+                                    f"HTTP Error {response.status}: {error_msg} (after {max_retries} retries)"
+                                )
 
+                            # Non-retryable errors (401, 403, 404, 400, etc.)
                             raise LLMError(f"HTTP Error {response.status}: {error_msg}")
 
                         # Use time.perf_counter() for more precise time measurement
@@ -191,6 +230,18 @@ class OpenAIProvider(LLMProvider):
                             f"[OpenAI-{self.model}] Total Tokens: {total_tokens:,}"
                         )
 
+                        # Report token usage to collector
+                        try:
+                            collector = get_bean_by_type(TokenUsageCollector)
+                            collector.add(
+                                self.model,
+                                prompt_tokens,
+                                completion_tokens,
+                                call_type="llm",
+                            )
+                        except Exception:
+                            pass
+
                         # New: record statistics for current call (if statistics enabled)
                         if self.enable_stats:
                             self.current_call_stats = {
@@ -201,7 +252,20 @@ class OpenAIProvider(LLMProvider):
                                 'timestamp': time.time(),
                             }
 
-                        return response_data['choices'][0]['message']['content']
+                        message = response_data['choices'][0]['message']
+                        reasoning = message.get('reasoning_content') or message.get('reasoning') or message.get('thinking')
+                        if reasoning:
+                            logger.debug(
+                                f"[OpenAI-{self.model}] "
+                                f"🧠 Thinking detected: "
+                                f"{len(reasoning)} chars"
+                            )
+                        else:
+                            logger.debug(
+                                f"[OpenAI-{self.model}] "
+                                f"💭 No thinking in response"
+                            )
+                        return message['content']
 
             except aiohttp.ClientError as e:
                 error_time = time.perf_counter()
@@ -252,4 +316,8 @@ class OpenAIProvider(LLMProvider):
 
     def __repr__(self) -> str:
         """String representation of the provider."""
-        return f"OpenAIProvider(model={self.model}, base_url={self.base_url})"
+        return (
+            "OpenAIProvider("
+            f"provider_type={self.provider_type}, model={self.model}, base_url={self.base_url}"
+            ")"
+        )

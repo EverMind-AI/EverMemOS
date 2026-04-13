@@ -42,12 +42,13 @@ from core.tenants.tenant_contextvar import get_current_tenant
 # Utility Functions
 # ============================================================
 
+
 def get_space_id_for_metrics() -> str:
     """
     Get space_id for metrics label
-    
+
     Returns 'default' if tenant context is not available or space_id is not set.
-    
+
     Returns:
         str: space_id or 'default'
     """
@@ -63,10 +64,10 @@ def get_space_id_for_metrics() -> str:
 def get_raw_data_type_label(raw_data_type: Optional[str]) -> str:
     """
     Get raw_data_type for metrics label
-    
+
     Args:
         raw_data_type: Raw data type string or enum value
-        
+
     Returns:
         str: Original value as string or 'unknown'
     """
@@ -216,7 +217,7 @@ Memory extraction stage duration histogram
 Labels:
 - space_id: Tenant space identifier
 - raw_data_type: Type of raw data (conversation, etc.)
-- stage: init_state, extract_episodes, extract_foresights, extract_event_logs, 
+- stage: init_state, extract_episodes, extract_foresights, extract_atomic_facts, 
          update_memcell_cluster, process_memories
 
 Buckets: 10ms - 10s for ML inference
@@ -236,7 +237,7 @@ Memory extraction counter by type
 Labels:
 - space_id: Tenant space identifier
 - raw_data_type: Type of raw data (conversation, etc.)
-- memory_type: episode, foresight, event_log
+- memory_type: episode, foresight, atomic_fact
 """
 
 
@@ -253,7 +254,7 @@ extract_memory call counter
 Labels:
 - space_id: Tenant space identifier
 - raw_data_type: Type of raw data (conversation, etc.)
-- memory_type: episodic_memory, foresight, event_log, profile, group_profile
+- memory_type: episodic_memory, foresight, atomic_fact, profile, group_profile
 - status: success, error, empty_result
 """
 
@@ -272,7 +273,7 @@ extract_memory duration histogram
 Labels:
 - space_id: Tenant space identifier
 - raw_data_type: Type of raw data (conversation, etc.)
-- memory_type: episodic_memory, foresight, event_log, profile, group_profile
+- memory_type: episodic_memory, foresight, atomic_fact, profile, group_profile
 
 Buckets: 10ms - 10s for ML inference
 """
@@ -282,21 +283,19 @@ Buckets: 10ms - 10s for ML inference
 # Helper Functions
 # ============================================================
 
+
 def record_memorize_request(
-    space_id: str,
-    raw_data_type: str,
-    status: str,
-    duration_seconds: float,
+    space_id: str, raw_data_type: str, status: str, duration_seconds: float
 ) -> None:
     """
     Helper function to record memorize request metrics
-    
+
     Args:
         space_id: Tenant space identifier
         raw_data_type: Type of raw data (conversation, etc.)
         status: Request status (success, error, accumulated, extracted)
         duration_seconds: Total operation duration in seconds
-    
+
     Example:
         record_memorize_request(
             space_id=get_space_id_for_metrics(),
@@ -306,34 +305,33 @@ def record_memorize_request(
         )
     """
     raw_data_type = get_raw_data_type_label(raw_data_type)
-    
+
     # Counter
     MEMORIZE_REQUESTS_TOTAL.labels(
         space_id=space_id, raw_data_type=raw_data_type, status=status
     ).inc()
-    
+
     # Duration histogram (use simplified status for duration)
-    duration_status = 'success' if status in ('success', 'accumulated', 'extracted') else 'error'
+    duration_status = (
+        'success' if status in ('success', 'accumulated', 'extracted') else 'error'
+    )
     MEMORIZE_DURATION_SECONDS.labels(
         space_id=space_id, raw_data_type=raw_data_type, status=duration_status
     ).observe(duration_seconds)
 
 
 def record_memorize_error(
-    space_id: str,
-    raw_data_type: str,
-    stage: str,
-    error_type: str,
+    space_id: str, raw_data_type: str, stage: str, error_type: str
 ) -> None:
     """
     Helper function to record memorize error
-    
+
     Args:
         space_id: Tenant space identifier
         raw_data_type: Type of raw data (conversation, etc.)
         stage: Stage where error occurred (conversion, save_logs, memorize_process)
         error_type: Error type (validation_error, timeout, connection_error, unknown)
-    
+
     Example:
         record_memorize_error(
             space_id=get_space_id_for_metrics(),
@@ -344,25 +342,25 @@ def record_memorize_error(
     """
     raw_data_type = get_raw_data_type_label(raw_data_type)
     MEMORIZE_ERRORS_TOTAL.labels(
-        space_id=space_id, raw_data_type=raw_data_type, stage=stage, error_type=error_type
+        space_id=space_id,
+        raw_data_type=raw_data_type,
+        stage=stage,
+        error_type=error_type,
     ).inc()
 
 
 def record_memorize_message(
-    space_id: str,
-    raw_data_type: str,
-    status: str,
-    count: int = 1,
+    space_id: str, raw_data_type: str, status: str, count: int = 1
 ) -> None:
     """
     Helper function to record message processing
-    
+
     Args:
         space_id: Tenant space identifier
         raw_data_type: Type of raw data (conversation, etc.)
         status: Message status (received, saved, processed)
         count: Number of messages
-    
+
     Example:
         record_memorize_message(
             space_id=get_space_id_for_metrics(),
@@ -380,10 +378,10 @@ def record_memorize_message(
 def classify_memorize_error(error: Exception) -> str:
     """
     Classify error type for metrics
-    
+
     Args:
         error: Exception instance
-    
+
     Returns:
         Error type string for metrics label
     """
@@ -393,20 +391,17 @@ def classify_memorize_error(error: Exception) -> str:
 
 
 def record_boundary_detection(
-    space_id: str,
-    raw_data_type: str,
-    result: str,
-    trigger_type: str,
+    space_id: str, raw_data_type: str, result: str, trigger_type: str
 ) -> None:
     """
     Helper function to record boundary detection metrics
-    
+
     Args:
         space_id: Tenant space identifier
         raw_data_type: Type of raw data (conversation, etc.)
         result: Detection result (should_end, should_wait, error, force_split)
         trigger_type: What triggered the detection (llm, token_limit, message_limit, first_message)
-    
+
     Example:
         record_boundary_detection(
             space_id=get_space_id_for_metrics(),
@@ -417,23 +412,24 @@ def record_boundary_detection(
     """
     raw_data_type = get_raw_data_type_label(raw_data_type)
     BOUNDARY_DETECTION_TOTAL.labels(
-        space_id=space_id, raw_data_type=raw_data_type, result=result, trigger_type=trigger_type
+        space_id=space_id,
+        raw_data_type=raw_data_type,
+        result=result,
+        trigger_type=trigger_type,
     ).inc()
 
 
 def record_memcell_extracted(
-    space_id: str,
-    raw_data_type: str,
-    trigger_type: str,
+    space_id: str, raw_data_type: str, trigger_type: str
 ) -> None:
     """
     Helper function to record MemCell extraction
-    
+
     Args:
         space_id: Tenant space identifier
         raw_data_type: Type of raw data (conversation, etc.)
         trigger_type: What triggered the extraction (llm, token_limit, message_limit)
-    
+
     Example:
         record_memcell_extracted(
             space_id=get_space_id_for_metrics(),
@@ -448,21 +444,18 @@ def record_memcell_extracted(
 
 
 def record_extraction_stage(
-    space_id: str,
-    raw_data_type: str,
-    stage: str,
-    duration_seconds: float,
+    space_id: str, raw_data_type: str, stage: str, duration_seconds: float
 ) -> None:
     """
     Helper function to record memory extraction stage duration
-    
+
     Args:
         space_id: Tenant space identifier
         raw_data_type: Type of raw data (conversation, etc.)
-        stage: Extraction stage (init_state, extract_episodes, extract_foresights, 
-               extract_event_logs, update_memcell_cluster, process_memories)
+        stage: Extraction stage (init_state, extract_episodes, extract_foresights,
+               extract_atomic_facts, update_memcell_cluster, process_memories)
         duration_seconds: Stage duration in seconds
-    
+
     Example:
         record_extraction_stage(
             space_id=get_space_id_for_metrics(),
@@ -478,20 +471,17 @@ def record_extraction_stage(
 
 
 def record_memory_extracted(
-    space_id: str,
-    raw_data_type: str,
-    memory_type: str,
-    count: int = 1,
+    space_id: str, raw_data_type: str, memory_type: str, count: int = 1
 ) -> None:
     """
     Helper function to record extracted memory count by type
-    
+
     Args:
         space_id: Tenant space identifier
         raw_data_type: Type of raw data (conversation, etc.)
-        memory_type: Memory type (episode, foresight, event_log)
+        memory_type: Memory type (episode, foresight, atomic_fact)
         count: Number of memories extracted
-    
+
     Example:
         record_memory_extracted(
             space_id=get_space_id_for_metrics(),
@@ -515,14 +505,14 @@ def record_extract_memory_call(
 ) -> None:
     """
     Helper function to record extract_memory call metrics
-    
+
     Args:
         space_id: Tenant space identifier
         raw_data_type: Type of raw data (conversation, etc.)
-        memory_type: Memory type (episodic_memory, foresight, event_log, profile, group_profile)
+        memory_type: Memory type (episodic_memory, foresight, atomic_fact, profile, group_profile)
         status: Call status (success, error, empty_result)
         duration_seconds: Call duration in seconds
-    
+
     Example:
         record_extract_memory_call(
             space_id=get_space_id_for_metrics(),
@@ -534,7 +524,10 @@ def record_extract_memory_call(
     """
     raw_data_type = get_raw_data_type_label(raw_data_type)
     EXTRACT_MEMORY_REQUESTS_TOTAL.labels(
-        space_id=space_id, raw_data_type=raw_data_type, memory_type=memory_type, status=status
+        space_id=space_id,
+        raw_data_type=raw_data_type,
+        memory_type=memory_type,
+        status=status,
     ).inc()
     EXTRACT_MEMORY_DURATION_SECONDS.labels(
         space_id=space_id, raw_data_type=raw_data_type, memory_type=memory_type

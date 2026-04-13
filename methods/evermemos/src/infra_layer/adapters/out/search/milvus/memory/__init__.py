@@ -10,8 +10,16 @@ from infra_layer.adapters.out.search.milvus.memory.episodic_memory_collection im
 from infra_layer.adapters.out.search.milvus.memory.foresight_collection import (
     ForesightCollection,
 )
-from infra_layer.adapters.out.search.milvus.memory.event_log_collection import (
-    EventLogCollection,
+from infra_layer.adapters.out.search.milvus.memory.atomic_fact_collection import (
+    AtomicFactCollection,
+)
+from infra_layer.adapters.out.search.milvus.memory.user_profile_collection import (
+    UserProfileCollection,
 )
 
-__all__ = ["EpisodicMemoryCollection", "ForesightCollection", "EventLogCollection"]
+__all__ = [
+    "EpisodicMemoryCollection",
+    "ForesightCollection",
+    "AtomicFactCollection",
+    "UserProfileCollection",
+]

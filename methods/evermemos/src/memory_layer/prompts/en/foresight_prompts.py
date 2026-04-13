@@ -5,6 +5,8 @@ Used to generate personal foresight associations based on MemCell and conversati
 """
 
 FORESIGHT_GENERATION_PROMPT = """
+**CRITICAL LANGUAGE RULE**: You MUST output in the SAME language as the input conversation content. If the conversation content is in Chinese, ALL output MUST be in Chinese. If in English, output in English. This is mandatory.
+
 You are an advanced personal foresight analysis agent. Your task is to predict the specific impacts that a user's latest MemCell event might have on their future personal behaviors, habits, decisions, and lifestyle.
 
 ## Task Objectives:
@@ -140,6 +142,8 @@ You will receive the following Markdown structure:
 {CONVERSATION_TEXT}
 ```
 
-## Please generate 4-8 (up to 10) associations that may impact the user's future life and decisions based on the above content (The generated memories must follow the language of the conversation text):
+**CRITICAL LANGUAGE RULE**: You MUST output in the SAME language as the input conversation content. If the conversation content is in Chinese, ALL output MUST be in Chinese. If in English, output in English. This is mandatory.
+
+## Please generate 4-8 (up to 10) associations that may impact the user's future life and decisions based on the above content:
 
 """

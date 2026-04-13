@@ -6,6 +6,7 @@ Provides common basic operations, all Milvus repositories should inherit from th
 
 from abc import ABC
 from typing import Optional, TypeVar, Generic, Type, List, Any
+from pymilvus.orm.mutation import MutationResult
 from core.oxm.milvus.milvus_collection_base import MilvusCollectionBase
 from core.oxm.milvus.async_collection import AsyncCollection
 from core.observation.logger import get_logger
@@ -142,7 +143,9 @@ class BaseMilvusRepository(ABC, Generic[T]):
 
     # ==================== Batch Operations ====================
 
-    async def insert_batch(self, entities: List[T], flush: bool = False) -> List[str]:
+    async def insert_batch(
+        self, entities: List[T], flush: bool = False
+    ) -> MutationResult:
         """
         Insert entities in batch
 
@@ -151,10 +154,10 @@ class BaseMilvusRepository(ABC, Generic[T]):
             flush: Whether to flush immediately
 
         Returns:
-            List[str]: List of inserted entity IDs
+            MutationResult from Milvus
         """
         try:
-            entity_ids = await self.collection.insert_batch(entities)
+            result = await self.collection.insert(entities)
             if flush:
                 await self.collection.flush()
             logger.debug(
@@ -162,7 +165,7 @@ class BaseMilvusRepository(ABC, Generic[T]):
                 self.model_name,
                 len(entities),
             )
-            return entity_ids
+            return result
         except Exception as e:
             logger.error("❌ Batch insert entities failed [%s]: %s", self.model_name, e)
             raise

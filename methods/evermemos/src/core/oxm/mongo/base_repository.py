@@ -256,6 +256,48 @@ class BaseRepository(ABC, Generic[T]):
             )
             raise
 
+    # ==================== Query Methods ====================
+
+    async def find_by_query(
+        self,
+        query: dict,
+        skip: int = 0,
+        limit: int = 20,
+        sort: list = None,
+        projection_model=None,
+    ):
+        """
+        Generic query with pagination and optional projection.
+
+        Args:
+            query: MongoDB filter dict
+            skip: Number of documents to skip
+            limit: Maximum number of documents to return
+            sort: List of (field, direction) tuples
+            projection_model: Optional Pydantic model for field projection (e.g. exclude vector)
+
+        Returns:
+            Tuple of (documents list, total count)
+        """
+        import asyncio
+
+        try:
+            find_kwargs = {"skip": skip, "limit": limit}
+            if sort:
+                find_kwargs["sort"] = sort
+            if projection_model:
+                find_kwargs["projection_model"] = projection_model
+
+            find_query = self.model.find_many(query, **find_kwargs)
+            count_query = self.model.find_many(query).count()
+
+            docs, total_count = await asyncio.gather(find_query.to_list(), count_query)
+
+            return docs, total_count
+        except Exception as e:
+            logger.error("❌ Failed to query documents [%s]: %s", self.model_name, e)
+            raise
+
     # ==================== Counting Methods ====================
 
     async def count_all(self, filter_query: Optional[dict] = None) -> int:

@@ -9,7 +9,7 @@ This guide explains how to efficiently process multiple messages using EverMemOS
 ## Table of Contents
 
 - [Overview](#overview)
-- [Group Chat Format](#group-chat-format)
+- [Conversation Format](#conversation-format)
 - [Batch Storage Script](#batch-storage-script)
 - [Data Format Specification](#data-format-specification)
 - [Examples](#examples)
@@ -29,15 +29,15 @@ EverMemOS supports batch processing for efficiently storing multiple messages at
 
 ---
 
-## Group Chat Format
+## Conversation Format
 
-EverMemOS uses a standardized **GroupChatFormat** for batch operations. This format supports:
+EverMemOS uses a standardized **ConversationFormat** for batch operations. This format supports:
 
 - Conversation metadata (group info, user details)
 - Multi-speaker conversations
 - Timestamps and message IDs
 
-For complete format specifications, see [Group Chat Format Specification](../../data_format/group_chat/group_chat_format.md).
+For complete format specifications, see [Conversation Format Specification](../../data_format/conversation/conversation_format.md).
 
 ---
 
@@ -48,20 +48,20 @@ For complete format specifications, see [Group Chat Format Specification](../../
 ```bash
 # Store group chat messages (Chinese data)
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat_zh.json \
-  --api-url http://localhost:1995/api/v1/memories \
-  --scene group_chat
+  --input data/team_chat_zh.json \
+  --api-url http://localhost:8001/api/v0/memories \
+  --scene team
 
 # Store group chat messages (English data)
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat_en.json \
-  --api-url http://localhost:1995/api/v1/memories \
-  --scene group_chat
+  --input data/team_chat_en.json \
+  --api-url http://localhost:8001/api/v0/memories \
+  --scene team
 
 # Validate file format without storing
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat_en.json \
-  --scene group_chat \
+  --input data/team_chat_en.json \
+  --scene team \
   --validate-only
 ```
 
@@ -70,33 +70,33 @@ uv run python src/bootstrap.py src/run_memorize.py \
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `--input` | Yes | Path to the conversation data file (JSON format) |
-| `--api-url` | No | API endpoint (default: http://localhost:1995/api/v1/memories) |
-| `--scene` | Yes | Scene type: `assistant` or `group_chat` |
+| `--api-url` | No | API endpoint (default: http://localhost:8001/api/v0/memories) |
+| `--scene` | Yes | Scene type: `solo` or `team` |
 | `--validate-only` | No | Validate format without sending to API |
 
 ### Scene Parameter Explanation
 
 The `--scene` parameter specifies the memory extraction strategy:
 
-- **`assistant`** - Use for one-on-one conversations with AI assistant
-- **`group_chat`** - Use for multi-person group discussions
+- **`solo`** - Use for one-on-one conversations with AI assistant
+- **`team`** - Use for multi-person group discussions
 
-**Important Note**: In your data files, you may see `scene` values like `work`, `company`, or `social` - these are internal scene descriptors in the data format. The `--scene` command-line parameter uses different values (`assistant`/`group_chat`) to specify which extraction pipeline to apply.
+**Important Note**: In your data files, you may see `scene` values like `work`, `company`, or `social` - these are internal scene descriptors in the data format. The `--scene` command-line parameter uses different values (`solo`/`team`) to specify which extraction pipeline to apply.
 
 ---
 
 ## Data Format Specification
 
-### GroupChatFormat Structure
+### ConversationFormat Structure
 
 ```json
 {
   "version": "1.0.0",
-  "conversation_meta": {
+  "session_meta": {
     "group_id": "group_001",
     "name": "Project Discussion Group",
     "description": "Team project planning and updates",
-    "scene": "group_chat",
+    "scene": "team",
     "timezone": "Asia/Shanghai",
     "user_details": {
       "user_101": {
@@ -129,7 +129,7 @@ The `--scene` parameter specifies the memory extraction strategy:
 
 ### Required Fields
 
-**conversation_meta:**
+**session_meta:**
 - `group_id` (string) - Unique identifier for the conversation group
 - `name` (string) - Human-readable name for the group
 - `user_details` (object) - Map of user IDs to user information
@@ -142,9 +142,9 @@ The `--scene` parameter specifies the memory extraction strategy:
 
 ### Optional Fields
 
-**conversation_meta:**
+**session_meta:**
 - `description` (string) - Group description
-- `scene` (string) - Internal scene descriptor (group_chat or assistant)
+- `scene` (string) - Internal scene descriptor (team or solo)
 - `timezone` (string) - Timezone for the conversation
 
 **conversation_list:**
@@ -159,7 +159,7 @@ The `--scene` parameter specifies the memory extraction strategy:
 ```json
 {
   "version": "1.0.0",
-  "conversation_meta": {
+  "session_meta": {
     "group_id": "team_standup",
     "name": "Daily Standup",
     "user_details": {
@@ -189,11 +189,11 @@ The `--scene` parameter specifies the memory extraction strategy:
 ```json
 {
   "version": "1.0.0",
-  "conversation_meta": {
+  "session_meta": {
     "group_id": "family_chat_001",
     "name": "Smith Family",
     "description": "Family group chat",
-    "scene": "group_chat",
+    "scene": "team",
     "timezone": "America/New_York",
     "user_details": {
       "mom": {
@@ -234,10 +234,10 @@ The `--scene` parameter specifies the memory extraction strategy:
 ```json
 {
   "version": "1.0.0",
-  "conversation_meta": {
+  "session_meta": {
     "group_id": "user_assistant_001",
     "name": "Personal Assistant",
-    "scene": "assistant",
+    "scene": "solo",
     "user_details": {
       "user_001": {
         "full_name": "Alex"
@@ -261,11 +261,11 @@ The `--scene` parameter specifies the memory extraction strategy:
 }
 ```
 
-**Command for assistant chat:**
+**Command for solo chat:**
 ```bash
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input my_assistant_chat.json \
-  --scene assistant
+  --input my_solo_chat.json \
+  --scene solo
 ```
 
 ---
@@ -295,12 +295,12 @@ uv run python src/bootstrap.py src/run_memorize.py \
 
 ### 4. Scene Selection
 
-- Use `assistant` for:
+- Use `solo` for:
   - One-on-one conversations
   - Personal AI assistant chats
   - Individual user interactions
 
-- Use `group_chat` for:
+- Use `team` for:
   - Multi-participant discussions
   - Team conversations
   - Family or social group chats
@@ -324,8 +324,8 @@ uv run python src/bootstrap.py src/run_memorize.py \
 **Problem**: Script reports API errors when storing
 
 **Solutions:**
-- Verify API server is running: `curl http://localhost:1995/health`
-- Check API URL is correct (default: http://localhost:1995/api/v1/memories)
+- Verify API server is running: `curl http://localhost:8001/health`
+- Check API URL is correct (default: http://localhost:8001/api/v0/memories)
 - Ensure .env has required API keys (LLM_API_KEY, VECTORIZE_API_KEY)
 - Review error messages for specific issues
 
@@ -353,7 +353,7 @@ uv run python src/bootstrap.py src/run_memorize.py \
 
 ## See Also
 
-- [Group Chat Format Specification](../../data_format/group_chat/group_chat_format.md) - Complete format reference
+- [Conversation Format Specification](../../data_format/conversation/conversation_format.md) - Complete format reference
 - [Usage Examples](USAGE_EXAMPLES.md) - Other usage methods
 - [Demos](DEMOS.md) - Interactive demo walkthroughs
 - [API Documentation](../api_docs/memory_api.md) - Memory API reference

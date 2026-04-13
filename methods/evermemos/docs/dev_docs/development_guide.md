@@ -387,7 +387,7 @@ LOG_FORMAT=detailed
 
 # External service configuration (use test addresses in development)
 EXTERNAL_API_URL=https://api-test.example.com
-DATABASE_URL=postgresql://dev:password@localhost:5432/memsys_dev
+DATABASE_URL=postgresql://dbuser:dbpass@localhost:5432/app_dev
 REDIS_URL=redis://localhost:6379/0
 ```
 
@@ -490,49 +490,29 @@ if __name__ == "__main__":
 
 #### Run Development Scripts
 ```bash
-# Enter src directory
-cd src
-
-# Run data processing script
-python your_dev_script.py
-
-# Run migration script
-python migrate_data.py
-
-# Run test script
-python test_service.py
+# Use bootstrap to run scripts with full application context
+uv run python src/bootstrap.py your_dev_script.py
+uv run python src/bootstrap.py migrate_data.py
+uv run python src/bootstrap.py test_service.py
 ```
 
 #### Start Development Service
 ```bash
 # Start web service (automatically loads .env file)
-python run.py
+uv run python src/run.py
 
 # Or set environment variable and start
 export MOCK_MODE=true
-python run.py
+uv run python src/run.py
 ```
 
 #### VS Code Debug Configuration
 
-Add development configuration to VS Code's `launch.json`:
+The project already includes launch configurations in `.vscode/launch.json`. Press `F5` or use the **Run and Debug** panel to select:
 
-```json
-{
-    "name": "Development Mode Launch",
-    "type": "debugpy",
-    "request": "launch",
-    "env": {
-        "PYTHONPATH": "${workspaceFolder}/src"
-    },
-    "envFile": "${workspaceFolder}/.env",
-    "cwd": "${workspaceFolder}/src",
-    "python": "${workspaceFolder}/.venv/bin/python",
-    "program": "dev_run.py",
-    "console": "integratedTerminal",
-    "justMyCode": false
-}
-```
+- `Python 调试程序: run` — Start API service
+- `Python 调试程序: task` — Start Task Worker
+- `Python 调试程序: run_this_file` — Run currently open file via bootstrap
 
 ### 4. Mock Mode Verification
 

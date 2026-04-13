@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Callable, Type
 
-from pymilvus import Collection
+from pymilvus import Collection, utility
 
 from core.observation.logger import get_logger
 from core.oxm.milvus.milvus_collection_base import (
@@ -132,9 +132,21 @@ def rebuild_collection(
             "Unsupported collection type: %s", collection_class.__name__
         )
 
-    # Ensure the original collection is loaded
-    manager.ensure_loaded()
-    old_collection = manager.collection()
+    # Load the old collection WITHOUT passing schema to avoid SchemaNotReadyException
+    # when code-defined schema differs from the existing collection's schema.
+    # This is the whole point of rebuild: the schema has changed.
+    manager.ensure_connection_registered()
+
+    alias_name = manager.name
+    using = manager.using
+
+    if not utility.has_collection(alias_name, using=using):
+        raise ValueError(
+            f"Collection '{alias_name}' does not exist in Milvus, nothing to rebuild"
+        )
+
+    old_collection = Collection(name=alias_name, using=using)
+    old_collection.load()
     old_real_name = old_collection.name
     logger.info("Original collection real name: %s", old_real_name)
 
@@ -154,7 +166,28 @@ def rebuild_collection(
             logger.error("Data population failed: %s", e)
             raise
 
-    # 5. Switch alias to new collection and optionally delete old collection
+    # 5. Verify data consistency before switching
+    #    Use query-based count instead of num_entities (which is approximate
+    #    and includes soft-deleted records not yet compacted).
+    if populate_fn:
+        new_collection.flush()
+        old_count = old_collection.query(expr='id != ""', output_fields=["count(*)"])[
+            0
+        ]["count(*)"]
+        new_count = new_collection.query(expr='id != ""', output_fields=["count(*)"])[
+            0
+        ]["count(*)"]
+        logger.info("Data verification: old=%d, new=%d", old_count, new_count)
+        if old_count != new_count:
+            raise RuntimeError(
+                f"Data count mismatch after migration: "
+                f"old={old_count}, new={new_count}. "
+                f"Aborting alias switch. New collection '{new_real_name}' "
+                f"is left intact for inspection."
+            )
+        logger.info("Data verification passed")
+
+    # 6. Switch alias to new collection and optionally delete old collection
     logger.info("Switching alias '%s' to new collection '%s'...", alias, new_real_name)
     manager.switch_alias(new_collection, drop_old=drop_old)
 

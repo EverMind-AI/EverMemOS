@@ -198,6 +198,23 @@ class DocumentBase(Document):
         # Common document configurations can be set here
         # For example: indexes, validation rules, etc.
 
+    @classmethod
+    async def count(cls, **kwargs) -> int:
+        """
+        Count documents in the collection
+
+        Uses estimated_document_count() for fast counting based on collection metadata.
+        This is very fast (millisecond level) but returns an approximate count.
+
+        Subclasses (e.g., DocumentBaseWithSoftDelete) may override this method
+        to provide filtering capabilities (e.g., excluding soft-deleted documents).
+
+        Returns:
+            int: Estimated document count
+        """
+        collection = cls.get_pymongo_collection()
+        return await collection.estimated_document_count()
+
     def __str__(self) -> str:
         """String representation"""
         return f"{self.__class__.__name__}({self.id})"

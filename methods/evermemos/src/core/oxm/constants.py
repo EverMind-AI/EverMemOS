@@ -17,4 +17,8 @@ MAX_FETCH_LIMIT = 500
 MAX_RETRIEVE_LIMIT = 500
 
 # Export all constants
-__all__ = ["MAGIC_ALL", "MAX_FETCH_LIMIT", "MAX_RETRIEVE_LIMIT"]
+__all__ = [
+    "MAGIC_ALL",
+    "MAX_FETCH_LIMIT",
+    "MAX_RETRIEVE_LIMIT",
+]

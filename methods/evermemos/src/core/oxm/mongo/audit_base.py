@@ -6,7 +6,7 @@ Audit base class based on Beanie ODM, including common timestamp fields and auto
 
 from datetime import datetime
 from typing import Optional, List, Any
-from beanie import before_event, Insert, Update
+from beanie import before_event, Insert, Replace, Save, Update
 from pydantic import Field, BaseModel
 from common_utils.datetime_utils import get_now_with_timezone
 
@@ -33,9 +33,9 @@ class AuditBase(BaseModel):
         self.created_at = now
         self.updated_at = now
 
-    @before_event(Update)
+    @before_event(Update, Replace, Save)
     async def set_updated_at(self):
-        """Set update time before update"""
+        """Set update time before update, replace, or save"""
         self.updated_at = get_now_with_timezone()
 
     @classmethod

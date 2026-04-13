@@ -7,11 +7,8 @@ import re
 import asyncio
 import httpx
 from typing import List, Dict, Any
-from common_utils.datetime_utils import (
-    get_now_with_timezone,
-    get_timezone,
-    to_iso_format,
-)
+from api_specs.memory_types import ScenarioType
+from common_utils.datetime_utils import get_now_with_timezone, to_iso_format
 
 
 def extract_event_time_from_memory(mem: Dict[str, Any]) -> str:
@@ -82,14 +79,14 @@ class SimpleMemoryManager:
         self,
         base_url: str = "http://localhost:1995",
         group_id: str = "default_group",
-        scene: str = "assistant",
+        scene: str = ScenarioType.SOLO.value,
     ):
         """Initialize the manager
 
         Args:
             base_url: API server address (default: localhost:1995)
             group_id: Group ID (default: default_group)
-            scene: Scene type (default: "assistant", options: "assistant" or "companion")
+            scene: Scene type (default: "solo", options: "solo" or "team")
         """
         self.base_url = base_url
         self.group_id = group_id
@@ -97,11 +94,9 @@ class SimpleMemoryManager:
         self.scene = scene
         self.memorize_url = f"{base_url}/api/v1/memories"
         self.retrieve_url = f"{base_url}/api/v1/memories/search"
-        self.conversation_meta_url = f"{base_url}/api/v1/memories/conversation-meta"
+        self.settings_url = f"{base_url}/api/v1/settings"
         self._message_counter = 0
-        self._conversation_meta_saved = (
-            False  # Flag to indicate if conversation-meta is saved
-        )
+        self._settings_initialized = False
 
     async def store(self, content: str, sender: str = "User") -> bool:
         """Store a message
@@ -113,9 +108,9 @@ class SimpleMemoryManager:
         Returns:
             Success status
         """
-        # ========== Save conversation-meta first when storing for the first time ==========
-        if not self._conversation_meta_saved:
-            await self._save_conversation_meta()
+        # ========== Initialize settings first when storing for the first time ==========
+        if not self._settings_initialized:
+            await self._init_settings()
 
         # Generate unique message ID
         self._message_counter += 1
@@ -162,77 +157,46 @@ class SimpleMemoryManager:
 
         except httpx.ConnectError:
             print(f"  ❌ Cannot connect to API server ({self.base_url})")
-            print(
-                f"     Please start first: uv run python src/run.py"
-            )
+            print(f"     Please start first: uv run python src/run.py")
             return False
         except Exception as e:
             print(f"  ❌ Storage failed: {e}")
             return False
 
-    async def _save_conversation_meta(self) -> bool:
+    async def _init_settings(self) -> bool:
         """
-        Save conversation metadata (called when storing the first message)
+        Initialize global settings via V1 API (called when storing the first message)
 
         Returns:
             Success status
         """
-        if self._conversation_meta_saved:
+        if self._settings_initialized:
             return True
 
-        # Build conversation-meta request data
-        now = get_now_with_timezone()
-        conversation_meta_request = {
-            "version": "1.0.0",
-            "scene": self.scene,
-            "scene_desc": {},
-            "name": self.group_name,
-            "description": f"Simple Demo - {self.scene} scene",
-            "group_id": self.group_id,
-            "created_at": to_iso_format(now),
-            "default_timezone": get_timezone().key,
-            "user_details": {
-                "User": {"full_name": "Demo User", "role": "user", "extra": {}},
-                "Assistant": {
-                    "full_name": "AI Assistant",
-                    "role": "assistant",
-                    "extra": {},
-                },
-            },
-            "tags": ["demo", self.scene],
-        }
+        settings_request = {}
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    self.conversation_meta_url, json=conversation_meta_request
-                )
+                response = await client.put(self.settings_url, json=settings_request)
                 response.raise_for_status()
                 result = response.json()
 
-                if result.get("status") == "ok":
-                    self._conversation_meta_saved = True
-                    print(
-                        f"  ℹ️  Initialized conversation metadata (Scene: {self.scene})"
-                    )
+                if "data" in result:
+                    self._settings_initialized = True
+                    print(f"  ℹ️  Initialized settings (Scene: {self.scene})")
                     return True
                 else:
-                    print(
-                        f"  ⚠️  Failed to save conversation metadata: {result.get('message')}"
-                    )
-                    # Mark as saved even if failed to avoid retrying repeatedly
-                    self._conversation_meta_saved = True
+                    print(f"  ⚠️  Failed to init settings: {result.get('message')}")
+                    self._settings_initialized = True
                     return False
 
         except httpx.ConnectError:
-            print(f"  ⚠️  Cannot connect to API server for conversation metadata")
-            # Mark as saved even if failed to avoid retrying repeatedly
-            self._conversation_meta_saved = True
+            print(f"  ⚠️  Cannot connect to API server for settings init")
+            self._settings_initialized = True
             return False
         except Exception as e:
-            print(f"  ⚠️  Failed to save conversation metadata: {e}")
-            # Mark as saved even if failed to avoid retrying repeatedly
-            self._conversation_meta_saved = True
+            print(f"  ⚠️  Failed to init settings: {e}")
+            self._settings_initialized = True
             return False
 
     async def search(
@@ -274,7 +238,7 @@ class SimpleMemoryManager:
                     raw_memories = result.get("result", {}).get("memories", [])
                     metadata = result.get("result", {}).get("metadata", {})
                     latency = metadata.get("total_latency_ms", 0)
-                    
+
                     # Flatten grouped memories to flat list
                     memories = []
                     for group_dict in raw_memories:

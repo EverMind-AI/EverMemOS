@@ -1,33 +1,44 @@
 """Memory resource DTOs.
 
 This module contains DTOs related to memory CRUD operations:
-- Memorize (POST /api/v1/memories)
-- Fetch (GET /api/v1/memories)
+- Add / Flush (POST /api/v1/memories, /api/v1/memories/group, etc.)
 - Search (GET /api/v1/memories/search)
 - Delete (DELETE /api/v1/memories)
+- Get (POST /api/v1/memories/get)
 """
 
 from __future__ import annotations
 
+import os
+
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 import json
 import re
 
+from api_specs.memory_types import ScenarioType
 from bson import ObjectId
-from pydantic import BaseModel, Field, model_validator, SkipValidation, SerializeAsAny
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+    model_validator,
+    SkipValidation,
+    SerializeAsAny,
+)
 
 from api_specs.dtos.base import BaseApiResponse
-from api_specs.memory_types import BaseMemory, RawDataType
+from api_specs.memory_types import RetrieveMemoryModel, RawDataType
 from api_specs.memory_models import (
     MemoryType,
     Metadata,
-    MemoryModel,
+    QueryMetadata,
     RetrieveMethod,
     MessageSenderRole,
 )
-from core.oxm.constants import MAGIC_ALL, MAX_FETCH_LIMIT, MAX_RETRIEVE_LIMIT
+from core.oxm.constants import MAGIC_ALL, MAX_RETRIEVE_LIMIT
+from biz_layer.retrieve_constants import MAX_GROUP_IDS_COUNT
 
 
 iso_pattern = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'
@@ -50,6 +61,10 @@ class RawData:
     data_id: str
     data_type: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+
+    # Note: Enrichment results (parsed_content, parsed_summary, parse_status)
+    # are embedded directly into content item dicts by the enrich provider,
+    # so they are persisted as part of content_items in RawMessage.
 
     def _serialize_value(self, value: Any) -> Any:
         """
@@ -266,7 +281,7 @@ class RawData:
 
 
 # =============================================================================
-# Memorize DTOs (POST /api/v1/memories)
+# Memorize Internal DTO
 # =============================================================================
 
 
@@ -276,320 +291,312 @@ class MemorizeRequest(BaseModel):
     history_raw_data_list: list[RawData]
     new_raw_data_list: list[RawData]
     raw_data_type: RawDataType
-    # Full list of user_id for the entire group
-    user_id_list: List[str]
     group_id: Optional[str] = None
-    group_name: Optional[str] = None
     current_time: Optional[datetime] = None
+    # Session identifier for conversation isolation
+    session_id: Optional[str] = None
     # Optional extraction control parameters
     enable_foresight_extraction: bool = True  # Whether to extract foresight
-    enable_event_log_extraction: bool = True  # Whether to extract event logs
+    enable_atomic_fact_extraction: bool = True  # Whether to extract atomic facts
+    # Force boundary trigger - when True, immediately triggers memory extraction
+    flush: bool = False
+    # Scene type: "solo" (1 user + N agents) or "team" (multi-user + agents)
+    scene: str = ScenarioType.SOLO.value
 
     model_config = {"arbitrary_types_allowed": True}
 
 
-class MemorizeMessageRequest(BaseModel):
-    """
-    Store single message request body (HTTP API layer)
+# =============================================================================
+# Add / Flush DTOs
+# =============================================================================
 
-    Used for POST /api/v1/memories endpoint
+
+class ContentItem(BaseModel):
+    """Single content item in a message's content array.
+
+    Supports multimodal content types. This phase only supports type="text".
+    Non-text types (audio, image, doc, pdf, html, email) are planned for next phase.
     """
 
-    group_id: Optional[str] = Field(
-        default=None,
-        description="Group ID. If not provided, will automatically generate based on hash(sender) + '_group' suffix, "
-        "representing single-user mode where each user's messages are extracted into separate memory spaces.",
-        examples=["group_123"],
-    )
-    group_name: Optional[str] = Field(
-        default=None, description="Group name", examples=["Project Discussion Group"]
-    )
-    message_id: str = Field(
-        ..., description="Message unique identifier", examples=["msg_001"]
-    )
-    create_time: str = Field(
+    type: str = Field(
         ...,
-        description="Message creation time (ISO 8601 format)",
-        examples=["2025-01-15T10:00:00+00:00"],
+        description='Content type: "text" / "audio" / "image" / "doc" / "pdf" / "html" / "email"',
     )
-    sender: str = Field(
+    text: Optional[str] = Field(
+        default=None,
+        description="Content body. For type='text', this is the actual text. "
+        "For other types (image, audio, etc.), this can be a textual description.",
+    )
+    source: Optional[str] = Field(
+        default=None,
+        description='Content source: "google_doc" / "notion" / "confluence" / "zoom"',
+    )
+    base64: Optional[str] = Field(default=None, description="Base64-encoded content")
+    uri: Optional[str] = Field(default=None, description="File URI (MinIO, HTTP, etc.)")
+    ext: Optional[str] = Field(
+        default=None, description="File extension (e.g., 'png', 'mp3', 'pdf')"
+    )
+    name: Optional[str] = Field(default=None, description="File name")
+    source_info: Optional[Dict[str, Any]] = Field(
+        default=None, description="Source-related traceability info"
+    )
+    extras: Optional[Dict[str, Any]] = Field(
+        default=None, description="Type-specific extra fields"
+    )
+    # Note: Enrichment results (parsed_content, parsed_summary, parse_status) are
+    # embedded directly into content-item dicts by the enrich provider.
+
+    @model_validator(mode="before")
+    @classmethod
+    def _compat_content_field(cls, values: Any) -> Any:
+        """Accept legacy 'content' field as an alias for 'text'."""
+        if isinstance(values, dict) and "content" in values and "text" not in values:
+            values = dict(values)
+            values["text"] = values.pop("content")
+        return values
+
+
+class MessageItem(BaseModel):
+    """Single message item in add request.
+
+    Uses content array for multimodal support. This phase only supports type='text' items.
+    content accepts a plain string shorthand: "hello" is coerced to
+    [{"type": "text", "text": "hello"}].
+    """
+
+    message_id: Optional[str] = Field(default=None, description="Message unique ID")
+    sender_id: Optional[str] = Field(default=None, description="Sender identifier")
+    sender_name: Optional[str] = Field(default=None, description="Sender display name")
+    role: str = Field(..., description="user / assistant")
+    timestamp: int = Field(..., description="Message timestamp in unix milliseconds")
+    content: Union[str, List[ContentItem]] = Field(
         ...,
-        description="Sender user ID (required). Also used as user_id internally for memory ownership.",
-        examples=["user_001"],
+        min_length=1,
+        description='Content items. Accepts plain string shorthand: "hello" → [{type: "text", text: "hello"}]',
     )
-    sender_name: Optional[str] = Field(
-        default=None,
-        description="Sender name (uses sender if not provided)",
-        examples=["John"],
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_content_string(cls, values: Any) -> Any:
+        """Coerce plain string content to ContentItem array."""
+        if isinstance(values, dict) and isinstance(values.get("content"), str):
+            text = values["content"]
+            if not text:
+                raise ValueError("messages[].content must not be empty")
+            values = dict(values)
+            values["content"] = [{"type": "text", "text": text}]
+        return values
+
+
+class PersonalAddRequest(BaseModel):
+    """POST /api/v1/memories (personal add) request body."""
+
+    user_id: str = Field(..., description="Owner user ID")
+    session_id: Optional[str] = Field(default=None, description="Session identifier")
+    messages: List[MessageItem] = Field(
+        ..., min_length=1, max_length=500, description="Batch message array"
     )
-    role: Optional[str] = Field(
-        default=None,
-        description="""Message sender role, used to identify the source of the message.
-Enum values from MessageSenderRole:
-- user: Message from a human user
-- assistant: Message from an AI assistant""",
-        examples=["user", "assistant"],
+
+
+class GroupAddRequest(BaseModel):
+    """POST /api/v1/memories/group (group add) request body."""
+
+    group_id: str = Field(..., description="Group identifier")
+    group_meta: Optional[Dict[str, Any]] = Field(
+        default=None, description="Group metadata"
     )
-    content: str = Field(
-        ...,
-        description="Message content",
-        examples=["Let's discuss the technical solution for the new feature today"],
-    )
-    refer_list: Optional[List[str]] = Field(
-        default=None,
-        description="List of referenced message IDs",
-        examples=[["msg_000"]],
+    messages: List[MessageItem] = Field(
+        ..., min_length=1, max_length=500, description="Batch message array"
     )
 
     @model_validator(mode="after")
-    def validate_role(self):
-        """Validate that role is a valid MessageSenderRole value"""
-        if self.role is not None and not MessageSenderRole.is_valid(self.role):
-            raise ValueError(
-                f"Invalid role '{self.role}'. Must be one of: {[r.value for r in MessageSenderRole]}"
-            )
+    def validate_sender_id_required(self) -> "GroupAddRequest":
+        """Validate that sender_id is required for each message in group add."""
+        for i, msg in enumerate(self.messages):
+            if not msg.sender_id:
+                raise ValueError(f"messages[{i}].sender_id is required for group add")
         return self
 
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "summary": "With explicit group_id (multi-user group mode)",
-                    "value": {
-                        "group_id": "group_123",
-                        "group_name": "Project Discussion Group",
-                        "message_id": "msg_001",
-                        "create_time": "2025-01-15T10:00:00+00:00",
-                        "sender": "user_001",
-                        "sender_name": "John",
-                        "role": "user",
-                        "content": "Let's discuss the technical solution for the new feature today",
-                        "refer_list": ["msg_000"],
-                    },
-                },
-                {
-                    "summary": "Without group_id (single-user mode, auto-generated)",
-                    "value": {
-                        "message_id": "msg_002",
-                        "create_time": "2025-01-15T10:05:00+00:00",
-                        "sender": "user_001",
-                        "sender_name": "John",
-                        "role": "user",
-                        "content": "What's the weather like today?",
-                    },
-                },
-            ]
-        }
-    }
+
+# ==================== Agent Add (POST /api/v1/memories/agent) ====================
 
 
-class MemorizeResult(BaseModel):
-    """Memory storage result data
+class ToolCallFunction(BaseModel):
+    """Function details within a tool call."""
 
-    Result data for POST /api/v1/memories endpoint.
+    name: str = Field(..., description="Function/tool name")
+    arguments: str = Field(..., description="JSON-encoded arguments string")
+
+
+class ToolCall(BaseModel):
+    """OpenAI-format tool call made by the assistant."""
+
+    id: str = Field(..., description="Unique tool call ID")
+    type: str = Field(default="function", description="Tool call type")
+    function: ToolCallFunction = Field(..., description="Function call details")
+
+
+class AgentMessageItem(MessageItem):
+    """Extended MessageItem with agent-specific fields.
+
+    Supports role='tool' in addition to 'user'/'assistant'.
+    Adds tool_calls (assistant) and tool_call_id (tool) fields.
+
+    Overrides content to Optional: assistant messages with tool_calls may have
+    empty/null content (common in OpenAI Chat Completion API). Fine-grained
+    validation (user/tool must have content) is handled in the request converter.
     """
 
-    saved_memories: List[Any] = Field(
-        default_factory=list,
-        description="List of saved memories (fetch via API for details)",
+    role: str = Field(
+        ...,
+        description="Message sender role: 'user', 'assistant', or 'tool'",
+        examples=["user", "assistant", "tool"],
     )
-    count: int = Field(
-        default=0, description="Number of memories extracted", examples=[1, 0]
+    content: Optional[Union[str, List[ContentItem]]] = Field(
+        default=None,
+        description="Content items. Optional for assistant messages with tool_calls.",
     )
-    status_info: str = Field(
+    tool_calls: Optional[List[ToolCall]] = Field(
+        default=None,
+        description="Tool calls made by the assistant (OpenAI format). "
+        "Only applicable when role='assistant'.",
+    )
+    tool_call_id: Optional[str] = Field(
+        default=None,
+        description="ID of the tool call this message is responding to. "
+        "Required when role='tool'.",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_content_string(cls, values: Any) -> Any:
+        """Override parent: allow empty content for assistant with tool_calls."""
+        if isinstance(values, dict) and isinstance(values.get("content"), str):
+            text = values["content"]
+            if not text:
+                if values.get("role") == "assistant" and values.get("tool_calls"):
+                    values = dict(values)
+                    values["content"] = [{"type": "text", "text": ""}]
+                    return values
+                raise ValueError("messages[].content must not be empty")
+            values = dict(values)
+            values["content"] = [{"type": "text", "text": text}]
+        return values
+
+
+class AgentAddRequest(BaseModel):
+    """POST /api/v1/memories/agent request body.
+
+    Strictly mirrors PersonalAddRequest structure, with AgentMessageItem
+    supporting tool_calls/tool_call_id and role='tool'.
+    """
+
+    user_id: str = Field(..., description="Owner user ID")
+    session_id: Optional[str] = Field(default=None, description="Session identifier")
+    messages: List[AgentMessageItem] = Field(
+        ..., min_length=1, max_length=500, description="Agent trajectory messages"
+    )
+
+
+# ==================== Flush ====================
+
+
+class PersonalFlushRequest(BaseModel):
+    """POST /api/v1/memories/flush (personal flush) request body."""
+
+    user_id: str = Field(..., description="Owner user ID")
+    session_id: Optional[str] = Field(default=None, description="Target session")
+
+
+class GroupFlushRequest(BaseModel):
+    """POST /api/v1/memories/group/flush (group flush) request body."""
+
+    group_id: str = Field(..., description="Target group")
+
+
+class AgentFlushRequest(BaseModel):
+    """POST /api/v1/memories/agent/flush (agent flush) request body."""
+
+    user_id: str = Field(..., description="Owner user ID")
+    session_id: Optional[str] = Field(default=None, description="Target session")
+
+
+class AddResult(BaseModel):
+    """Add endpoint result data."""
+
+    request_id: str = Field(default="", description="Request tracking ID (reserved)")
+    message_count: int = Field(
+        default=0, description="Number of messages accepted in this request"
+    )
+    status: str = Field(
         default="accumulated",
-        description="Processing status: 'extracted' (memories created) or 'accumulated' (waiting for boundary)",
-        examples=["extracted", "accumulated"],
+        description="Processing status. "
+        "'accumulated': messages buffered, waiting for boundary detection; "
+        "'extracted': boundary detected and memory extraction triggered",
+        examples=["accumulated", "extracted"],
+    )
+    message: str = Field(
+        default="Messages accepted", description="Human-readable status description"
     )
 
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "summary": "Extracted memories (boundary triggered)",
-                    "value": {
-                        "saved_memories": [],
-                        "count": 1,
-                        "status_info": "extracted",
-                    },
-                },
-                {
-                    "summary": "Message queued (boundary not triggered)",
-                    "value": {
-                        "saved_memories": [],
-                        "count": 0,
-                        "status_info": "accumulated",
-                    },
-                },
-            ]
-        }
-    }
+
+class AddResponse(BaseApiResponse[AddResult]):
+    """Add endpoint response."""
+
+    data: AddResult = Field(default_factory=AddResult, description="Add result")
 
 
-class MemorizeResponse(BaseApiResponse[MemorizeResult]):
-    """Memory storage response
+class FlushResult(BaseModel):
+    """Flush endpoint result data."""
 
-    Response for POST /api/v1/memories endpoint.
-    """
-
-    result: MemorizeResult = Field(
-        default_factory=MemorizeResult, description="Memory storage result"
+    request_id: str = Field(default="", description="Request tracking ID (reserved)")
+    status: str = Field(
+        default="no_extraction",
+        description="Processing status. "
+        "'extracted': boundary detected and memory extraction triggered; "
+        "'no_extraction': no accumulated messages or no boundary detected",
+        examples=["extracted", "no_extraction"],
+    )
+    message: str = Field(
+        default="Flush completed", description="Human-readable status description"
     )
 
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "summary": "Extracted memories (boundary triggered)",
-                    "value": {
-                        "status": "ok",
-                        "message": "Extracted 1 memories",
-                        "result": {
-                            "saved_memories": [],
-                            "count": 1,
-                            "status_info": "extracted",
-                        },
-                    },
-                },
-                {
-                    "summary": "Message queued (boundary not triggered)",
-                    "value": {
-                        "status": "ok",
-                        "message": "Message queued, awaiting boundary detection",
-                        "result": {
-                            "saved_memories": [],
-                            "count": 0,
-                            "status_info": "accumulated",
-                        },
-                    },
-                },
-            ]
-        }
-    }
+
+class FlushResponse(BaseApiResponse[FlushResult]):
+    """Flush endpoint response."""
+
+    data: FlushResult = Field(default_factory=FlushResult, description="Flush result")
 
 
 # =============================================================================
-# Fetch DTOs (GET /api/v1/memories)
+# Flush Clustering DTOs (POST /api/v1/memories/agent/flush-clustering)
 # =============================================================================
 
 
-class FetchMemRequest(BaseModel):
-    """Memory fetch request
+class AgentFlushClusteringRequest(BaseModel):
+    """Request to force-drain pending memcells and run batch clustering."""
 
-    Used for GET /api/v1/memories endpoint.
-
-    Note:
-    - user_id and group_id support special value MAGIC_ALL ("__all__") to skip filtering
-    - Empty string or None for user_id/group_id filters for null/empty values
-    - user_id and group_id cannot both be MAGIC_ALL
-    - limit is capped at MAX_FETCH_LIMIT (500)
-    """
-
-    user_id: Optional[str] = Field(
-        default=None, description="User ID", examples=["user_123"]
-    )
-    group_id: Optional[str] = Field(
-        default=None, description="Group ID", examples=["group_456"]
-    )
-    limit: Optional[int] = Field(
-        default=40,
-        description="Maximum number of memories to return",
-        ge=1,
-        le=500,
-        examples=[20],
-    )
-    offset: Optional[int] = Field(
-        default=0, description="Pagination offset", ge=0, examples=[0]
-    )
-    memory_type: Optional[MemoryType] = Field(
-        default=MemoryType.EPISODIC_MEMORY,
-        description="""Memory type, enum values from MemoryType:
-- profile: user profile
-- episodic_memory: episodic memory (default)
-- foresight: prospective memory
-- event_log: event log (atomic facts)""",
-        examples=["episodic_memory"],
-    )
-    version_range: Optional[Tuple[Optional[str], Optional[str]]] = Field(
-        default=None,
-        description="Version range filter, format (start, end), closed interval",
-        examples=[("v1.0", "v2.0")],
-    )
-    start_time: Optional[str] = Field(
-        default=None,
-        description="Start time for time range filtering (ISO 8601 format)",
-        examples=["2024-01-01T00:00:00"],
-    )
-    end_time: Optional[str] = Field(
-        default=None,
-        description="End time for time range filtering (ISO 8601 format)",
-        examples=["2024-12-31T23:59:59"],
+    user_id: str = Field(
+        ...,
+        description="User ID (used to derive group_id for solo scene)",
     )
 
-    model_config = {"arbitrary_types_allowed": True}
 
-    @model_validator(mode="after")
-    def validate_request(self) -> "FetchMemRequest":
-        """Validate request parameters"""
-        if self.user_id == MAGIC_ALL and self.group_id == MAGIC_ALL:
-            raise ValueError("user_id and group_id cannot both be MAGIC_ALL")
+class AgentFlushClusteringResult(BaseModel):
+    """Result of flush-clustering operation."""
 
-        # Cap limit at MAX_FETCH_LIMIT
-        if self.limit and self.limit > MAX_FETCH_LIMIT:
-            object.__setattr__(self, "limit", MAX_FETCH_LIMIT)
-
-        return self
-
-    def get_memory_types(self) -> List[MemoryType]:
-        """Get the list of memory types to query"""
-        return [self.memory_type]
+    request_id: str = Field(default="", description="Request ID")
+    status: str = Field(default="", description="Flush clustering status")
+    message: str = Field(default="", description="Status message")
 
 
-class FetchMemResponse(BaseModel):
-    """Memory fetch response (result data)"""
+class AgentFlushClusteringResponse(BaseApiResponse[AgentFlushClusteringResult]):
+    """Flush-clustering endpoint response."""
 
-    memories: SkipValidation[List[MemoryModel]] = Field(default_factory=list)
-    total_count: int = 0
-    has_more: bool = False
-    metadata: SkipValidation[Optional[Metadata]] = None
-
-    model_config = {"arbitrary_types_allowed": True}
-
-
-class FetchMemoriesResponse(BaseApiResponse[FetchMemResponse]):
-    """Memory fetch API response
-
-    Response for GET /api/v1/memories endpoint.
-    """
-
-    result: FetchMemResponse = Field(description="Memory fetch result")
-
-    model_config = {
-        "json_schema_extra": {
-            "example": {
-                "status": "ok",
-                "message": "Memory retrieval successful, retrieved 1 memories",
-                "result": {
-                    "memories": [
-                        {
-                            "memory_type": "episodic_memory",
-                            "user_id": "user_123",
-                            "timestamp": "2024-01-15T10:30:00",
-                            "content": "User discussed coffee during the project sync",
-                            "summary": "Project sync coffee note",
-                        }
-                    ],
-                    "total_count": 100,
-                    "has_more": False,
-                    "metadata": {
-                        "source": "fetch_mem_service",
-                        "user_id": "user_123",
-                        "memory_type": "fetch",
-                    },
-                },
-            }
-        }
-    }
+    data: AgentFlushClusteringResult = Field(
+        default_factory=AgentFlushClusteringResult,
+        description="Flush clustering result",
+    )
 
 
 # =============================================================================
@@ -609,38 +616,40 @@ class RetrieveMemRequest(BaseModel):
         description="User ID (at least one of user_id or group_id must be provided)",
         examples=["user_123"],
     )
-    group_id: Optional[str] = Field(
+    group_ids: Optional[List[str]] = Field(
         default=None,
-        description="Group ID (at least one of user_id or group_id must be provided)",
-        examples=["group_456"],
+        description="Array of Group IDs to search (max 10 items). "
+        "None means search all groups for the user.",
+        examples=[["group_456", "group_789"]],
     )
     memory_types: List[MemoryType] = Field(
         default_factory=list,
         description="""List of memory types to retrieve, enum values from MemoryType:
+- profile: user profile (Milvus vector search only)
 - episodic_memory: episodic memory
-- foresight: prospective memory
-- event_log: event log (atomic facts)
-Note: profile type is not supported in search interface""",
-        examples=[["episodic_memory"]],
+- foresight: prospective memory (not yet supported for search)
+- atomic_fact: atomic fact (not yet supported for search)
+Note: Only profile and episodic_memory are supported. Defaults to both if not specified.""",
+        examples=[[MemoryType.EPISODIC_MEMORY.value]],
     )
     top_k: int = Field(
-        default=40,
-        description="Maximum number of results to return",
-        ge=1,
+        default=-1,
+        description="Maximum number of results to return. -1 means return all results that meet the threshold (up to 100). Valid values: -1 or 1-100.",
+        ge=-1,
         le=100,
-        examples=[10],
+        examples=[10, -1],
     )
     include_metadata: bool = Field(
         default=True, description="Whether to include metadata", examples=[True]
     )
     start_time: Optional[str] = Field(
         default=None,
-        description="Time range start (ISO 8601 format)",
+        description="Time range start (ISO 8601 format). Only applies to episodic_memory, ignored for profile",
         examples=["2024-01-01T00:00:00"],
     )
     end_time: Optional[str] = Field(
         default=None,
-        description="Time range end (ISO 8601 format)",
+        description="Time range end (ISO 8601 format). Only applies to episodic_memory, ignored for profile",
         examples=["2024-12-31T23:59:59"],
     )
     query: Optional[str] = Field(
@@ -656,10 +665,6 @@ Note: profile type is not supported in search interface""",
 - agentic: LLM-guided multi-round intelligent retrieval""",
         examples=["keyword"],
     )
-    current_time: Optional[str] = Field(
-        default=None,
-        description="Current time, used to filter forward-looking events within validity period",
-    )
     radius: Optional[float] = Field(
         default=None,
         description="COSINE similarity threshold for vector retrieval (only for vector and hybrid methods, default 0.6)",
@@ -673,17 +678,61 @@ Note: profile type is not supported in search interface""",
     @model_validator(mode="after")
     def validate_request(self) -> "RetrieveMemRequest":
         """Validate request parameters"""
-        if self.user_id == MAGIC_ALL and self.group_id == MAGIC_ALL:
-            raise ValueError("user_id and group_id cannot both be MAGIC_ALL")
+        # Validate: at least one of user_id or group_ids must be specified
+        if (
+            self.user_id is None or self.user_id == MAGIC_ALL
+        ) and self.group_ids is None:
+            raise ValueError(
+                "At least one of user_id or group_ids must be specified. "
+                "Cannot query without any filter."
+            )
 
-        if self.top_k and self.top_k > MAX_RETRIEVE_LIMIT:
+        # Validate: user_id is not specified and group_ids is an empty list
+        if (
+            (self.user_id is None or self.user_id == MAGIC_ALL)
+            and isinstance(self.group_ids, list)
+            and len(self.group_ids) == 0
+        ):
+            raise ValueError(
+                "group_ids cannot be an empty list when user_id is not specified."
+            )
+
+        # Validate: group_ids array length cannot exceed MAX_GROUP_IDS_COUNT
+        if self.group_ids is not None and len(self.group_ids) > MAX_GROUP_IDS_COUNT:
+            raise ValueError(
+                f"group_ids array length cannot exceed {MAX_GROUP_IDS_COUNT}"
+            )
+
+        # Validate: Search supports episodic_memory, profile, agent_case, agent_skill
+        if self.memory_types:
+            allowed_types = {
+                MemoryType.EPISODIC_MEMORY,
+                MemoryType.PROFILE,
+                MemoryType.AGENT_CASE,
+                MemoryType.AGENT_SKILL,
+            }
+            invalid_types = [mt for mt in self.memory_types if mt not in allowed_types]
+            if invalid_types:
+                raise ValueError(
+                    f"Search interface only supports memory_types: "
+                    f"episodic_memory, profile, agent_case, agent_skill. "
+                    f"Invalid types: {[mt.value for mt in invalid_types]}"
+                )
+
+        # top_k must be -1 (return all) or positive (1-100), 0 is invalid
+        if self.top_k == 0:
+            raise ValueError(
+                "top_k must be -1 (return all results) or a positive integer (1-100)"
+            )
+
+        if self.top_k > 0 and self.top_k > MAX_RETRIEVE_LIMIT:
             object.__setattr__(self, "top_k", MAX_RETRIEVE_LIMIT)
 
         return self
 
 
-class PendingMessage(BaseModel):
-    """Pending message that has not yet been extracted into memory.
+class RawMessageDTO(BaseModel):
+    """Raw message DTO for messages not yet extracted into memory.
 
     Represents a cached message waiting for boundary detection or memory extraction.
     """
@@ -692,33 +741,63 @@ class PendingMessage(BaseModel):
     request_id: str  # Request ID
     message_id: Optional[str] = None  # Message ID
     group_id: Optional[str] = None  # Group ID
-    user_id: Optional[str] = None  # User ID
-    sender: Optional[str] = None  # Sender ID
+    session_id: Optional[str] = None  # Session identifier for conversation isolation
+    sender_id: Optional[str] = None  # Sender ID
     sender_name: Optional[str] = None  # Sender name
-    group_name: Optional[str] = None  # Group name
-    content: Optional[str] = None  # Message content
-    refer_list: Optional[List[str]] = None  # List of referenced message IDs
-    message_create_time: Optional[str] = None  # Message creation time (ISO 8601 format)
+    content_items: Optional[List[Dict[str, Any]]] = None  # Message content items list
+    timestamp: Optional[str] = None  # Message timestamp (ISO 8601 format with timezone)
     created_at: Optional[str] = None  # Record creation time (ISO 8601 format)
     updated_at: Optional[str] = None  # Record update time (ISO 8601 format)
 
 
-class RetrieveMemResponse(BaseModel):
-    """Memory retrieve/search response (result data)"""
+class ProfileSearchItem(BaseModel):
+    """Profile search result item.
 
-    memories: SerializeAsAny[SkipValidation[List[Dict[str, List[BaseMemory]]]]] = Field(
-        default_factory=list
+    Represents a single profile item from Milvus vector search.
+    Fields are parsed from embed_text.
+    """
+
+    item_type: str = Field(
+        description="Item type: explicit_info or implicit_trait",
+        examples=["explicit_info", "implicit_trait"],
     )
-    scores: SkipValidation[List[Dict[str, List[float]]]] = Field(default_factory=list)
-    importance_scores: List[float] = Field(default_factory=list)
-    original_data: SkipValidation[List[Dict[str, List[Dict[str, Any]]]]] = Field(
-        default_factory=list
+    # For explicit_info
+    category: Optional[str] = Field(
+        default=None,
+        description="Category name (for explicit_info type)",
+        examples=["Dietary Preferences", "Professional Skills"],
     )
+    # For implicit_trait
+    trait_name: Optional[str] = Field(
+        default=None,
+        description="Trait name (for implicit_trait type)",
+        examples=["Health Conscious", "Efficiency Focused"],
+    )
+    description: str = Field(
+        default="",
+        description="Description content",
+        examples=["Prefers light flavors, favoring vegetables and seafood."],
+    )
+    score: float = Field(
+        default=0.0,
+        description="Similarity score from Milvus search",
+        examples=[0.89, 0.75],
+    )
+
+
+class RetrieveMemResponse(BaseModel):
+    """Memory retrieve/search response (result data) - flat structure"""
+
+    # Profile search results (from Milvus, no rerank)
+    profiles: List[ProfileSearchItem] = Field(
+        default_factory=list,
+        description="Profile search results (explicit_info and implicit_traits)",
+    )
+    memories: SkipValidation[List[RetrieveMemoryModel]] = Field(default_factory=list)
     total_count: int = 0
-    has_more: bool = False
-    query_metadata: SkipValidation[Optional[Metadata]] = None
+    query_metadata: SkipValidation[Optional[QueryMetadata]] = None
     metadata: SkipValidation[Optional[Metadata]] = None
-    pending_messages: SkipValidation[List[PendingMessage]] = Field(default_factory=list)
+    pending_messages: SkipValidation[List[RawMessageDTO]] = Field(default_factory=list)
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -729,41 +808,50 @@ class SearchMemoriesResponse(BaseApiResponse[RetrieveMemResponse]):
     Response for GET /api/v1/memories/search endpoint.
     """
 
-    result: RetrieveMemResponse = Field(description="Memory search result")
+    data: RetrieveMemResponse = Field(description="Memory search result")
 
     model_config = {
         "json_schema_extra": {
             "example": {
                 "status": "ok",
-                "message": "Memory search successful, retrieved 1 groups",
+                "message": "Memory search successful",
                 "result": {
+                    "profiles": [
+                        {
+                            "item_type": "explicit_info",
+                            "category": "Dietary Preferences",
+                            "description": "Prefers light flavors, favoring vegetables and seafood",
+                            "score": 0.89,
+                        },
+                        {
+                            "item_type": "implicit_trait",
+                            "trait_name": "Health Conscious",
+                            "description": "Prioritizes dietary health, preferring low oil and low salt",
+                            "score": 0.75,
+                        },
+                    ],
                     "memories": [
                         {
-                            "episodic_memory": [
-                                {
-                                    "memory_type": "episodic_memory",
-                                    "user_id": "user_123",
-                                    "timestamp": "2024-01-15T10:30:00",
-                                    "summary": "Discussed coffee choices",
-                                    "group_id": "group_456",
-                                }
-                            ]
+                            "memory_type": "episodic_memory",
+                            "user_id": "user_123",
+                            "timestamp": "2024-01-15T10:30:00",
+                            "summary": "User mentioned controlling their diet recently, eating only two meals a day, with dinner mainly being salad",
+                            "group_id": "group_456",
                         }
                     ],
-                    "scores": [{"episodic_memory": [0.95]}],
-                    "importance_scores": [0.85],
+                    "scores": [0.82],
                     "original_data": [],
-                    "total_count": 45,
+                    "total_count": 3,
                     "has_more": False,
                     "query_metadata": {
-                        "source": "episodic_memory_es_repository",
+                        "source": "hybrid_search",
                         "user_id": "user_123",
                         "memory_type": "retrieve",
                     },
                     "metadata": {
-                        "source": "episodic_memory_es_repository",
-                        "user_id": "user_123",
-                        "memory_type": "retrieve",
+                        "profile_count": 2,
+                        "episodic_count": 1,
+                        "latency_ms": 156,
                     },
                     "pending_messages": [],
                 },
@@ -784,16 +872,28 @@ class DeleteMemoriesRequest(BaseModel):
     Used for DELETE /api/v1/memories endpoint
 
     Notes:
-    - event_id, user_id, group_id are combined filter conditions
+    - memory_id, user_id, group_id are combined filter conditions
     - If all three are provided, all conditions must be met
     - If not provided, use MAGIC_ALL ("__all__") to skip filtering
     - Cannot all be MAGIC_ALL (at least one filter required)
+    - id and event_id are aliases for memory_id (backward compatibility)
     """
 
-    event_id: Optional[str] = Field(
+    memory_id: Optional[str] = Field(
         default=MAGIC_ALL,
-        description="Memory event_id (filter condition)",
+        description="Memory id (filter condition)",
         examples=["507f1f77bcf86cd799439011", MAGIC_ALL],
+    )
+    # Backward compatibility: support id and event_id as alias for memory_id
+    id: Optional[str] = Field(
+        default=None,
+        description="Alias for memory_id (backward compatibility)",
+        examples=["507f1f77bcf86cd799439011"],
+    )
+    event_id: Optional[str] = Field(
+        default=None,
+        description="Alias for memory_id (backward compatibility)",
+        examples=["507f1f77bcf86cd799439011"],
     )
     user_id: Optional[str] = Field(
         default=MAGIC_ALL,
@@ -809,14 +909,19 @@ class DeleteMemoriesRequest(BaseModel):
     @model_validator(mode="after")
     def validate_filters(self):
         """Validate that at least one filter is provided"""
+        # Resolve memory_id from aliases (priority: memory_id > id > event_id)
+        effective_memory_id = self.memory_id
+        if effective_memory_id == MAGIC_ALL:
+            effective_memory_id = self.id or self.event_id or MAGIC_ALL
+
         # Check if all are MAGIC_ALL
         if (
-            self.event_id == MAGIC_ALL
+            effective_memory_id == MAGIC_ALL
             and self.user_id == MAGIC_ALL
             and self.group_id == MAGIC_ALL
         ):
             raise ValueError(
-                "At least one of event_id, user_id, or group_id must be provided (not MAGIC_ALL)"
+                "At least one of memory_id, user_id, or group_id must be provided (not MAGIC_ALL)"
             )
         return self
 
@@ -824,9 +929,9 @@ class DeleteMemoriesRequest(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
-                    "summary": "Delete by event_id only",
+                    "summary": "Delete by memory_id only",
                     "value": {
-                        "event_id": "507f1f77bcf86cd799439011",
+                        "memory_id": "507f1f77bcf86cd799439011",
                         "user_id": MAGIC_ALL,
                         "group_id": MAGIC_ALL,
                     },
@@ -834,7 +939,7 @@ class DeleteMemoriesRequest(BaseModel):
                 {
                     "summary": "Delete by user_id only",
                     "value": {
-                        "event_id": MAGIC_ALL,
+                        "memory_id": MAGIC_ALL,
                         "user_id": "user_123",
                         "group_id": MAGIC_ALL,
                     },
@@ -842,7 +947,7 @@ class DeleteMemoriesRequest(BaseModel):
                 {
                     "summary": "Delete by user_id and group_id",
                     "value": {
-                        "event_id": MAGIC_ALL,
+                        "memory_id": MAGIC_ALL,
                         "user_id": "user_123",
                         "group_id": "group_456",
                     },
@@ -890,7 +995,7 @@ class DeleteMemoriesResponse(BaseApiResponse[DeleteMemoriesResult]):
     Response for DELETE /api/v1/memories endpoint.
     """
 
-    result: DeleteMemoriesResult = Field(description="Delete operation result")
+    data: DeleteMemoriesResult = Field(description="Delete operation result")
 
     model_config = {
         "json_schema_extra": {
@@ -918,6 +1023,813 @@ class DeleteMemoriesResponse(BaseApiResponse[DeleteMemoriesResult]):
                         "message": "Successfully deleted 10 memories",
                         "result": {"filters": ["user_id", "group_id"], "count": 10},
                     },
+                },
+            ]
+        }
+    }
+
+
+# =============================================================================
+# Get DTOs (POST /api/v1/memories/get)
+# =============================================================================
+
+
+class GetMemRequest(BaseModel):
+    """Memory get request
+
+    Used for POST /api/v1/memories/get endpoint.
+
+    Note:
+    - memory_type: supported values are "episodic_memory", "profile", "agent_case", "agent_skill"
+    - filters must contain at least one of user_id or group_id at first level
+    - filters supports operators: eq (implicit), in, gt, gte, lt, lte
+    - filters supports combinators: AND, OR
+    """
+
+    memory_type: str = Field(
+        description="Memory type to get: episodic_memory, profile, agent_case, agent_skill",
+        examples=[MemoryType.EPISODIC_MEMORY.value],
+    )
+    page: int = Field(
+        default=1, description="Page number, starts from 1", ge=1, examples=[1]
+    )
+    page_size: int = Field(
+        default=20,
+        description="Items per page, default 20, max 100",
+        ge=1,
+        le=100,
+        examples=[20],
+    )
+    rank_by: str = Field(
+        default="timestamp", description="Sort field", examples=["timestamp"]
+    )
+    rank_order: str = Field(
+        default="desc", description="Sort order: asc or desc", examples=["desc"]
+    )
+    filters: Dict[str, Any] = Field(
+        description="Filter conditions with user_id/group_id scope and optional operators"
+    )
+
+    @field_validator("memory_type")
+    @classmethod
+    def validate_memory_type(cls, v: str) -> str:
+        allowed = {
+            MemoryType.EPISODIC_MEMORY.value,
+            MemoryType.PROFILE.value,
+            MemoryType.AGENT_CASE.value,
+            MemoryType.AGENT_SKILL.value,
+        }
+        if v not in allowed:
+            raise ValueError(
+                f"memory_type must be one of: {', '.join(sorted(allowed))}"
+            )
+        return v
+
+    @field_validator("rank_order")
+    @classmethod
+    def validate_rank_order(cls, v: str) -> str:
+        if v not in ("asc", "desc"):
+            raise ValueError("rank_order must be 'asc' or 'desc'")
+        return v
+
+    @field_validator("filters")
+    @classmethod
+    def validate_filters(cls, v: Dict[str, Any]) -> Dict[str, Any]:
+        if "user_id" not in v and "group_id" not in v:
+            raise ValueError(
+                "filters must contain at least one of 'user_id' or 'group_id' at first level"
+            )
+        return v
+
+
+class EpisodeItem(BaseModel):
+    """Episode object in GET response
+
+    Derived from episodic_memories collection.
+    12 fields, no score, no vector, no audit timestamps.
+    """
+
+    id: str = Field(description="MongoDB ObjectId as string")
+    user_id: Optional[str] = Field(
+        default=None, description="Owner user ID, null = group memory"
+    )
+    group_id: Optional[str] = Field(default=None, description="Group ID")
+    session_id: Optional[str] = Field(default=None, description="Session identifier")
+    timestamp: Optional[datetime] = Field(
+        default=None, description="Event occurrence time"
+    )
+    participants: Optional[List[str]] = Field(
+        default=None, description="Event participant names"
+    )
+    sender_ids: Optional[List[str]] = Field(
+        default=None, description="Sender IDs of event participants"
+    )
+    summary: Optional[str] = Field(default=None, description="Memory summary")
+    subject: Optional[str] = Field(default=None, description="Memory subject")
+    episode: Optional[str] = Field(
+        default=None, description="Full episodic memory text"
+    )
+    type: Optional[str] = Field(default=None, description="Episode type")
+    parent_type: Optional[str] = Field(default=None, description="Parent memory type")
+    parent_id: Optional[str] = Field(default=None, description="Parent memory ID")
+
+
+class ProfileItem(BaseModel):
+    """Profile object in GET response
+
+    Derived from user_profiles collection.
+    6 fields, no audit timestamps.
+    """
+
+    id: str = Field(description="MongoDB ObjectId as string")
+    user_id: Optional[str] = Field(default=None, description="User ID")
+    group_id: Optional[str] = Field(default=None, description="Group ID")
+    profile_data: Optional[Dict[str, Any]] = Field(
+        default=None, description="Profile data"
+    )
+    scenario: Optional[str] = Field(
+        default=None, description="Scenario type: solo or team"
+    )
+    memcell_count: Optional[int] = Field(default=None, description="Number of MemCells")
+
+
+class GetMemResponse(BaseModel):
+    """Memory get response data
+
+    Response for POST /api/v1/memories/get endpoint.
+    Wrapped in envelope: { "data": GetMemResponse }
+    """
+
+    episodes: List[EpisodeItem] = Field(
+        default_factory=list, description="Episodic memory items"
+    )
+    profiles: List[ProfileItem] = Field(
+        default_factory=list, description="Profile items"
+    )
+    agent_cases: List[AgentCaseItem] = Field(
+        default_factory=list,
+        description="Agent case items (populated when memory_type=agent_case)",
+    )
+    agent_skills: List[AgentSkillItem] = Field(
+        default_factory=list,
+        description="Agent skill items (populated when memory_type=agent_skill)",
+    )
+    total_count: int = Field(
+        default=0, description="Total number of records matching query conditions"
+    )
+    count: int = Field(default=0, description="Number of records in current page")
+
+
+class GetMemoriesResponse(BaseModel):
+    """Response envelope for POST /api/v1/memories/get
+
+    Used as response_model for OpenAPI documentation.
+    """
+
+    data: GetMemResponse = Field(description="Memory get result")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "data": {
+                        "episodes": [
+                            {
+                                "id": "67c8a1b2f3e4d5c6a7b8c9d0",
+                                "user_id": "user_123",
+                                "group_id": "group_abc",
+                                "session_id": "sess_abc",
+                                "timestamp": "2026-03-01T10:00:00Z",
+                                "participants": ["user_123", "user_456"],
+                                "summary": "Team discussed Q1 roadmap",
+                                "subject": "Q1 Roadmap Discussion",
+                                "episode": "Alice and Bob discussed...",
+                                "type": "Conversation",
+                                "parent_type": "memcell",
+                                "parent_id": "67c8a1b2f3e4d5c6a7b8c9d1",
+                            }
+                        ],
+                        "profiles": [],
+                        "agent_cases": [],
+                        "agent_skills": [],
+                        "total_count": 1,
+                        "count": 1,
+                    }
+                },
+                {
+                    "data": {
+                        "episodes": [],
+                        "profiles": [
+                            {
+                                "id": "67c8a1b2f3e4d5c6a7b8c9e0",
+                                "user_id": "user_123",
+                                "group_id": "group_abc",
+                                "profile_data": {
+                                    "explicit_info": {"Role": "Product Manager"},
+                                    "implicit_traits": {
+                                        "Leadership": "Takes initiative in meetings"
+                                    },
+                                },
+                                "scenario": "team",
+                                "memcell_count": 5,
+                            }
+                        ],
+                        "agent_cases": [],
+                        "agent_skills": [],
+                        "total_count": 1,
+                        "count": 1,
+                    }
+                },
+                {
+                    "data": {
+                        "episodes": [],
+                        "profiles": [],
+                        "agent_cases": [
+                            {
+                                "id": "67d1a2b3c4e5f6a7b8c9d0e1",
+                                "user_id": "user_01",
+                                "group_id": None,
+                                "session_id": "sess_agent_001",
+                                "task_intent": "Retrieve and summarize weather data for a given city",
+                                "approach": "1. Parse city name from user query. 2. Call get_weather API. 3. Format response with temperature and conditions.",
+                                "quality_score": 0.92,
+                                "timestamp": "2026-03-15T14:30:00Z",
+                                "parent_type": "memcell",
+                                "parent_id": "67d1a2b3c4e5f6a7b8c9d0e2",
+                            }
+                        ],
+                        "agent_skills": [],
+                        "total_count": 1,
+                        "count": 1,
+                    }
+                },
+                {
+                    "data": {
+                        "episodes": [],
+                        "profiles": [],
+                        "agent_cases": [],
+                        "agent_skills": [
+                            {
+                                "id": "67d2b3c4d5e6f7a8b9c0d1e2",
+                                "user_id": "user_01",
+                                "group_id": None,
+                                "cluster_id": "cluster_weather_01",
+                                "name": "Weather Query Handling",
+                                "description": "Retrieve weather data for cities using the get_weather API and present results in a user-friendly format",
+                                "content": "Steps: 1. Extract city name. 2. Call get_weather(city). 3. Format: '{city}: {temp}, {conditions}'.",
+                                "confidence": 0.88,
+                                "maturity_score": 0.75,
+                            }
+                        ],
+                        "total_count": 1,
+                        "count": 1,
+                    }
+                },
+            ]
+        }
+    }
+
+
+# =============================================================================
+# Search DTOs (POST /api/v1/memories/search)
+# =============================================================================
+
+
+class SearchMemoriesRequest(BaseModel):
+    """Memory search request (v1)
+
+    Used for POST /api/v1/memories/search endpoint.
+    Uses structured Filters DSL (MongoFilterParser compatible).
+
+    Note:
+    - query: Search query text (required for keyword/vector/hybrid/rrf/agentic methods)
+    - method: Retrieval method (keyword/vector/hybrid/rrf/agentic, default: hybrid)
+    - memory_types: List of memory types to search (episodic_memory, profile, raw_message, agent_memory)
+    - filters: Structured filter conditions using Filters DSL
+    - top_k: Max results (default: -1). -1 = return all results meeting threshold (up to 100)
+    - radius: Similarity threshold for vector/hybrid/rrf retrieval (0.0-1.0)
+    - include_original_data: Whether to return original data (default: false)
+    """
+
+    query: str = Field(
+        ...,
+        min_length=1,
+        description="Search query text",
+        examples=["What did Alice say about the project?"],
+    )
+    method: str = Field(
+        default_factory=lambda: os.getenv("DEFAULT_SEARCH_METHOD", "hybrid"),
+        description="""Retrieval method:
+- keyword: BM25 keyword retrieval (ES only)
+- vector: Vector semantic retrieval (Milvus only)
+- hybrid: Hybrid retrieval (default). episodic_memory uses hierarchical retrieval, others use ES + Milvus + Rerank
+- agentic: LLM-guided multi-round retrieval
+Default controlled by DEFAULT_SEARCH_METHOD env var.""",
+        examples=["keyword", "vector", "hybrid", "agentic"],
+    )
+    memory_types: List[str] = Field(
+        default_factory=lambda: [
+            MemoryType.EPISODIC_MEMORY.value,
+            MemoryType.PROFILE.value,
+        ],
+        description="""List of memory types to search:
+- episodic_memory: Episodic memory (ES + Milvus)
+- profile: User profile (Milvus only)
+- raw_message: Raw unprocessed messages (ES only)
+- agent_memory: Agent memory - cases and skills (ES + Milvus)""",
+        examples=[[MemoryType.EPISODIC_MEMORY.value, MemoryType.PROFILE.value]],
+    )
+    top_k: int = Field(
+        default=-1,
+        description="Max results. -1 = return all meeting threshold (up to 100). Valid: -1 or 1-100",
+        ge=-1,
+        le=100,
+        examples=[10, -1],
+    )
+    radius: Optional[float] = Field(
+        default=None,
+        description="COSINE similarity threshold (0.0-1.0) for vector methods",
+        ge=0.0,
+        le=1.0,
+        examples=[0.6],
+    )
+    include_original_data: bool = Field(
+        default=False, description="Whether to return original data", examples=[False]
+    )
+    filters: Dict[str, Any] = Field(
+        description="""Filter conditions using Filters DSL.
+Must contain at least one of user_id or group_id at first level.
+Supported fields: user_id, group_id, session_id, timestamp.
+Operators: eq (implicit), in, gt, gte, lt, lte.
+Combinators: AND, OR.
+
+Examples:
+{"user_id": "user_123", "group_id": {"in": ["group_a", "group_b"]}}
+{"AND": [{"timestamp": {"gte": 1704067200000}}, {"timestamp": {"lt": 1740614399000}}]}"""
+    )
+
+    @field_validator("method")
+    @classmethod
+    def validate_method(cls, v: str) -> str:
+        if not v:
+            return os.getenv("DEFAULT_SEARCH_METHOD", "hybrid")
+        allowed = {"keyword", "vector", "hybrid", "agentic"}
+        if v not in allowed:
+            raise ValueError(
+                f"Unknown method: '{v}'. Allowed: {', '.join(sorted(allowed))}"
+            )
+        return v
+
+    @field_validator("memory_types")
+    @classmethod
+    def validate_memory_types(cls, v: List[str]) -> List[str]:
+        allowed = {
+            MemoryType.EPISODIC_MEMORY.value,
+            MemoryType.PROFILE.value,
+            MemoryType.RAW_MESSAGE.value,
+            MemoryType.AGENT_MEMORY.value,
+        }
+        invalid = [mt for mt in v if mt not in allowed]
+        if invalid:
+            raise ValueError(
+                f"memory_types must be from: {', '.join(sorted(allowed))}. "
+                f"Invalid: {invalid}"
+            )
+        return v
+
+    @field_validator("filters")
+    @classmethod
+    def validate_filters(cls, v: Dict[str, Any]) -> Dict[str, Any]:
+        # Recursively check for user_id or group_id in filters
+        def has_user_or_group_filter(filters: Dict[str, Any]) -> bool:
+            if "user_id" in filters or "group_id" in filters:
+                return True
+            # Check nested AND/OR conditions
+            for key in ["AND", "OR"]:
+                if key in filters and isinstance(filters[key], list):
+                    for item in filters[key]:
+                        if isinstance(item, dict) and has_user_or_group_filter(item):
+                            return True
+            return False
+
+        if not has_user_or_group_filter(v):
+            raise ValueError(
+                "filters must contain at least one of 'user_id' or 'group_id'"
+            )
+        return v
+
+    @model_validator(mode="after")
+    def validate_request(self) -> "SearchMemoriesRequest":
+        if self.top_k == 0:
+            raise ValueError(
+                "top_k must be -1 (return all results) or a positive integer (1-100)"
+            )
+        if self.top_k > MAX_RETRIEVE_LIMIT:
+            object.__setattr__(self, "top_k", MAX_RETRIEVE_LIMIT)
+        return self
+
+
+class SearchQueryInfo(BaseModel):
+    """Query information echoed in response"""
+
+    text: str = Field(description="Search query text")
+    method: str = Field(description="Retrieval method used")
+    filters_applied: Optional[Dict[str, Any]] = Field(
+        default=None, description="Filters that were applied"
+    )
+
+
+class SearchAtomicFactItem(BaseModel):
+    """Atomic fact item in search response (with score)
+
+    Derived from v1_atomic_fact_records collection.
+    """
+
+    id: str = Field(description="MongoDB ObjectId as string")
+    user_id: Optional[str] = Field(default=None, description="User ID")
+    group_id: Optional[str] = Field(default=None, description="Group ID")
+    session_id: Optional[str] = Field(default=None, description="Session identifier")
+    atomic_fact: Optional[str] = Field(
+        default=None, description="Atomic fact content (single sentence)"
+    )
+    timestamp: Optional[datetime] = Field(
+        default=None, description="Event occurrence time"
+    )
+    participants: Optional[List[str]] = Field(
+        default=None, description="Related participant IDs"
+    )
+    parent_type: Optional[str] = Field(default=None, description="Parent memory type")
+    parent_id: Optional[str] = Field(default=None, description="Parent memory ID")
+    score: Optional[float] = Field(
+        default=None, description="Relevance score (BM25 score, unbounded)"
+    )
+    parent_episode_id: Optional[str] = Field(
+        default=None, description="Source episode ID (MRAG expansion)"
+    )
+    original_text: Optional[str] = Field(
+        default=None, description="Original text from parent episode"
+    )
+
+
+class SearchEpisodeItem(BaseModel):
+    """Episode item in search response (with score)
+
+    Derived from v1_episodic_memories collection.
+    Same as EpisodeItem but with optional score field and optional text fields.
+    """
+
+    id: str = Field(description="MongoDB ObjectId as string")
+    user_id: Optional[str] = Field(
+        default=None, description="Owner user ID, null = group memory"
+    )
+    group_id: Optional[str] = Field(default=None, description="Group ID")
+    session_id: Optional[str] = Field(default=None, description="Session identifier")
+    timestamp: Optional[datetime] = Field(
+        default=None, description="Event occurrence time"
+    )
+    participants: Optional[List[str]] = Field(
+        default=None, description="Event participant IDs"
+    )
+    summary: Optional[str] = Field(default=None, description="Memory summary")
+    subject: Optional[str] = Field(default=None, description="Memory subject")
+    episode: Optional[str] = Field(
+        default=None, description="Full episodic memory text"
+    )
+    type: Optional[str] = Field(default=None, description="Episode type")
+    parent_type: Optional[str] = Field(default=None, description="Parent memory type")
+    parent_id: Optional[str] = Field(default=None, description="Parent memory ID")
+    score: Optional[float] = Field(
+        default=None, description="Relevance score (BM25 score, unbounded)"
+    )
+    atomic_facts: List[SearchAtomicFactItem] = Field(
+        default_factory=list, description="Atomic facts expanded from this episode"
+    )
+
+
+class SearchProfileItem(BaseModel):
+    """Profile item in search response (with score)
+
+    Derived from v1_user_profiles collection.
+    Same as ProfileItem but with optional score field.
+    """
+
+    id: str = Field(description="MongoDB ObjectId as string")
+    user_id: Optional[str] = Field(default=None, description="User ID")
+    group_id: Optional[str] = Field(default=None, description="Group ID")
+    profile_data: Optional[Dict[str, Any]] = Field(
+        default=None, description="Profile data"
+    )
+    scenario: Optional[str] = Field(
+        default=None, description="Scenario type: solo or team"
+    )
+    memcell_count: Optional[int] = Field(default=None, description="Number of MemCells")
+    score: Optional[float] = Field(
+        default=None, description="Relevance score (BM25 score, unbounded)"
+    )
+
+
+class SearchForesightItem(BaseModel):
+    """Foresight item in search response (with score)
+
+    Derived from v1_foresight_records collection.
+    """
+
+    id: str = Field(description="MongoDB ObjectId as string")
+    user_id: Optional[str] = Field(default=None, description="User ID")
+    group_id: Optional[str] = Field(default=None, description="Group ID")
+    sender_id: Optional[str] = Field(default=None, description="Sender ID")
+    session_id: Optional[str] = Field(default=None, description="Session identifier")
+    content: Optional[str] = Field(default=None, description="Foresight content")
+    evidence: Optional[str] = Field(
+        default=None, description="Evidence supporting this foresight"
+    )
+    start_time: Optional[str] = Field(
+        default=None, description="Foresight start time (date string)"
+    )
+    end_time: Optional[str] = Field(
+        default=None, description="Foresight end time (date string)"
+    )
+    duration_days: Optional[int] = Field(default=None, description="Duration in days")
+    timestamp: Optional[datetime] = Field(
+        default=None, description="Creation timestamp"
+    )
+    participants: Optional[List[str]] = Field(
+        default=None, description="Related participant IDs"
+    )
+    parent_type: Optional[str] = Field(default=None, description="Parent memory type")
+    parent_id: Optional[str] = Field(default=None, description="Parent memory ID")
+    score: Optional[float] = Field(
+        default=None, description="Relevance score (BM25 score, unbounded)"
+    )
+
+
+class AgentCaseItem(BaseModel):
+    """Agent case item in GET response.
+
+    Derived from v1_agent_cases collection.
+    No score field — use SearchAgentCaseItem for search responses.
+    """
+
+    id: str = Field(description="MongoDB ObjectId as string")
+    user_id: Optional[str] = Field(default=None, description="User ID")
+    group_id: Optional[str] = Field(default=None, description="Group ID")
+    session_id: Optional[str] = Field(default=None, description="Session identifier")
+    task_intent: Optional[str] = Field(
+        default=None, description="Rewritten task intent as retrieval key"
+    )
+    approach: Optional[str] = Field(
+        default=None, description="Step-by-step approach with decisions and lessons"
+    )
+    quality_score: Optional[float] = Field(
+        default=None, description="Task completion quality score (0.0-1.0)"
+    )
+    key_insight: Optional[str] = Field(
+        default=None, description="Pivotal strategy shift or decision"
+    )
+    timestamp: Optional[datetime] = Field(
+        default=None, description="Task occurrence time"
+    )
+    parent_type: Optional[str] = Field(default=None, description="Parent memory type")
+    parent_id: Optional[str] = Field(default=None, description="Parent memory ID")
+
+
+class AgentSkillItem(BaseModel):
+    """Agent skill item in GET response.
+
+    Derived from v1_agent_skills collection.
+    No score field — use SearchAgentSkillItem for search responses.
+    """
+
+    id: str = Field(description="MongoDB ObjectId as string")
+    user_id: Optional[str] = Field(default=None, description="User ID")
+    group_id: Optional[str] = Field(default=None, description="Group ID")
+    cluster_id: Optional[str] = Field(default=None, description="MemScene cluster ID")
+    name: Optional[str] = Field(default=None, description="Skill name")
+    description: Optional[str] = Field(
+        default=None, description="What this skill does and when to use it"
+    )
+    content: Optional[str] = Field(default=None, description="Full skill content")
+    confidence: Optional[float] = Field(
+        default=None, description="Confidence score (0.0-1.0)"
+    )
+    maturity_score: Optional[float] = Field(
+        default=None, description="Maturity score (0.0-1.0)"
+    )
+    source_case_ids: List[str] = Field(
+        default_factory=list,
+        description="AgentCase IDs that triggered add/update of this skill",
+    )
+
+
+class SearchAgentCaseItem(BaseModel):
+    """Agent case item in search response (with score).
+
+    Same as AgentCaseItem but with optional score field for search ranking.
+    """
+
+    id: str = Field(description="MongoDB ObjectId as string")
+    user_id: Optional[str] = Field(default=None, description="User ID")
+    group_id: Optional[str] = Field(default=None, description="Group ID")
+    session_id: Optional[str] = Field(default=None, description="Session identifier")
+    task_intent: Optional[str] = Field(
+        default=None, description="Rewritten task intent as retrieval key"
+    )
+    approach: Optional[str] = Field(
+        default=None, description="Step-by-step approach with decisions and lessons"
+    )
+    quality_score: Optional[float] = Field(
+        default=None, description="Task completion quality score (0.0-1.0)"
+    )
+    key_insight: Optional[str] = Field(
+        default=None, description="Pivotal strategy shift or decision"
+    )
+    timestamp: Optional[datetime] = Field(
+        default=None, description="Task occurrence time"
+    )
+    parent_type: Optional[str] = Field(default=None, description="Parent memory type")
+    parent_id: Optional[str] = Field(default=None, description="Parent memory ID")
+    score: Optional[float] = Field(
+        default=None, description="Relevance score (search only)"
+    )
+
+
+class SearchAgentSkillItem(BaseModel):
+    """Agent skill item in search response (with score).
+
+    Same as AgentSkillItem but with optional score field for search ranking.
+    """
+
+    id: str = Field(description="MongoDB ObjectId as string")
+    user_id: Optional[str] = Field(default=None, description="User ID")
+    group_id: Optional[str] = Field(default=None, description="Group ID")
+    cluster_id: Optional[str] = Field(default=None, description="MemScene cluster ID")
+    name: Optional[str] = Field(default=None, description="Skill name")
+    description: Optional[str] = Field(
+        default=None, description="What this skill does and when to use it"
+    )
+    content: Optional[str] = Field(default=None, description="Full skill content")
+    confidence: Optional[float] = Field(
+        default=None, description="Confidence score (0.0-1.0)"
+    )
+    maturity_score: Optional[float] = Field(
+        default=None, description="Maturity score (0.0-1.0)"
+    )
+    source_case_ids: List[str] = Field(
+        default_factory=list,
+        description="AgentCase IDs that triggered add/update of this skill",
+    )
+    score: Optional[float] = Field(
+        default=None, description="Relevance score (search only)"
+    )
+
+
+class AgentMemorySearchResult(BaseModel):
+    """Agent memory search result container.
+
+    Groups agent cases and skills under one structure
+    when memory_types includes 'agent_memory'.
+    """
+
+    cases: List[SearchAgentCaseItem] = Field(
+        default_factory=list, description="Agent case search results"
+    )
+    skills: List[SearchAgentSkillItem] = Field(
+        default_factory=list, description="Agent skill search results"
+    )
+
+
+class SearchMemoriesResponseData(BaseModel):
+    """Memory search response data (v1)
+
+    Result data for POST /api/v1/memories/search endpoint.
+    Wrapped in envelope: { "data": SearchMemoriesResponseData }
+    """
+
+    episodes: List[SearchEpisodeItem] = Field(
+        default_factory=list, description="Episodic memory search results"
+    )
+    profiles: List[SearchProfileItem] = Field(
+        default_factory=list, description="Profile search results"
+    )
+    raw_messages: List[RawMessageDTO] = Field(
+        default_factory=list, description="Raw unprocessed messages (pending)"
+    )
+    agent_memory: Optional[AgentMemorySearchResult] = Field(
+        default=None,
+        description="Agent memory search results containing cases and skills "
+        "(populated when memory_types includes 'agent_memory')",
+    )
+    query: SearchQueryInfo = Field(description="Query information echoed from request")
+    original_data: Optional[Dict[str, Any]] = Field(
+        default=None, description="Original data (if include_original_data=true)"
+    )
+
+
+class SearchMemoriesResponse(BaseApiResponse[SearchMemoriesResponseData]):
+    """Memory search response (v1)
+
+    Response for POST /api/v1/memories/search endpoint.
+    """
+
+    data: SearchMemoriesResponseData = Field(description="Memory search result")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "data": {
+                        "episodes": [
+                            {
+                                "id": "67c8a1b2f3e4d5c6a7b8c9d0",
+                                "user_id": "user_123",
+                                "group_id": "group_abc",
+                                "session_id": "sess_abc",
+                                "timestamp": "2026-03-01T10:00:00Z",
+                                "participants": ["user_123", "user_456"],
+                                "summary": "Team discussed Q1 roadmap",
+                                "subject": "Q1 Roadmap Discussion",
+                                "episode": "Alice and Bob discussed the Q1 roadmap...",
+                                "type": "Conversation",
+                                "parent_type": "memcell",
+                                "parent_id": "67c8a1b2f3e4d5c6a7b8c9d1",
+                                "score": 0.85,
+                            }
+                        ],
+                        "profiles": [],
+                        "query": {
+                            "text": "What did Alice say about the project?",
+                            "method": "hybrid",
+                            "filters_applied": {
+                                "user_id": "user_123",
+                                "group_id": "group_abc",
+                            },
+                        },
+                        "original_data": None,
+                    }
+                },
+                {
+                    "data": {
+                        "episodes": [],
+                        "profiles": [
+                            {
+                                "id": "67c8a1b2f3e4d5c6a7b8c9e0",
+                                "user_id": "user_456",
+                                "group_id": "group_abc",
+                                "profile_data": {
+                                    "explicit_info": {"Role": "Product Manager"},
+                                    "implicit_traits": {"Leadership": "Proactive"},
+                                },
+                                "scenario": "team",
+                                "memcell_count": 150,
+                                "score": 0.72,
+                            }
+                        ],
+                        "query": {
+                            "text": "What is Alice's role?",
+                            "method": "vector",
+                            "filters_applied": {"user_id": "user_456"},
+                        },
+                        "original_data": None,
+                    }
+                },
+                {
+                    "data": {
+                        "episodes": [],
+                        "profiles": [],
+                        "agent_memory": {
+                            "cases": [
+                                {
+                                    "id": "67d1a2b3c4e5f6a7b8c9d0e1",
+                                    "user_id": "user_01",
+                                    "session_id": "sess_agent_001",
+                                    "task_intent": "Handle API timeout errors with retry and fallback",
+                                    "approach": "1. Catch timeout exception. 2. Retry up to 3 times with exponential backoff. 3. If all retries fail, return cached result or error message.",
+                                    "quality_score": 0.95,
+                                    "timestamp": "2026-03-15T14:30:00Z",
+                                    "score": 0.88,
+                                }
+                            ],
+                            "skills": [
+                                {
+                                    "id": "67d2b3c4d5e6f7a8b9c0d1e2",
+                                    "user_id": "user_01",
+                                    "cluster_id": "cluster_error_handling",
+                                    "name": "API Error Handling with Retry",
+                                    "description": "Handle API errors with exponential backoff retry and graceful fallback",
+                                    "content": "Pattern: try/except with max_retries=3, backoff_factor=2. On final failure, return cached data or user-friendly error.",
+                                    "confidence": 0.91,
+                                    "maturity_score": 0.82,
+                                    "score": 0.79,
+                                }
+                            ],
+                        },
+                        "query": {
+                            "text": "How to handle timeout errors",
+                            "method": "hybrid",
+                            "filters_applied": {"user_id": "user_01"},
+                        },
+                        "original_data": None,
+                    }
                 },
             ]
         }

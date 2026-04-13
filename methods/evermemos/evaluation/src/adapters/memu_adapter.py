@@ -253,7 +253,7 @@ class MemuAdapter(OnlineAPIAdapter):
         task_id = None
         for attempt in range(self.max_retries):
             try:
-                url = f"{self.base_url}/api/v1/memory/memorize"
+                url = f"{self.base_url}/api/v0/memory/memorize"
                 # Use run_in_executor to avoid blocking event loop
                 loop = asyncio.get_event_loop()
                 response = await loop.run_in_executor(
@@ -381,7 +381,7 @@ class MemuAdapter(OnlineAPIAdapter):
 
             for task_id in list(pending_tasks):
                 try:
-                    url = f"{self.base_url}/api/v1/memory/memorize/status/{task_id}"
+                    url = f"{self.base_url}/api/v0/memory/memorize/status/{task_id}"
                     # Use run_in_executor to avoid blocking event loop
                     loop = asyncio.get_event_loop()
                     response = await loop.run_in_executor(
@@ -466,7 +466,7 @@ class MemuAdapter(OnlineAPIAdapter):
         min_similarity = kwargs.get("min_similarity", 0.3)
 
         try:
-            url = f"{self.base_url}/api/v1/memory/retrieve/related-memory-items"
+            url = f"{self.base_url}/api/v0/memory/retrieve/related-memory-items"
             payload = {
                 "user_id": user_id,
                 "agent_id": self.agent_id,
@@ -734,7 +734,7 @@ class MemuAdapter(OnlineAPIAdapter):
         import asyncio
 
         try:
-            url = f"{self.base_url}/api/v1/memory/retrieve/default-categories"
+            url = f"{self.base_url}/api/v0/memory/retrieve/default-categories"
             payload = {
                 "user_id": user_id,
                 "agent_id": self.agent_id,

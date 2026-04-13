@@ -17,9 +17,17 @@ import time
 from typing import Optional, Any, List, Dict
 from dataclasses import dataclass, field
 
-from core.di import service
+from core.observation.stage_timer import timed
 
-from agentic_layer.rerank_interface import RerankServiceInterface, RerankError
+from core.di import service
+from core.di.utils import get_bean_by_type
+from core.component.llm.tokenizer.tokenizer_factory import TokenizerFactory
+
+from agentic_layer.rerank_interface import (
+    RerankServiceInterface,
+    RerankError,
+    extract_text_from_hit,
+)
 from agentic_layer.rerank_vllm import VllmRerankService, VllmRerankConfig
 from agentic_layer.rerank_deepinfra import DeepInfraRerankService, DeepInfraRerankConfig
 from agentic_layer.metrics.rerank_metrics import (
@@ -48,20 +56,22 @@ class HybridRerankConfig:
     fallback_base_url: str = ""
 
     # Shared model configuration
-    model: str = "Qwen/Qwen3-Reranker-4B"
+    model: str = "Qwen/Qwen3-Reranker-4B"  # skip-sensitive-check
 
     # Common settings
-    timeout: int = 30
-    max_retries: int = 3
+    timeout: int = 3
+    max_retries: int = 2
     batch_size: int = 10
     max_concurrent_requests: int = 5
 
     # Fallback behavior
     enable_fallback: bool = True
     max_primary_failures: int = 3
+    failure_reset_interval: int = 300  # Reset failure count after 5 minutes
 
     # Runtime state (failure tracking)
     _primary_failure_count: int = field(default=0, init=False, repr=False)
+    _last_failure_time: float = field(default=0.0, init=False, repr=False)
 
     def __post_init__(self):
         """Load hybrid service configuration from environment"""
@@ -109,6 +119,9 @@ class HybridRerankConfig:
         )
         self.max_primary_failures = int(
             os.getenv("RERANK_MAX_PRIMARY_FAILURES", str(self.max_primary_failures))
+        )
+        self.failure_reset_interval = int(
+            os.getenv("RERANK_FAILURE_RESET_INTERVAL", str(self.failure_reset_interval))
         )
 
 
@@ -236,6 +249,27 @@ class HybridRerankService(RerankServiceInterface):
         """
         return self.primary_service
 
+    @staticmethod
+    def _log_rerank_input(
+        query: str, hits: List[Dict[str, Any]], documents_count: int
+    ) -> None:
+        """Log rerank input statistics (doc count + token count)."""
+        try:
+            texts = [extract_text_from_hit(hit) for hit in hits]
+            all_text = query + " " + " ".join(texts)
+            tokenizer = get_bean_by_type(TokenizerFactory).get_tokenizer_from_tiktoken(
+                "o200k_base"
+            )
+            total_tokens = len(tokenizer.encode(all_text))
+            logger.info(
+                "Rerank input: %d docs, %d tokens", documents_count, total_tokens
+            )
+        except Exception:
+            logger.info(
+                "Rerank input: %d docs (token count unavailable)", documents_count
+            )
+            logger.debug("Token count failed", exc_info=True)
+
     async def rerank_memories(
         self,
         query: str,
@@ -247,20 +281,23 @@ class HybridRerankService(RerankServiceInterface):
         start_time = time.perf_counter()
         documents_count = len(hits)
 
+        self._log_rerank_input(query, hits, documents_count)
+
         try:
-            result = await self.execute_with_fallback(
-                "rerank_memories",
-                lambda: self.primary_service.rerank_memories(
-                    query, hits, top_k, instruction
-                ),
-                lambda: (
-                    self.fallback_service.rerank_memories(
+            with timed("rerank"):
+                result = await self.execute_with_fallback(
+                    "rerank_memories",
+                    lambda: self.primary_service.rerank_memories(
                         query, hits, top_k, instruction
-                    )
-                    if self.fallback_service
-                    else None
-                ),
-            )
+                    ),
+                    lambda: (
+                        self.fallback_service.rerank_memories(
+                            query, hits, top_k, instruction
+                        )
+                        if self.fallback_service
+                        else None
+                    ),
+                )
 
             # Record success metrics
             duration = time.perf_counter() - start_time
@@ -273,8 +310,8 @@ class HybridRerankService(RerankServiceInterface):
 
             return result
 
-        except Exception as e:
-            # Record error metrics (fallback failure is recorded in execute_with_fallback)
+        except Exception:
+            # Record error metrics
             duration = time.perf_counter() - start_time
             record_rerank_request(
                 provider=self.config.primary_provider,
@@ -302,17 +339,20 @@ class HybridRerankService(RerankServiceInterface):
         Returns:
             Dict with 'results' key containing list of {index, score, rank}
         """
-        return await self.execute_with_fallback(
-            "rerank_documents",
-            lambda: self.primary_service.rerank_documents(
-                query, documents, instruction
-            ),
-            lambda: (
-                self.fallback_service.rerank_documents(query, documents, instruction)
-                if self.fallback_service
-                else None
-            ),
-        )
+        with timed("rerank"):
+            return await self.execute_with_fallback(
+                "rerank_documents",
+                lambda: self.primary_service.rerank_documents(
+                    query, documents, instruction
+                ),
+                lambda: (
+                    self.fallback_service.rerank_documents(
+                        query, documents, instruction
+                    )
+                    if self.fallback_service
+                    else None
+                ),
+            )
 
     async def execute_with_fallback(
         self, operation_name: str, primary_func, fallback_func
@@ -331,6 +371,54 @@ class HybridRerankService(RerankServiceInterface):
         Raises:
             RerankError: If both services fail
         """
+        # Check if failure count should be reset (timeout expired)
+        current_time = time.time()
+        if (
+            self.config._last_failure_time > 0
+            and current_time - self.config._last_failure_time
+            > self.config.failure_reset_interval
+        ):
+            logger.info(
+                f"🔄 Resetting failure count ({self.config._primary_failure_count}) after "
+                f"{int(current_time - self.config._last_failure_time)}s of no failures"
+            )
+            self.config._primary_failure_count = 0
+            self.config._last_failure_time = 0.0
+
+        # Check if primary service should be skipped due to excessive failures
+        if (
+            self.config.enable_fallback
+            and fallback_func is not None
+            and self.config._primary_failure_count >= self.config.max_primary_failures
+        ):
+            logger.info(
+                f"⚠️ Primary service has {self.config._primary_failure_count} failures "
+                f"(>= {self.config.max_primary_failures}), skipping and using {self.config.fallback_provider} directly"
+            )
+
+            try:
+                # Record fallback event
+                record_rerank_fallback(
+                    primary_provider=self.config.primary_provider,
+                    fallback_provider=self.config.fallback_provider,
+                    reason='max_failures_exceeded',
+                )
+
+                result = await fallback_func()
+                return result
+
+            except Exception as fallback_error:
+                logger.error(f"❌ Fallback service also failed: {fallback_error}")
+
+                # Record fallback error
+                fallback_error_type = self._classify_error(fallback_error)
+                record_rerank_error(
+                    provider=self.config.fallback_provider,
+                    error_type=fallback_error_type,
+                )
+
+                raise RerankError(f"Fallback service failed: {fallback_error}")
+
         # Try primary service first
         try:
             result = await primary_func()
@@ -339,8 +427,9 @@ class HybridRerankService(RerankServiceInterface):
             return result
 
         except Exception as primary_error:
-            # Increment failure count
+            # Increment failure count and update timestamp
             self.config._primary_failure_count += 1
+            self.config._last_failure_time = time.time()
 
             logger.warning(
                 f"Primary service ({self.config.primary_provider}) {operation_name} failed "

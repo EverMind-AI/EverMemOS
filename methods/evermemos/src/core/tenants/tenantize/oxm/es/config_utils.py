@@ -10,7 +10,7 @@ from hashlib import md5
 
 from core.observation.logger import get_logger
 from core.tenants.tenant_contextvar import get_current_tenant
-from core.tenants.tenant_config import get_tenant_config
+
 
 logger = get_logger(__name__)
 
@@ -199,59 +199,52 @@ def load_es_config_from_env() -> Dict[str, Any]:
     return config
 
 
+def _base_prefixed_index_name(original_name: str) -> str:
+    """Apply the base resource prefix to an index name (e.g., "v1_memories" → "b0001_v1_memories")."""
+    from core.tenants.tenant_constants import get_base_resource_prefix
+
+    return f"{get_base_resource_prefix()}_{original_name}"
+
+
 def get_tenant_aware_index_name(original_name: str) -> str:
     """
-    Generate tenant-aware index name
+    Get tenant-aware index name.
 
-    Add tenant prefix to index name based on current tenant context.
-    Return original name if in non-tenant mode or without tenant context.
-
-    Naming rules:
-    - Add tenant prefix: {tenant_id}_{original_name}
-    - Replace special characters: replace invalid characters with "_" to comply with ES index naming conventions
-
-    ES index naming conventions:
-    - Can only contain lowercase letters, digits, underscores, hyphens
-    - Cannot start with underscore or hyphen
-    - Cannot contain special characters
+    Resolution order:
+    1. Tenant context exists → read from storage_info.elasticsearch.index_prefix
+    2. No tenant context (e.g., startup) → base resource prefix + original_name
 
     Args:
-        original_name: Original index name
+        original_name: Original index name (e.g., "v1_atomic_fact_record")
 
     Returns:
-        str: Tenant-aware index name
-
-    Examples:
-        >>> # In tenant mode
-        >>> set_current_tenant(TenantInfo(tenant_id="tenant-001", ...))
-        >>> get_tenant_aware_index_name("my_index")
-        'tenant-001-my_index'
-
-        >>> # In non-tenant mode or without tenant context
-        >>> get_tenant_aware_index_name("my_index")
-        'my_index'
+        str: Resolved index name (e.g., "dev-v1_atomic_fact_record", "b0001-v1_atomic_fact_record")
     """
     try:
-        # Check if it's non-tenant mode
-        config = get_tenant_config()
-        if config.non_tenant_mode:
-            return original_name
-
-        # Get current tenant information
         tenant_info = get_current_tenant()
         if not tenant_info:
-            return original_name
+            return _base_prefixed_index_name(original_name)
 
-        # Generate tenant prefix (ES index name allows hyphens, keep as is)
-        tenant_prefix = tenant_info.tenant_id.lower()
+        # Read index_prefix from storage_info (set by routing layer)
+        es_config = tenant_info.get_storage_info("elasticsearch")
+        if es_config is None:
+            es_config = tenant_info.get_storage_info("es_config")
+        if es_config is None:
+            es_config = tenant_info.get_storage_info("es")
 
-        # Return tenant-aware index name
-        return f"{tenant_prefix}-{original_name}"
+        if es_config and es_config.get("index_prefix"):
+            return f"{es_config['index_prefix']}_{original_name}"
+
+        # No index_prefix configured
+        logger.warning(
+            "Tenant [%s] storage_info has no elasticsearch.index_prefix configured, "
+            "using base prefix. Configure index_prefix in routing layer.",
+            tenant_info.tenant_id,
+        )
+        return _base_prefixed_index_name(original_name)
 
     except Exception as e:
         logger.warning(
-            "Failed to generate tenant-aware index name, using original name [%s]: %s",
-            original_name,
-            e,
+            "Failed to get tenant-aware index name, using base prefix: %s", e
         )
-        return original_name
+        return _base_prefixed_index_name(original_name)

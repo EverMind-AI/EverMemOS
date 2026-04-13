@@ -9,7 +9,7 @@ This document provides detailed instructions on how to use MemSys API interfaces
   - [V1 Memory API](#v3-agentic-api)
   - [V1 Memory API](#v1-memory-api)
   - [API Selection Guide](#api-selection-guide)
-- [Group Chat Data Format](#group-chat-data-format)
+- [Conversation Data Format](#conversation-data-format)
 - [Using Scripts to Store Memories](#using-scripts-to-store-memories)
 - [API Call Examples](#api-call-examples)
 
@@ -21,7 +21,7 @@ MemSys provides two standardized API interfaces for storing memories:
 
 | API Type | Endpoint | Features | Recommended Use Case |
 |---------|---------|------|---------|
-| **V1 Memory API** | `/api/v1/memories` | Memory Storage + Intelligent Retrieval | Complete application scenarios requiring retrieval features |
+| **V1 Memory API** | `/api/v0/memories` | Memory Storage + Intelligent Retrieval | Complete application scenarios requiring retrieval features |
 
 ### API Comparison
 
@@ -30,7 +30,7 @@ MemSys provides two standardized API interfaces for storing memories:
 | Store Single Message | ✅ Supported | ✅ Supported |
 | Message Format | Simple direct single message format | Simple direct single message format |
 | Intelligent Retrieval | ✅ Supported (Lightweight + Agentic) | ❌ Not Supported |
-| Session Metadata Management | ✅ Supported | ✅ Supported (with PATCH updates) |
+| Settings Management | ✅ Supported | ✅ Supported (with PUT updates) |
 | Use Case | Complete memory system (storage + retrieval) | Pure memory storage system |
 
 **Important Note**: Both APIs use identical storage formats, so you can choose based on your needs. If you need retrieval functionality, we recommend using V1 Memory API for complete feature support.
@@ -46,7 +46,7 @@ Recommended for scenarios requiring complete functionality (storage + retrieval)
 #### Endpoint
 
 ```
-POST /api/v1/memories
+POST /api/v0/memories
 ```
 
 #### Features
@@ -54,7 +54,7 @@ POST /api/v1/memories
 - ✅ Simple direct single message format
 - ✅ Supports lightweight retrieval (RRF fusion)
 - ✅ Supports Agentic intelligent retrieval (LLM-assisted)
-- ✅ Supports session metadata management
+- ✅ Supports settings management
 
 For detailed documentation, see: [Memory API Documentation](../api_docs/memory_api.md)
 
@@ -67,14 +67,14 @@ Recommended for simple scenarios requiring only storage functionality.
 #### Endpoint
 
 ```
-POST /api/v1/memories
+POST /api/v0/memories
 ```
 
 #### Features
 
 - ✅ Simple direct single message format
 - ✅ Focused on memory storage
-- ✅ Supports session metadata management (with PATCH partial updates)
+- ✅ Supports settings management (with PUT updates)
 
 For detailed documentation, see: [Memory API Documentation](../api_docs/memory_api.md)
 
@@ -82,12 +82,12 @@ For detailed documentation, see: [Memory API Documentation](../api_docs/memory_a
 
 ### API Selection Guide
 
-**Use V1 Memory API (`/api/v1/memories`)** if:
+**Use V1 Memory API (`/api/v0/memories`)** if:
 - ✅ You need intelligent retrieval functionality
 - ✅ You need to build a complete memory system (storage + retrieval)
 - ✅ You want to use lightweight or Agentic retrieval modes
 
-**Use V1 Memory API (`/api/v1/memories`)** if:
+**Use V1 Memory API (`/api/v0/memories`)** if:
 - ✅ You only need to store memories without retrieval
 - ✅ You have your own retrieval solution
 - ✅ You prefer a more concise dedicated storage interface
@@ -152,7 +152,7 @@ Both APIs use the same simple direct single message format:
 #### cURL
 
 ```bash
-curl -X POST http://localhost:1995/api/v1/memories \
+curl -X POST http://localhost:8001/api/v0/memories \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
@@ -174,7 +174,7 @@ import asyncio
 async def store_memory():
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            "http://localhost:1995/api/v1/memories",
+            "http://localhost:8001/api/v0/memories",
             json={
                 "message_id": "msg_001",
                 "create_time": "2025-02-01T10:00:00+00:00",
@@ -193,7 +193,7 @@ asyncio.run(store_memory())
 #### JavaScript
 
 ```javascript
-fetch('http://localhost:1995/api/v1/memories', {
+fetch('http://localhost:8001/api/v0/memories', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
@@ -215,7 +215,7 @@ fetch('http://localhost:1995/api/v1/memories', {
 **Using V1 Memory API:**
 
 ```javascript
-fetch('http://localhost:1995/api/v1/memories', {
+fetch('http://localhost:8001/api/v0/memories', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
@@ -234,16 +234,16 @@ fetch('http://localhost:1995/api/v1/memories', {
 .then(data => console.log(data));
 ```
 
-## 📁 Group Chat Data Format
+## 📁 Conversation Data Format
 
-MemSys defines a standardized group chat data format `GroupChatFormat` for storing and exchanging group chat conversation data.
+MemSys defines a standardized conversation data format `ConversationFormat` for storing and exchanging conversation data.
 
 ### Format Overview
 
 ```json
 {
   "version": "1.0.0",
-  "conversation_meta": {
+  "session_meta": {
     "group_id": "group_001",
     "name": "Project Discussion Group",
     "default_timezone": "+00:00",
@@ -272,7 +272,7 @@ MemSys defines a standardized group chat data format `GroupChatFormat` for stori
 ### Core Features
 
 1. **Separated Metadata and Message List**
-   - `conversation_meta`: Group chat metadata
+   - `session_meta`: Group chat metadata
    - `conversation_list`: Message list
 
 2. **Centralized User Details**
@@ -289,7 +289,7 @@ MemSys defines a standardized group chat data format `GroupChatFormat` for stori
 
 ### Detailed Documentation
 
-For complete format specification, see: [Group Chat Format Specification](../../data_format/group_chat/group_chat_format.md)
+For complete format specification, see: [Conversation Format Specification](../../data_format/conversation/conversation_format.md)
 
 ## 🔧 Using Scripts to Store Memories
 
@@ -309,23 +309,23 @@ Run using the Bootstrap script with V1 API:
 
 ```bash
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --api-url http://localhost:1995/api/v1/memories
+  --input data/team_chat.json \
+  --api-url http://localhost:8001/api/v0/memories
 ```
 
 **Using V1 Memory API (Storage only):**
 
 ```bash
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --api-url http://localhost:1995/api/v1/memories
+  --input data/team_chat.json \
+  --api-url http://localhost:8001/api/v0/memories
 ```
 
 ### Command Line Arguments
 
 | Argument | Required | Description |
 |------|------|------|
-| `--input` | Yes | Input group chat JSON file path (GroupChatFormat) |
+| `--input` | Yes | Input group chat JSON file path (ConversationFormat) |
 | `--api-url` | No* | Memorize API address (*unless using --validate-only) |
 | `--validate-only` | No | Only validate input file format without storing |
 
@@ -338,18 +338,18 @@ uv run python src/bootstrap.py src/run_memorize.py \
 ```bash
 # Basic usage
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --api-url http://localhost:1995/api/v1/memories
+  --input data/team_chat.json \
+  --api-url http://localhost:8001/api/v0/memories
 
 # Using relative path
 uv run python src/bootstrap.py src/run_memorize.py \
   --input ../my_data/chat_history.json \
-  --api-url http://localhost:1995/api/v1/memories
+  --api-url http://localhost:8001/api/v0/memories
 
 # Specifying remote server
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --api-url http://api.example.com/api/v1/memories
+  --input data/team_chat.json \
+  --api-url http://api.example.com/api/v0/memories
 ```
 
 **Using V1 Memory API:**
@@ -357,13 +357,13 @@ uv run python src/bootstrap.py src/run_memorize.py \
 ```bash
 # Basic usage
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
-  --api-url http://localhost:1995/api/v1/memories
+  --input data/team_chat.json \
+  --api-url http://localhost:8001/api/v0/memories
 
 # Using relative path
 uv run python src/bootstrap.py src/run_memorize.py \
   --input ../my_data/chat_history.json \
-  --api-url http://localhost:1995/api/v1/memories
+  --api-url http://localhost:8001/api/v0/memories
 ```
 
 #### 2. Validate File Format
@@ -372,7 +372,7 @@ Validate file format before storing:
 
 ```bash
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat.json \
+  --input data/team_chat.json \
   --validate-only
 ```
 
@@ -380,7 +380,7 @@ uv run python src/bootstrap.py src/run_memorize.py \
 
 1. **Validate Input File**
    - Check if JSON format is correct
-   - Verify compliance with GroupChatFormat specification
+   - Verify compliance with ConversationFormat specification
    - Output data statistics
 
 2. **Process Messages One by One**
@@ -398,16 +398,16 @@ uv run python src/bootstrap.py src/run_memorize.py \
 ```
 🚀 Group Chat Memory Storage Script
 ======================================================================
-📄 Input File: /path/to/data/group_chat.json
+📄 Input File: /path/to/data/team_chat.json
 🔍 Validation Mode: No
-🌐 API Address: http://localhost:1995/api/v1/memories
+🌐 API Address: http://localhost:8001/api/v0/memories
 ======================================================================
 
 ======================================================================
 Validating Input File Format
 ======================================================================
-Reading file: /path/to/data/group_chat.json
-Validating GroupChatFormat...
+Reading file: /path/to/data/team_chat.json
+Validating ConversationFormat...
 ✓ Format validation passed!
 
 === Data Statistics ===
@@ -424,7 +424,7 @@ Starting to Call Memorize API for Each Message
 Group Name: Project Discussion Group
 Group ID: group_001
 Message Count: 20
-API Address: http://localhost:1995/api/v1/memories
+API Address: http://localhost:8001/api/v0/memories
 
 --- Processing Message 1/20 ---
   ✓ Successfully saved 2 memories
@@ -447,12 +447,12 @@ Processing Complete
 
 #### 1. Prepare Data File
 
-Create a JSON file conforming to GroupChatFormat:
+Create a JSON file conforming to ConversationFormat:
 
 ```json
 {
   "version": "1.0.0",
-  "conversation_meta": {
+  "session_meta": {
     "group_id": "project_team_001",
     "name": "Product Development Team",
     "default_timezone": "+00:00",
@@ -510,7 +510,7 @@ Ensure MemSys service is running:
 uv run python src/run.py
 ```
 
-After service starts, visit http://localhost:1995/docs to verify API documentation is accessible.
+After service starts, visit http://localhost:8001/docs to verify API documentation is accessible.
 
 #### 4. Store Memories
 
@@ -519,7 +519,7 @@ After service starts, visit http://localhost:1995/docs to verify API documentati
 ```bash
 uv run python src/bootstrap.py src/run_memorize.py \
   --input my_chat_data.json \
-  --api-url http://localhost:1995/api/v1/memories
+  --api-url http://localhost:8001/api/v0/memories
 ```
 
 **Option B: Using V1 Memory API**
@@ -527,7 +527,7 @@ uv run python src/bootstrap.py src/run_memorize.py \
 ```bash
 uv run python src/bootstrap.py src/run_memorize.py \
   --input my_chat_data.json \
-  --api-url http://localhost:1995/api/v1/memories
+  --api-url http://localhost:8001/api/v0/memories
 ```
 
 #### 5. Verify Storage Results
@@ -540,12 +540,12 @@ If using V1 Memory API, you can query stored memories through the retrieval inte
 
 ```
 ✗ Format validation failed!
-Please ensure input file conforms to GroupChatFormat specification
+Please ensure input file conforms to ConversationFormat specification
 ```
 
 **Solution**:
 - Check if JSON format is correct
-- Refer to [Group Chat Format Specification](../../data_format/group_chat/group_chat_format.md)
+- Refer to [Conversation Format Specification](../../data_format/conversation/conversation_format.md)
 - Ensure all required fields are filled
 
 #### API Call Failed
@@ -580,14 +580,14 @@ Response content: {"error": "Internal server error"}
 
 ### Other Documentation
 
-- [Group Chat Format Specification](../../data_format/group_chat/group_chat_format.md) - Detailed GroupChatFormat specification
+- [Conversation Format Specification](../../data_format/conversation/conversation_format.md) - Detailed ConversationFormat specification
 - [Getting Started Guide](getting_started.md) - Environment setup and service startup
 - [Agentic Retrieval Guide](agentic_retrieval_guide.md) - Intelligent retrieval features explained
 
 ## 💡 Best Practices
 
 1. **Data Preparation**
-   - Use standard GroupChatFormat
+   - Use standard ConversationFormat
    - Ensure timestamps include timezone information
    - Provide complete user details
 

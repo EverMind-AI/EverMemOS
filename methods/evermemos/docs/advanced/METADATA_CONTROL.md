@@ -1,10 +1,10 @@
-# Conversation Metadata Control Guide
+# Settings Control Guide
 
-[Home](../../README.md) > [Docs](../README.md) > [Advanced](.) > Metadata Control
+[Home](../../README.md) > [Docs](../README.md) > [Advanced](.) > Settings
 
 ## Overview
 
-EverMemOS uses **conversation metadata** to provide context for memory extraction and retrieval. Properly configured metadata enables:
+EverMemOS uses **settings** to provide context for memory extraction and retrieval. Properly configured settings enable:
 
 - **Better memory extraction** - Understanding who said what and in what context
 - **Accurate retrieval filtering** - Querying memories by user, group, or time range
@@ -25,7 +25,7 @@ This guide explains when and how to control metadata for optimal results.
 
 ```json
 {
-  "conversation_meta": {
+  "session_meta": {
     "user_details": {
       "alice": {
         "full_name": "Alice Smith",
@@ -56,8 +56,8 @@ This guide explains when and how to control metadata for optimal results.
 
 ```json
 {
-  "conversation_meta": {
-    "scene": "assistant",
+  "session_meta": {
+    "scene": "solo",
     "scene_desc": {
       "description": "Project discussion group chat"
     },
@@ -83,12 +83,12 @@ This guide explains when and how to control metadata for optimal results.
 
 **Use Case:** Distributed teams working across different timezones
 
-**Why:** The `default_timezone` ensures timestamps are interpreted correctly when timezone info is missing from individual messages.
+**Why:** The `timezone` ensures timestamps are interpreted correctly when timezone info is missing from individual messages.
 
 ```json
 {
-  "conversation_meta": {
-    "default_timezone": "America/Los_Angeles",
+  "session_meta": {
+    "timezone": "America/Los_Angeles",
     "user_details": {
       "dev_sf": {"full_name": "SF Developer"},
       "dev_tokyo": {"full_name": "Tokyo Developer"}
@@ -109,8 +109,8 @@ This guide explains when and how to control metadata for optimal results.
 
 ```json
 {
-  "conversation_meta": {
-    "scene": "group_chat",
+  "session_meta": {
+    "scene": "team",
     "tags": ["project-alpha", "backend", "Q1-2025"]
   }
 }
@@ -124,17 +124,17 @@ This guide explains when and how to control metadata for optimal results.
 
 **Use Case:** Setting organization-wide defaults that apply when specific group config is missing
 
-**Why:** EverMemOS supports a default configuration that applies when a specific `group_id` config is not found.
+**Why:** EverMemOS supports a default configuration that applies when a specific `scene` config is not found.
 
 ```python
-# Save default config (no group_id)
-requests.post(
-    "http://localhost:1995/api/v1/memories/conversation-meta",
+# Save default config
+requests.put(
+    "http://localhost:8001/api/v1/settings",
     json={
-        "scene": "group_chat",
-        "name": "Default Work Config",
-        "default_timezone": "UTC",
-        "user_details": {}
+        "scene": "team",
+        "scene_desc": {},
+        "timezone": "UTC",
+        "llm_custom_setting": {}
     }
 )
 ```
@@ -145,21 +145,16 @@ requests.post(
 
 ---
 
-## Metadata Fields Reference
+## Settings Fields Reference
 
-### Conversation Metadata (`conversation_meta`)
+### Settings (`session_meta`)
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `group_id` | string | No | Unique identifier for the conversation group |
-| `name` | string | Yes | Human-readable name for the conversation |
-| `description` | string | No | Description of the conversation context |
-| `scene` | string | No | Scene type: `assistant` (1:1 with AI) or `group_chat` (group chat) |
-| `scene_desc` | object | No | Scene-specific details (e.g., `description` for assistant scene) |
-| `default_timezone` | string | No | IANA timezone name (e.g., `America/New_York`) |
-| `user_details` | object | Yes | Dictionary of user information keyed by user ID |
-| `tags` | array | No | List of tags for categorization |
-| `created_at` | string | No | Conversation creation time (ISO 8601) |
+| `scene` | string | No | Scene type: `solo` (1:1 with AI) or `team` (group chat) |
+| `scene_desc` | object | No | Scene-specific details (e.g., `description` for solo scene) |
+| `timezone` | string | No | IANA timezone name (e.g., `America/New_York`) |
+| `llm_custom_setting` | object | No | Custom LLM settings for memory extraction |
 
 ### User Details (`user_details`)
 
@@ -195,7 +190,7 @@ When storing a single message, you can include group and sender metadata:
 import requests
 
 response = requests.post(
-    "http://localhost:1995/api/v1/memories",
+    "http://localhost:8001/api/v0/memories",
     json={
         "message_id": "msg_001",
         "create_time": "2025-02-01T10:00:00+00:00",
@@ -216,7 +211,7 @@ Filter search results by user or group:
 ```python
 # Search within a specific group
 response = requests.get(
-    "http://localhost:1995/api/v1/memories/search",
+    "http://localhost:8001/api/v0/memories/search",
     json={
         "query": "What programming languages are preferred?",
         "group_id": "team_engineering",
@@ -228,76 +223,53 @@ response = requests.get(
 )
 ```
 
-### Manage Conversation Metadata
+### Manage Settings
 
-#### Get Metadata (with fallback to default)
+#### Get Settings
 
 ```python
-# Get specific group's metadata
+# Get current settings
 response = requests.get(
-    "http://localhost:1995/api/v1/memories/conversation-meta",
-    json={"group_id": "team_engineering"}
-)
-
-# Get default config
-response = requests.get(
-    "http://localhost:1995/api/v1/memories/conversation-meta",
-    json={}
+    "http://localhost:8001/api/v1/settings"
 )
 ```
 
-#### Save/Update Metadata (Full Replace)
+#### Save/Update Settings (Upsert)
+
+The V1 Settings API uses PUT for both creation and updates (upsert semantics):
 
 ```python
-response = requests.post(
-    "http://localhost:1995/api/v1/memories/conversation-meta",
+response = requests.put(
+    "http://localhost:8001/api/v1/settings",
     json={
-        "group_id": "team_engineering",
-        "scene": "group_chat",
-        "name": "Engineering Team",
-        "description": "Backend engineering team discussions",
-        "default_timezone": "America/Los_Angeles",
-        "user_details": {
-            "alice": {
-                "full_name": "Alice Smith",
-                "role": "user",
-                "custom_role": "Tech Lead"
-            }
+        "scene": "team",
+        "scene_desc": {
+            "description": "Backend engineering team discussions"
         },
-        "tags": ["engineering", "backend"]
+        "timezone": "America/Los_Angeles",
+        "llm_custom_setting": {}
     }
 )
 ```
 
-#### Partial Update Metadata
-
-Update only specific fields without replacing the entire record:
-
-```python
-response = requests.patch(
-    "http://localhost:1995/api/v1/memories/conversation-meta",
-    json={
-        "group_id": "team_engineering",
-        "name": "Backend Engineering Team",  # Only update name
-        "tags": ["engineering", "backend", "python"]  # Update tags
-    }
-)
+**Response format (success):**
+```json
+{
+  "data": {
+    "scene": "team",
+    "scene_desc": {"description": "..."},
+    "timezone": "America/Los_Angeles",
+    "llm_custom_setting": {}
+  }
+}
 ```
-
-**Fields that can be partially updated:**
-- `name`
-- `description`
-- `scene_desc`
-- `tags`
-- `default_timezone`
-- `user_details` (replaces entire user_details object)
 
 ### Delete Memories with Metadata Filters
 
 ```python
 # Delete all memories for a specific user in a group
 response = requests.delete(
-    "http://localhost:1995/api/v1/memories",
+    "http://localhost:8001/api/v0/memories",
     json={
         "user_id": "user_123",
         "group_id": "team_engineering"
@@ -315,23 +287,11 @@ Track support conversations with customer context:
 
 ```json
 {
-  "conversation_meta": {
-    "group_id": "support_ticket_12345",
-    "scene": "assistant",
+  "session_meta": {
+    "scene": "solo",
     "scene_desc": {"description": "Support conversation with customer"},
-    "name": "Ticket #12345 - Login Issue",
-    "tags": ["support", "login", "high-priority"],
-    "user_details": {
-      "customer_abc": {
-        "full_name": "Jane Customer",
-        "role": "user",
-        "extra": {"account_tier": "enterprise"}
-      },
-      "support_bot": {
-        "full_name": "Support Assistant",
-        "role": "assistant"
-      }
-    }
+    "timezone": "UTC",
+    "llm_custom_setting": {}
   }
 }
 ```
@@ -342,26 +302,13 @@ Capture meeting context with participant roles:
 
 ```json
 {
-  "conversation_meta": {
-    "group_id": "meeting_standup_2025_02_01",
-    "scene": "group_chat",
-    "name": "Daily Standup - Feb 1, 2025",
-    "default_timezone": "America/New_York",
-    "tags": ["standup", "daily", "sprint-23"],
-    "user_details": {
-      "pm_sarah": {
-        "full_name": "Sarah Johnson",
-        "custom_role": "Scrum Master"
-      },
-      "dev_mike": {
-        "full_name": "Mike Chen",
-        "custom_role": "Senior Developer"
-      },
-      "dev_lisa": {
-        "full_name": "Lisa Park",
-        "custom_role": "Frontend Developer"
-      }
-    }
+  "session_meta": {
+    "scene": "team",
+    "scene_desc": {
+      "description": "Daily Standup - Feb 1, 2025"
+    },
+    "timezone": "America/New_York",
+    "llm_custom_setting": {}
   }
 }
 ```
@@ -372,21 +319,11 @@ Track personal conversations with the AI:
 
 ```json
 {
-  "conversation_meta": {
-    "group_id": "personal_assistant_john",
-    "scene": "assistant",
-    "scene_desc": {"description": "Personal assistant conversation with John"},
-    "name": "John's Personal Assistant",
-    "user_details": {
-      "john": {
-        "full_name": "John Doe",
-        "role": "user"
-      },
-      "claude_assistant": {
-        "full_name": "Claude",
-        "role": "assistant"
-      }
-    }
+  "session_meta": {
+    "scene": "solo",
+    "scene_desc": {"description": "Personal assistant conversation"},
+    "timezone": "UTC",
+    "llm_custom_setting": {}
   }
 }
 ```
@@ -411,7 +348,7 @@ Use the same `sender` ID across all messages from the same person. The ID in mes
 
 ### 3. Include Timezone Information
 
-Always include timezone in message timestamps or set `default_timezone`:
+Always include timezone in message timestamps or set `timezone` in settings:
 
 ```json
 "create_time": "2025-02-01T10:00:00-05:00"
@@ -419,8 +356,8 @@ Always include timezone in message timestamps or set `default_timezone`:
 
 ### 4. Use Appropriate Scene Types
 
-- **`assistant`**: Use for 1:1 human-AI conversations
-- **`group_chat`**: Use for multi-person group chats and meetings
+- **`solo`**: Use for 1:1 human-AI conversations
+- **`team`**: Use for multi-person group chats and meetings
 
 ### 5. Leverage Tags for Organization
 
@@ -430,7 +367,7 @@ Tags provide additional filtering and categorization without affecting the core 
 
 ## See Also
 
-- [Group Chat Guide](GROUP_CHAT_GUIDE.md) - Multi-participant conversations
-- [Group Chat Format Specification](../../data_format/group_chat/group_chat_format.md) - Complete schema reference
+- [Team Chat Guide](TEAM_CHAT_GUIDE.md) - Multi-participant conversations
+- [Conversation Format Specification](../../data_format/conversation/conversation_format.md) - Complete schema reference
 - [Batch Operations](../usage/BATCH_OPERATIONS.md) - Processing conversations in batch
 - [API Documentation](../api_docs/memory_api.md) - Complete API reference

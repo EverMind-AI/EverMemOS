@@ -14,7 +14,7 @@ from demo.utils import query_memcells_by_group_and_time
 from demo.ui import I18nTexts
 from memory_layer.llm.llm_provider import LLMProvider
 from common_utils.datetime_utils import get_now_with_timezone, to_iso_format
-from memory_layer.memory_extractor.profile_memory_life.types import ProfileMemoryLife
+from api_specs.memory_types import ProfileMemory
 
 
 class ChatSession:
@@ -27,7 +27,7 @@ class ChatSession:
         llm_config: LLMConfig,
         scenario_type: ScenarioType,
         retrieval_mode: str,  # "keyword" / "vector" / "hybrid" / "rrf" / "agentic"
-        data_source: str,  # "episode" / "event_log"
+        data_source: str,  # "episode" / "atomic_fact"
         texts: I18nTexts,
         user_id: str = "user_001",  # User ID for profile fetch
     ):
@@ -39,7 +39,7 @@ class ChatSession:
             llm_config: LLM configuration
             scenario_type: Scenario type
             retrieval_mode: Retrieval mode (keyword/vector/hybrid/rrf/agentic)
-            data_source: Data source (episode/event_log)
+            data_source: Data source (episode/atomic_fact)
             texts: I18nTexts object
             user_id: User ID for fetching profile
         """
@@ -74,7 +74,7 @@ class ChatSession:
         """
         try:
             display_name = (
-                "group_chat"
+                "team_chat"
                 if self.group_id == "AI产品群"  # skip-i18n-check
                 else self.group_id
             )
@@ -160,7 +160,7 @@ class ChatSession:
         """
         try:
             display_name = (
-                "group_chat"
+                "team_chat"
                 if self.group_id == "AI产品群"  # skip-i18n-check
                 else self.group_id
             )
@@ -194,7 +194,7 @@ class ChatSession:
         """Save conversation history to file"""
         try:
             display_name = (
-                "group_chat"
+                "team_chat"
                 if self.group_id == "AI产品群"  # skip-i18n-check
                 else self.group_id
             )
@@ -313,7 +313,7 @@ class ChatSession:
                 and "explicit_info" in profile_data
             ):
 
-                profile_data["readable_profile"] = ProfileMemoryLife.from_dict(
+                profile_data["readable_profile"] = ProfileMemory.from_dict(
                     profile_data
                 ).to_readable_profile()
                 mem["profile_data"] = profile_data
@@ -537,7 +537,7 @@ class ChatSession:
         from common_utils.cli_ui import CLIUI
 
         display_name = (
-            "group_chat"
+            "team_chat"
             if self.group_id == "AI产品群"  # skip-i18n-check
             else self.group_id
         )

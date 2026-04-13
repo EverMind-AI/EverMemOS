@@ -8,7 +8,9 @@ Follow these principles when generating episodic memories:
 """
 
 EPISODE_GENERATION_PROMPT = """
-You are an episodic memory generation expert. Please convert the following conversation into an episodic memory.
+**CRITICAL LANGUAGE RULE**: You MUST output in the SAME language as the input conversation content. If the conversation content is in Chinese, ALL output (title and content) MUST be in Chinese. If in English, output in English. This is mandatory.
+
+You are an episodic memory generation expert. Please convert the following conversation content into an episodic memory.
 
 Conversation start time: {conversation_start_time}
 Conversation content:
@@ -68,12 +70,16 @@ If the conversation start time is "March 14, 2024 (Thursday) at 3:00 PM UTC" and
     "title": "Caroline's Mount Rainier Hiking Plan March 14, 2024: Weekend Adventure Planning Session",
     "content": "On March 14, 2024 at 3:00 PM UTC, Caroline expressed interest in hiking this weekend (March 16-17, 2024) and sought advice. She wanted to see the sunrise at Mount Rainier. When asked about gear by Melanie, Caroline received suggestions: hiking boots, warm clothing, flashlight, water, and high-energy food. Caroline decided to leave early Saturday morning (March 16, 2024) to catch the sunrise and planned to invite friends. She was excited about the trip."
 }}
+
+**CRITICAL LANGUAGE RULE**: You MUST output in the SAME language as the input conversation content. If the conversation content is in Chinese, ALL output (title and content) MUST be in Chinese. If in English, output in English. This is mandatory.
 
 Return only the JSON object, do not add any other text:
 """
 
 GROUP_EPISODE_GENERATION_PROMPT = """
-You are an episodic memory generation expert. Please convert the following conversation into an episodic memory.
+**CRITICAL LANGUAGE RULE**: You MUST output in the SAME language as the input conversation content. If the conversation content is in Chinese, ALL output (title and content) MUST be in Chinese. If in English, output in English. This is mandatory.
+
+You are an episodic memory generation expert. Please convert the following conversation content into an episodic memory.
 
 Conversation start time: {conversation_start_time}
 Conversation content:
@@ -133,6 +139,8 @@ If the conversation start time is "March 14, 2024 (Thursday) at 3:00 PM UTC" and
     "title": "Caroline's Mount Rainier Hiking Plan March 14, 2024: Weekend Adventure Planning Session",
     "content": "On March 14, 2024 at 3:00 PM UTC, Caroline expressed interest in hiking this weekend (March 16-17, 2024) and sought advice. She wanted to see the sunrise at Mount Rainier. When asked about gear by Melanie, Caroline received suggestions: hiking boots, warm clothing, flashlight, water, and high-energy food. Caroline decided to leave early Saturday morning (March 16, 2024) to catch the sunrise and planned to invite friends. She was excited about the trip."
 }}
+
+**CRITICAL LANGUAGE RULE**: You MUST output in the SAME language as the input conversation content. If the conversation content is in Chinese, ALL output (title and content) MUST be in Chinese. If in English, output in English. This is mandatory.
 
 Return only the JSON object, do not add any other text:
 """

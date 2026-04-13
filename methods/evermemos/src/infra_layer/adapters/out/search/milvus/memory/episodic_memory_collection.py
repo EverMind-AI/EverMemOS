@@ -1,8 +1,9 @@
 """
-Episodic Memory Milvus Collection Definition
+V1 Episodic Memory Milvus Collection Definition
 
-An episodic memory dedicated Collection class implemented based on MilvusCollectionWithSuffix.
-Provides Schema definition and index configuration compatible with EpisodicMemoryMilvusRepository.
+Based on MongoDB v1_episodic_memories collection.
+Simplified for vector semantic retrieval - only stores search-essential fields.
+Full data is retrieved from MongoDB using parent_id.
 """
 
 from pymilvus import DataType, FieldSchema, CollectionSchema
@@ -15,16 +16,15 @@ from memory_layer.constants import VECTORIZE_DIMENSIONS
 
 class EpisodicMemoryCollection(TenantAwareMilvusCollectionWithSuffix):
     """
-    Episodic Memory Milvus Collection
+    V1 Episodic Memory Milvus Collection
 
     Usage:
-        # Use the Collection
         collection.async_collection().insert([...])
         collection.async_collection().search([...])
     """
 
     # Base name for the Collection
-    _COLLECTION_NAME = "episodic_memory"
+    _COLLECTION_NAME = "v1_episodic_memory"
 
     # Collection Schema definition
     _SCHEMA = CollectionSchema(
@@ -40,20 +40,26 @@ class EpisodicMemoryCollection(TenantAwareMilvusCollectionWithSuffix):
             FieldSchema(
                 name="vector",
                 dtype=DataType.FLOAT_VECTOR,
-                dim=VECTORIZE_DIMENSIONS,  # Vector dimension of the BAAI/bge-m3 model
-                description="Text vector",
+                dim=VECTORIZE_DIMENSIONS,
+                description="Text vector for semantic search",
             ),
             FieldSchema(
                 name="user_id",
                 dtype=DataType.VARCHAR,
-                max_length=100,
-                description="User ID",
+                max_length=256,
+                description="User ID (None for group memory)",
             ),
             FieldSchema(
                 name="group_id",
                 dtype=DataType.VARCHAR,
-                max_length=100,
+                max_length=256,
                 description="Group ID",
+            ),
+            FieldSchema(
+                name="session_id",
+                dtype=DataType.VARCHAR,
+                max_length=100,
+                description="Session identifier",
             ),
             FieldSchema(
                 name="participants",
@@ -61,16 +67,26 @@ class EpisodicMemoryCollection(TenantAwareMilvusCollectionWithSuffix):
                 element_type=DataType.VARCHAR,
                 max_capacity=100,
                 max_length=100,
-                description="List of participants (used for user filtering in group memory)",
+                description="List of participant sender_ids",
             ),
             FieldSchema(
-                name="event_type",
+                name="sender_ids",
+                dtype=DataType.ARRAY,
+                element_type=DataType.VARCHAR,
+                max_capacity=100,
+                max_length=100,
+                description="Sender IDs of event participants",
+            ),
+            FieldSchema(
+                name="type",
                 dtype=DataType.VARCHAR,
                 max_length=50,
-                description="Event type (e.g., conversation, email, etc.)",
+                description="Episode type (e.g., Conversation, Email, etc.)",
             ),
             FieldSchema(
-                name="timestamp", dtype=DataType.INT64, description="Event timestamp"
+                name="timestamp",
+                dtype=DataType.INT64,
+                description="Event timestamp (epoch milliseconds)",
             ),
             FieldSchema(
                 name="episode",
@@ -85,12 +101,6 @@ class EpisodicMemoryCollection(TenantAwareMilvusCollectionWithSuffix):
                 description="Search content",
             ),
             FieldSchema(
-                name="metadata",
-                dtype=DataType.VARCHAR,
-                max_length=50000,
-                description="Detailed non-retrieval information in JSON (metadata)",
-            ),
-            FieldSchema(
                 name="parent_type",
                 dtype=DataType.VARCHAR,
                 max_length=100,
@@ -100,18 +110,10 @@ class EpisodicMemoryCollection(TenantAwareMilvusCollectionWithSuffix):
                 name="parent_id",
                 dtype=DataType.VARCHAR,
                 max_length=100,
-                description="Parent memory ID",
-            ),
-            FieldSchema(
-                name="created_at",
-                dtype=DataType.INT64,
-                description="Creation timestamp",
-            ),
-            FieldSchema(
-                name="updated_at", dtype=DataType.INT64, description="Update timestamp"
+                description="Parent memory ID (for MongoDB back-reference)",
             ),
         ],
-        description="Vector collection for episodic memory",
+        description="V1 vector collection for episodic memory",
         enable_dynamic_field=True,
     )
 
@@ -120,20 +122,14 @@ class EpisodicMemoryCollection(TenantAwareMilvusCollectionWithSuffix):
         # Vector field index (for similarity search)
         IndexConfig(
             field_name="vector",
-            index_type="HNSW",  # Efficient approximate nearest neighbor search
-            metric_type="COSINE",  # Cosine similarity
-            params={
-                "M": 16,  # Maximum number of connections per node
-                "efConstruction": 200,  # Search width during construction
-            },
+            index_type="HNSW",
+            metric_type="COSINE",
+            params={"M": 16, "efConstruction": 200},
         ),
         # Scalar field indexes (for filtering)
-        IndexConfig(
-            field_name="user_id",
-            index_type="AUTOINDEX",  # Automatically select the most suitable index type
-        ),
+        IndexConfig(field_name="user_id", index_type="AUTOINDEX"),
         IndexConfig(field_name="group_id", index_type="AUTOINDEX"),
-        IndexConfig(field_name="event_type", index_type="AUTOINDEX"),
+        IndexConfig(field_name="session_id", index_type="AUTOINDEX"),
         IndexConfig(field_name="parent_id", index_type="AUTOINDEX"),
         IndexConfig(field_name="timestamp", index_type="AUTOINDEX"),
     ]

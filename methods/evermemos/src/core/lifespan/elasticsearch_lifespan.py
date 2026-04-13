@@ -20,13 +20,13 @@ logger = get_logger(__name__)
 class ElasticsearchLifespanProvider(LifespanProvider):
     """Elasticsearch lifecycle provider"""
 
-    def __init__(self, name: str = "elasticsearch", order: int = 20):
+    def __init__(self, name: str = "elasticsearch", order: int = 18):
         """
         Initialize the Elasticsearch lifecycle provider
 
         Args:
             name (str): Provider name
-            order (int): Execution order, Elasticsearch starts after database connection
+            order (int): Execution order, must start before business_lifespan(20)
         """
         super().__init__(name, order)
         self._es_factory = None

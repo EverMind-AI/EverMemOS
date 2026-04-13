@@ -45,13 +45,13 @@ class I18nTexts:
             "zh": "请选择场景模式 [1-2]",
             "en": "Please select scenario mode [1-2]",
         },
-        "scenario_assistant": {"zh": "助手模式", "en": "Assistant Mode"},
-        "scenario_assistant_desc": {
+        "scenario_solo": {"zh": "助手模式", "en": "Solo Mode"},
+        "scenario_solo_desc": {
             "zh": "单人对话，基于个人记忆的智能助手",
             "en": "One-on-one conversation with personal memory-based AI assistant",
         },
-        "scenario_group_chat": {"zh": "群聊模式", "en": "Group Chat Mode"},
-        "scenario_group_chat_desc": {
+        "scenario_team": {"zh": "群聊模式", "en": "Team Mode"},
+        "scenario_team_desc": {
             "zh": "多人群聊，基于群组记忆的对话分析",
             "en": "Multi-person chat with group memory-based conversation analysis",
         },
@@ -75,7 +75,10 @@ class I18nTexts:
             "zh": "语义向量检索",
             "en": "Semantic vector search",
         },
-        "retrieval_mode_hybrid": {"zh": "Hybrid 检索（推荐）", "en": "Hybrid Search (Recommended)"},
+        "retrieval_mode_hybrid": {
+            "zh": "Hybrid 检索（推荐）",
+            "en": "Hybrid Search (Recommended)",
+        },
         "retrieval_mode_hybrid_desc": {
             "zh": "Keyword + Vector + Rerank",
             "en": "Keyword + Vector + Rerank",
@@ -90,20 +93,17 @@ class I18nTexts:
             "zh": "LLM 引导的多轮检索（实验性）",
             "en": "LLM-guided multi-round retrieval (experimental)",
         },
-        "retrieval_mode_selected": {"zh": "已选择检索模式", "en": "Retrieval mode selected"},
+        "retrieval_mode_selected": {
+            "zh": "已选择检索模式",
+            "en": "Retrieval mode selected",
+        },
         "retrieval_mode_agentic_cost_warning": {
             "zh": "⚠️  Agentic 检索将使用 LLM API，可能产生额外费用",
             "en": "⚠️  Agentic retrieval uses LLM API, may incur additional costs",
         },
-        "retrieval_mode_invalid_range": {
-            "zh": "请输入 1-5",
-            "en": "Please enter 1-5",
-        },
+        "retrieval_mode_invalid_range": {"zh": "请输入 1-5", "en": "Please enter 1-5"},
         # ==================== Agentic Retrieval UI ====================
-        "agentic_retrieving": {
-            "zh": "正在检索记忆...",
-            "en": "Retrieving memories...",
-        },
+        "agentic_retrieving": {"zh": "正在检索记忆...", "en": "Retrieving memories..."},
         "agentic_mode_keyword": {"zh": "Keyword", "en": "Keyword"},
         "agentic_mode_vector": {"zh": "Vector", "en": "Vector"},
         "agentic_mode_hybrid": {"zh": "Hybrid", "en": "Hybrid"},
@@ -122,7 +122,10 @@ class I18nTexts:
             "zh": "💡 首轮检索到的记忆信息不够充分，LLM 生成了更精确的补充查询以获取更多相关记忆",
             "en": "💡 First-round memories insufficient, LLM generated refined queries for more relevant memories",
         },
-        "agentic_supplementary_queries": {"zh": "补充查询", "en": "Supplementary queries"},
+        "agentic_supplementary_queries": {
+            "zh": "补充查询",
+            "en": "Supplementary queries",
+        },
         # ==================== Banner and Welcome ====================
         "banner_title": {
             "zh": "🧠  EverMem 记忆对话助手",
@@ -251,10 +254,7 @@ class I18nTexts:
             "zh": "多轮检索（Round 1 → Round 2）",
             "en": "Multi-round retrieval (Round 1 → Round 2)",
         },
-        "retrieval_single_round": {
-            "zh": "单轮检索",
-            "en": "Single-round retrieval",
-        },
+        "retrieval_single_round": {"zh": "单轮检索", "en": "Single-round retrieval"},
         "prompt_memory_episode": {"zh": "详情：{episode}", "en": "Details: {episode}"},
         # ==================== Command Processing ====================
         "cmd_help_title": {"zh": "📖  可用命令", "en": "📖  Available Commands"},

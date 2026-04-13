@@ -17,6 +17,7 @@ class ErrorStatus(Enum):
 
     OK = "ok"
     FAILED = "failed"
+    DUPLICATE = "duplicate"
 
 
 class ErrorCode(Enum):

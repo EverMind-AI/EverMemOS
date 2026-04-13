@@ -72,7 +72,7 @@ config = AgenticConfig(
     round1_emb_top_n=50,        # Embedding candidates
     round1_bm25_top_n=50,       # BM25 candidates
     round1_top_n=20,            # Top N after RRF fusion
-    round1_rerank_top_n=5,      # Top N after rerank for LLM judgment
+    round1_rerank_top_n=10,      # Top N after rerank for LLM judgment
     
     # LLM configuration
     llm_temperature=0.0,        # Low temperature for judgment
@@ -126,7 +126,7 @@ result = await memory_manager.retrieve_agentic(
         
         # Round 1 statistics
         "round1_count": 20,
-        "round1_reranked_count": 5,
+        "round1_reranked_count": 10,
         "round1_latency_ms": 800,
         
         # LLM judgment
@@ -162,7 +162,7 @@ Round 1: Hybrid Search (Embedding + BM25 + RRF)
   ↓
 RRF Fusion → Top 20
   ↓
-Rerank → Top 5
+Rerank → Top 10
   ↓
 LLM Judges Sufficiency
   ↓

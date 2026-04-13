@@ -1,217 +1,198 @@
 """
 Tenant database initialization module
 
-This module is used to initialize MongoDB, Milvus, and Elasticsearch databases for a specific tenant.
-The tenant ID is specified via the environment variable TENANT_SINGLE_TENANT_ID:
-1. Create tenant information and set tenant context
-2. Invoke MongoDB lifespan startup logic
-3. Invoke Milvus lifespan startup logic
-4. Invoke Elasticsearch lifespan startup logic
+Initializes MongoDB, Milvus, and Elasticsearch databases for a tenant.
+
+Tenant context is passed via TENANT_INIT_STORAGE_INFO environment variable,
+which contains full storage_info JSON. Works for both shared mode and
+exclusive mode.
 
 Usage:
-    Called via manage.py:
-    export TENANT_SINGLE_TENANT_ID=tenant_001
-    python src/manage.py tenant-init
+    # Shared mode (logical isolation, multiple tenants share the same storage):
+    TENANT_INIT_STORAGE_INFO='{
+        "tenant_id": "my_tenant",
+        "isolation_mode": "shared",
+        "storage_info": {
+            "mongodb": {"database": "my_tenant_memsys"},
+            "elasticsearch": {"index_prefix": "my_tenant"},
+            "milvus": {"collection_prefix": "my_tenant", "num_partitions": 256}
+        }
+    }' python src/manage.py tenant-init
 
-Note:
-    - Environment variable TENANT_SINGLE_TENANT_ID must be set, otherwise an error will be raised
-    - Database names are automatically generated based on the tenant ID (format: {tenant_id}_memsys)
-    - Database connection configurations are obtained from default environment variables
+    # Exclusive mode (physical isolation, dedicated storage per tenant):
+    TENANT_INIT_STORAGE_INFO='{
+        "tenant_id": "my_tenant",
+        "isolation_mode": "exclusive",
+        "storage_info": {
+            "mongodb": {"database": "my_tenant_memsys"},
+            "elasticsearch": {"index_prefix": "my_tenant"},
+            "milvus": {"collection_prefix": "my_tenant", "num_partitions": 1}
+        }
+    }' python src/manage.py tenant-init
+
+Storage info fields:
+    mongodb.database          — Target database name (e.g. "my_tenant_memsys")
+    elasticsearch.index_prefix — ES index name prefix (e.g. "my_tenant")
+    milvus.collection_prefix  — Milvus collection name prefix (e.g. "my_tenant")
+    milvus.num_partitions     — Milvus partition count (optional, default from env MILVUS_NUM_PARTITIONS)
+                                Recommended: 256 for shared mode, 1 for exclusive mode.
 """
 
+import json
+import os
+
 from core.observation.logger import get_logger
-from core.tenants.tenant_config import get_tenant_config
+from core.tenants.tenant_contextvar import set_current_tenant
+from core.tenants.tenant_models import TenantInfo, TenantDetail
 from core.lifespan.mongodb_lifespan import MongoDBLifespanProvider
 from core.lifespan.milvus_lifespan import MilvusLifespanProvider
 from core.lifespan.elasticsearch_lifespan import ElasticsearchLifespanProvider
 
 logger = get_logger(__name__)
 
+# Environment variable for passing full tenant context to init subprocess
+TENANT_INIT_STORAGE_INFO_ENV = "TENANT_INIT_STORAGE_INFO"
 
-async def init_mongodb() -> bool:
+
+def _setup_tenant_context_from_env() -> str:
     """
-    Initialize tenant's MongoDB database
-
-    Args:
-        tenant_info: Tenant information
+    Set up tenant context from TENANT_INIT_STORAGE_INFO environment variable.
 
     Returns:
-        Whether initialization was successful
+        tenant_id string for logging
+
+    Raises:
+        ValueError: If env var is not set or has invalid format
     """
+    # Priority 1: Full storage_info from env (set by TenantInitService)
+    storage_info_json = os.getenv(TENANT_INIT_STORAGE_INFO_ENV)
+    if storage_info_json:
+        try:
+            data = json.loads(storage_info_json)
+            tenant_id = data["tenant_id"]
+            storage_info = data.get("storage_info", {})
+            isolation_mode = data.get("isolation_mode", "shared")
+
+            tenant_detail = TenantDetail(
+                storage_info=storage_info, isolation_mode=isolation_mode
+            )
+            tenant_info = TenantInfo(
+                tenant_id=tenant_id, tenant_detail=tenant_detail, origin_tenant_data={}
+            )
+            set_current_tenant(tenant_info)
+            logger.info(
+                "Tenant context set from %s: tenant_id=%s, mode=%s",
+                TENANT_INIT_STORAGE_INFO_ENV,
+                tenant_id,
+                isolation_mode,
+            )
+            return tenant_id
+        except (json.JSONDecodeError, KeyError) as e:
+            raise ValueError(
+                f"Invalid {TENANT_INIT_STORAGE_INFO_ENV} format: {e}. "
+                f"Expected JSON with tenant_id, storage_info, isolation_mode."
+            ) from e
+
+    raise ValueError(
+        "Tenant context is not configured!\n"
+        f"Set {TENANT_INIT_STORAGE_INFO_ENV} environment variable.\n"
+        f"Example:\n"
+        f'  {TENANT_INIT_STORAGE_INFO_ENV}=\'{{"tenant_id":"my_tenant","isolation_mode":"shared",'
+        f'"storage_info":{{"mongodb":{{"database":"my_tenant_memsys"}},'
+        f'"elasticsearch":{{"index_prefix":"my_tenant"}},'
+        f'"milvus":{{"collection_prefix":"my_tenant","num_partitions":256}}}}}}\'\n'
+        f"  python src/manage.py tenant-init"
+    )
+
+
+class _MockApp:
+    """Mock FastAPI app for lifespan providers (only needs state attribute)."""
+
+    class State:
+        pass
+
+    state = State()
+
+
+async def init_mongodb() -> bool:
+    """Initialize tenant's MongoDB database."""
     logger.info("=" * 60)
     logger.info("Starting initialization of tenant's MongoDB database...")
     logger.info("=" * 60)
 
     try:
-        # Create MongoDB lifespan provider
         mongodb_provider = MongoDBLifespanProvider()
-
-        # Create a mock FastAPI app object (only needs state attribute)
-        class MockApp:
-            class State:
-                pass
-
-            state = State()
-
-        mock_app = MockApp()
-
-        # Call startup logic
+        mock_app = _MockApp()
         await mongodb_provider.startup(mock_app)
-
-        logger.info("=" * 60)
         logger.info("✅ Tenant's MongoDB database initialized successfully")
-        logger.info("=" * 60)
-
-        # Close connections
         await mongodb_provider.shutdown(mock_app)
-
         return True
-
     except Exception as e:
-        logger.error("=" * 60)
         logger.error("❌ Failed to initialize tenant's MongoDB database: %s", e)
-        logger.error("=" * 60)
         return False
 
 
 async def init_milvus() -> bool:
-    """
-    Initialize tenant's Milvus database
-
-    Args:
-        tenant_info: Tenant information
-
-    Returns:
-        Whether initialization was successful
-    """
+    """Initialize tenant's Milvus collections."""
     logger.info("=" * 60)
     logger.info("Starting initialization of tenant's Milvus database...")
     logger.info("=" * 60)
 
     try:
-        # Create Milvus lifespan provider
         milvus_provider = MilvusLifespanProvider()
-
-        # Create a mock FastAPI app object (only needs state attribute)
-        class MockApp:
-            class State:
-                pass
-
-            state = State()
-
-        mock_app = MockApp()
-
-        # Call startup logic
+        mock_app = _MockApp()
         await milvus_provider.startup(mock_app)
-
-        logger.info("=" * 60)
         logger.info("✅ Tenant's Milvus database initialized successfully")
-        logger.info("=" * 60)
-
-        # Close connections
         await milvus_provider.shutdown(mock_app)
-
         return True
-
     except Exception as e:
-        logger.error("=" * 60)
         logger.error("❌ Failed to initialize tenant's Milvus database: %s", e)
-        logger.error("=" * 60)
         return False
 
 
 async def init_elasticsearch() -> bool:
-    """
-    Initialize tenant's Elasticsearch database
-
-    Returns:
-        Whether initialization was successful
-    """
+    """Initialize tenant's Elasticsearch indices."""
     logger.info("=" * 60)
     logger.info("Starting initialization of tenant's Elasticsearch database...")
     logger.info("=" * 60)
 
     try:
-        # Create Elasticsearch lifespan provider
         es_provider = ElasticsearchLifespanProvider()
-
-        # Create a mock FastAPI app object (only needs state attribute)
-        class MockApp:
-            class State:
-                pass
-
-            state = State()
-
-        mock_app = MockApp()
-
-        # Call startup logic
+        mock_app = _MockApp()
         await es_provider.startup(mock_app)
-
-        logger.info("=" * 60)
         logger.info("✅ Tenant's Elasticsearch database initialized successfully")
-        logger.info("=" * 60)
-
-        # Close connections
         await es_provider.shutdown(mock_app)
-
         return True
-
     except Exception as e:
-        logger.error("=" * 60)
         logger.error("❌ Failed to initialize tenant's Elasticsearch database: %s", e)
-        logger.error("=" * 60)
         return False
 
 
 async def run_tenant_init() -> bool:
     """
-    Execute tenant database initialization
+    Execute tenant database initialization.
 
-    Read tenant ID from environment variable TENANT_SINGLE_TENANT_ID.
-    If this environment variable is not set, raise an error.
+    Reads tenant context from environment variables, then initializes
+    MongoDB, Milvus, and Elasticsearch in sequence.
 
     Returns:
         Whether all initializations were successful
-
-    Raises:
-        ValueError: If the TENANT_SINGLE_TENANT_ID environment variable is not set
-
-    Examples:
-        export TENANT_SINGLE_TENANT_ID=tenant_001
-        python src/manage.py tenant-init
     """
     logger.info("*" * 60)
     logger.info("Tenant Database Initialization Tool")
     logger.info("*" * 60)
 
-    # Get tenant ID from configuration
-    tenant_config = get_tenant_config()
-    tenant_id = tenant_config.single_tenant_id
-
-    # If tenant ID is not configured, raise error
-    if not tenant_id:
-        error_msg = (
-            "Tenant ID is not set!\n"
-            "Please set the environment variable TENANT_SINGLE_TENANT_ID, for example:\n"
-            "  export TENANT_SINGLE_TENANT_ID=tenant_001\n"
-            "  python src/manage.py tenant-init"
-        )
-        logger.error(error_msg)
-        raise ValueError("Environment variable TENANT_SINGLE_TENANT_ID is not set")
-
+    # Set up tenant context
+    tenant_id = _setup_tenant_context_from_env()
     logger.info("Tenant ID: %s", tenant_id)
     logger.info("*" * 60)
 
-    # Initialize MongoDB
+    # Initialize all three storage engines
     mongodb_success = await init_mongodb()
-
-    # Initialize Milvus
     milvus_success = await init_milvus()
-
-    # Initialize Elasticsearch
     es_success = await init_elasticsearch()
 
-    # Output summary
+    # Summary
     logger.info("")
     logger.info("*" * 60)
     logger.info("Initialization Result Summary")
@@ -222,5 +203,4 @@ async def run_tenant_init() -> bool:
     logger.info("Elasticsearch: %s", "✅ Success" if es_success else "❌ Failure")
     logger.info("*" * 60)
 
-    # Return whether all were successful
     return mongodb_success and milvus_success and es_success

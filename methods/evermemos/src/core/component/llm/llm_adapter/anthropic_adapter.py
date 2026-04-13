@@ -13,6 +13,8 @@ from core.component.llm.llm_adapter.completion import (
 from core.component.llm.llm_adapter.message import MessageRole
 from core.component.llm.llm_adapter.llm_backend_adapter import LLMBackendAdapter
 from core.constants.errors import ErrorMessage
+from core.di.utils import get_bean_by_type
+from core.component.token_usage_collector import TokenUsageCollector
 
 
 class AnthropicAdapter(LLMBackendAdapter):
@@ -91,8 +93,22 @@ class AnthropicAdapter(LLMBackendAdapter):
                 else:
                     response = await self.client.post("/v1/messages", json=data)
                     response.raise_for_status()
+                    response_json = response.json()
+                    # Report token usage
+                    usage = response_json.get("usage", {})
+                    if usage:
+                        try:
+                            collector = get_bean_by_type(TokenUsageCollector)
+                            collector.add(
+                                request.model or "unknown",
+                                usage.get("input_tokens", 0),
+                                usage.get("output_tokens", 0),
+                                call_type="llm",
+                            )
+                        except Exception:
+                            pass
                     return self._convert_anthropic_response(
-                        response.json(), request.model
+                        response_json, request.model
                     )
             except httpx.HTTPStatusError as e:
                 if attempt == self.max_retries - 1 or e.response.status_code < 500:
@@ -135,19 +151,44 @@ class AnthropicAdapter(LLMBackendAdapter):
         self, data: Dict[str, Any]
     ) -> AsyncGenerator[str, None]:
         """Streamed chat completion"""
-        async with self.client.stream("POST", "/v1/messages", json=data) as response:
-            response.raise_for_status()
-            async for line in response.aiter_lines():
-                if line.startswith("data:"):
-                    line_data = line[len("data: ") :]
-                    if not line_data:
-                        continue
-                    try:
-                        chunk = json.loads(line_data)
-                        if chunk.get("type") == "content_block_delta":
-                            yield chunk.get("delta", {}).get("text", "")
-                    except json.JSONDecodeError:
-                        continue
+        input_tokens = 0
+        output_tokens = 0
+        model = data.get("model", "unknown")
+
+        try:
+            async with self.client.stream(
+                "POST", "/v1/messages", json=data
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if line.startswith("data:"):
+                        line_data = line[len("data: ") :]
+                        if not line_data:
+                            continue
+                        try:
+                            chunk = json.loads(line_data)
+                            chunk_type = chunk.get("type")
+                            if chunk_type == "content_block_delta":
+                                yield chunk.get("delta", {}).get("text", "")
+                            elif chunk_type == "message_start":
+                                usage = chunk.get("message", {}).get("usage", {})
+                                input_tokens = usage.get("input_tokens", 0)
+                            elif chunk_type == "message_delta":
+                                usage = chunk.get("usage", {})
+                                output_tokens = usage.get("output_tokens", 0)
+                                # Some proxies put input_tokens here instead of message_start
+                                if not input_tokens:
+                                    input_tokens = usage.get("input_tokens", 0)
+                        except json.JSONDecodeError:
+                            continue
+        finally:
+            # Report usage even if client disconnects mid-stream
+            if input_tokens or output_tokens:
+                try:
+                    collector = get_bean_by_type(TokenUsageCollector)
+                    collector.add(model, input_tokens, output_tokens, call_type="llm")
+                except Exception:
+                    pass
 
     def get_available_models(self) -> List[str]:
         """Get list of available models"""

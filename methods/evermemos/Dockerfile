@@ -3,10 +3,10 @@ RUN apt-get update && apt-get upgrade -y && \
     apt-get install libgl1 libgomp1 libglib2.0-0 ffmpeg vim wget curl zip unzip g++ build-essential procps -y && \
     mkdir /app
 
-# Set working directory
+# 设置工作目录
 WORKDIR /app
 
-# Copy all files from current directory to working directory
+# 复制当前目录下的所有文件到工作目录
 COPY . /app
 
 RUN uv sync --frozen

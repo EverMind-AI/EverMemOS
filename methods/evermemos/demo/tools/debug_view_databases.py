@@ -210,7 +210,7 @@ def check_milvus(detail: bool = False):
                 known_pk_map = {
                     'episodic_memory_memsys': 'id',
                     'foresight_memsys': 'id',
-                    'event_log_memsys': 'id',
+                    'atomic_fact_memsys': 'id',
                 }
 
                 pk_field = known_pk_map.get(collection_name)

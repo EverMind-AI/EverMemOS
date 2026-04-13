@@ -16,6 +16,7 @@ from memory_layer.memory_extractor.base_memory_extractor import (
 from api_specs.memory_types import MemoryType, MemCell, Foresight, BaseMemory
 from agentic_layer.vectorize_service import get_vectorize_service
 from core.observation.logger import get_logger
+from core.observation.stage_timer import timed
 from common_utils.datetime_utils import get_now_with_timezone
 
 logger = get_logger(__name__)
@@ -26,7 +27,7 @@ class ForesightExtractor(MemoryExtractor):
     Foresight Extractor - Based on associative prediction method
 
     Supports conversation mode:
-    - Generate associations based on raw conversation transcript text (assistant scene).
+    - Generate associations based on raw conversation transcript text (solo scene).
 
     New strategy implementation:
     1. Based on content, large model associates 10 potential impacts on user's subsequent life and decisions
@@ -76,7 +77,6 @@ class ForesightExtractor(MemoryExtractor):
         user_id: str,
         user_name: Optional[str] = None,
         group_id: Optional[str] = None,
-        ori_event_id_list: Optional[List[str]] = None,
     ) -> List[Foresight]:
         """
         Generate foresight association predictions from raw conversation text.
@@ -87,81 +87,80 @@ class ForesightExtractor(MemoryExtractor):
             user_id: Target user id
             user_name: Optional user display name
             group_id: Optional group id
-            ori_event_id_list: Optional original event id list
 
         Returns:
             List of foresight items (up to 10 items), including time information
         """
         # Maximum 5 retries
-        for retry in range(5):
-            try:
-                if retry == 0:
+        with timed("extract_foresight"):
+            for retry in range(5):
+                try:
+                    if retry == 0:
+                        logger.info(
+                            f"🎯 Generating foresight associations for conversation: user_id={user_id}"
+                        )
+                    else:
+                        logger.info(
+                            f"🎯 Generating foresight associations for conversation: user_id={user_id}, retry {retry}/5"
+                        )
+
+                    # Build prompt (static prompt template via PromptManager)
+                    prompt_template = get_prompt_by("FORESIGHT_GENERATION_PROMPT")
+                    prompt = prompt_template.format(
+                        USER_ID=user_id,
+                        USER_NAME=user_name,
+                        CONVERSATION_TEXT=conversation_text,
+                    )
+
+                    # Call LLM to generate associations
+                    logger.debug(
+                        f"📝 Starting LLM call to generate foresight associations, prompt length: {len(prompt)}"
+                    )
+                    response = await self.llm_provider.generate(
+                        prompt=prompt, temperature=0.3
+                    )
+                    logger.debug(
+                        f"✅ LLM call completed, response length: {len(response) if response else 0}"
+                    )
+
+                    # Parse JSON response
+                    start_time = self._extract_start_time_from_timestamp(timestamp)
+                    foresights = await self._parse_foresights_response(
+                        response,
+                        start_time=start_time,
+                        user_id=user_id,
+                        timestamp=timestamp,
+                        group_id=group_id,
+                    )
+
+                    # Validate at least 1 item is returned
+                    if len(foresights) == 0:
+                        raise ValueError("LLM returned empty foresight list")
+
+                    # Ensure at most 10 items are returned
+                    if len(foresights) > 10:
+                        foresights = foresights[:10]
+                    elif len(foresights) < 4:
+                        logger.warning(
+                            f"Generated foresight associations less than 4, actual count: {len(foresights)}"
+                        )
+
                     logger.info(
-                        f"🎯 Generating foresight associations for conversation: user_id={user_id}"
+                        f"✅ Successfully generated {len(foresights)} foresight associations"
                     )
-                else:
-                    logger.info(
-                        f"🎯 Generating foresight associations for conversation: user_id={user_id}, retry {retry}/5"
-                    )
+                    for i, memory in enumerate(foresights[:3], 1):
+                        logger.info(f"  Association {i}: {memory.foresight}")
 
-                # Build prompt (static prompt template via PromptManager)
-                prompt_template = get_prompt_by("FORESIGHT_GENERATION_PROMPT")
-                prompt = prompt_template.format(
-                    USER_ID=user_id,
-                    USER_NAME=user_name,
-                    CONVERSATION_TEXT=conversation_text,
-                )
+                    return foresights
 
-                # Call LLM to generate associations
-                logger.debug(
-                    f"📝 Starting LLM call to generate foresight associations, prompt length: {len(prompt)}"
-                )
-                response = await self.llm_provider.generate(
-                    prompt=prompt, temperature=0.3
-                )
-                logger.debug(
-                    f"✅ LLM call completed, response length: {len(response) if response else 0}"
-                )
+                except Exception as e:
+                    logger.warning(f"Foresight generation retry {retry+1}/5: {e}")
+                    if retry == 4:
+                        logger.error(f"Foresight generation failed after 5 retries")
+                        return []
+                    continue
 
-                # Parse JSON response
-                start_time = self._extract_start_time_from_timestamp(timestamp)
-                foresights = await self._parse_foresights_response(
-                    response,
-                    start_time=start_time,
-                    user_id=user_id,
-                    timestamp=timestamp,
-                    ori_event_id_list=ori_event_id_list or [],
-                    group_id=group_id,
-                )
-
-                # Validate at least 1 item is returned
-                if len(foresights) == 0:
-                    raise ValueError("LLM returned empty foresight list")
-
-                # Ensure at most 10 items are returned
-                if len(foresights) > 10:
-                    foresights = foresights[:10]
-                elif len(foresights) < 4:
-                    logger.warning(
-                        f"Generated foresight associations less than 4, actual count: {len(foresights)}"
-                    )
-
-                logger.info(
-                    f"✅ Successfully generated {len(foresights)} foresight associations"
-                )
-                for i, memory in enumerate(foresights[:3], 1):
-                    logger.info(f"  Association {i}: {memory.foresight}")
-
-                return foresights
-
-            except Exception as e:
-                logger.warning(f"Foresight generation retry {retry+1}/5: {e}")
-                if retry == 4:
-                    logger.error(f"Foresight generation failed after 5 retries")
-                    return []
-                continue
-
-        return []
+            return []
 
     @staticmethod
     def _clean_date_string(date_str: Optional[str]) -> Optional[str]:
@@ -204,7 +203,6 @@ class ForesightExtractor(MemoryExtractor):
         start_time: Optional[str] = None,
         user_id: str = "",
         timestamp: Optional[datetime] = None,
-        ori_event_id_list: Optional[List[str]] = None,
         group_id: Optional[str] = None,
     ) -> List[Foresight]:
         """
@@ -215,7 +213,6 @@ class ForesightExtractor(MemoryExtractor):
             start_time: Start time, format YYYY-MM-DD
             user_id: User ID for the foresight
             timestamp: Timestamp for the foresight
-            ori_event_id_list: Original event ID list
             group_id: Group ID
 
         Returns:
@@ -298,7 +295,6 @@ class ForesightExtractor(MemoryExtractor):
                         memory_type=MemoryType.FORESIGHT,
                         user_id=user_id,
                         timestamp=timestamp or get_now_with_timezone(),
-                        ori_event_id_list=ori_event_id_list or [],
                         group_id=group_id,
                         foresight=item_data['foresight'],
                         evidence=item_data['evidence'],

@@ -118,13 +118,15 @@ To allow the MemSys application to connect to the local MongoDB, you need to con
     # MongoDB Configuration
     # ===================
 
+    # Tenant ID (required)
+    TENANT_SINGLE_TENANT_ID=t_yourname
+
     MONGODB_HOST=127.0.0.1
     MONGODB_PORT=27017
     MONGODB_USERNAME=
     MONGODB_PASSWORD=
-    MONGODB_DATABASE=memsys
     MONGODB_URI_PARAMS=
     ```
-    **Note**: Leave `MONGODB_USERNAME` and `MONGODB_PASSWORD` blank, and also set `MONGODB_URI_PARAMS` to empty. You can customize `MONGODB_DATABASE`; here we continue to use `memsys`.
+    **Note**: Leave `MONGODB_USERNAME` and `MONGODB_PASSWORD` blank, and also set `MONGODB_URI_PARAMS` to empty. The actual database name is auto-generated from `TENANT_SINGLE_TENANT_ID` (e.g., `t_yourname_memsys`).
 
 Now, your development environment is configured, and the MemSys application can successfully connect to the locally running MongoDB instance.

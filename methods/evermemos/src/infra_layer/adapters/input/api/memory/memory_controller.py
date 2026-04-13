@@ -2,61 +2,65 @@
 Memory Controller - Unified memory management controller
 
 Provides RESTful API routes for:
-- Memory ingestion (POST /memories): accept a single-message payload and create memories
-- Memory fetch (GET /memories): fetch by memory_type with optional user/group/time filters (query params or JSON body)
+- Personal add (POST /memories): batch messages for personal scene
+- Group add (POST /memories/group): batch messages for group scene
+- Personal flush (POST /memories/flush): trigger boundary detection for personal scene
+- Group flush (POST /memories/group/flush): trigger boundary detection for group scene
 - Memory search (GET /memories/search): keyword/vector/hybrid/rrf/agentic retrieval with grouped results
-- Conversation metadata (GET/POST/PATCH /conversation-meta): get with default fallback, upsert, and partial update
-- Memory deletion (DELETE /memories): soft delete by combined filters
+- Memory deletion (POST /memories/delete): soft delete by ID or filter conditions
 """
 
+import asyncio
 import json
 import logging
 import time
+
 from contextlib import suppress
-from typing import Any, Dict
 from fastapi import HTTPException, Request as FastAPIRequest
 
 from core.di.decorators import controller
 from core.di import get_bean_by_type
-from core.interface.controller.base_controller import (
-    BaseController,
-    get,
-    post,
-    patch,
-    delete,
-)
+from core.interface.controller.base_controller import BaseController, get, post
+from core.observation.stage_timer import stage_timed, timed
 from core.constants.errors import ErrorCode, ErrorStatus
-from core.constants.exceptions import ValidationException
 from agentic_layer.memory_manager import MemoryManager
 from api_specs.request_converter import (
-    convert_simple_message_to_memorize_request,
-    convert_dict_to_fetch_mem_request,
     convert_dict_to_retrieve_mem_request,
+    convert_personal_add_to_memorize_request,
+    convert_group_add_to_memorize_request,
+    convert_personal_flush_to_memorize_request,
+    convert_group_flush_to_memorize_request,
+    convert_agent_add_to_memorize_request,
+    convert_agent_flush_to_memorize_request,
 )
+from api_specs.id_generator import DEFAULT_SESSION_ID
+from infra_layer.adapters.out.event.personal_memorize_event import PersonalMemorizeEvent
+from infra_layer.adapters.out.event.group_memorize_event import GroupMemorizeEvent
+from core.events.event_publisher import ApplicationEventPublisher
 from infra_layer.adapters.input.api.dto.memory_dto import (
     # Request DTOs
-    MemorizeMessageRequest,
-    FetchMemRequest,
-    RetrieveMemRequest,
-    ConversationMetaCreateRequest,
-    ConversationMetaGetRequest,
-    ConversationMetaPatchRequest,
-    DeleteMemoriesRequestDTO,
-    # Response DTOs
-    MemorizeResponse,
-    FetchMemoriesResponse,
-    SearchMemoriesResponse,
-    GetConversationMetaResponse,
-    SaveConversationMetaResponse,
-    PatchConversationMetaResponse,
-    DeleteMemoriesResponse,
+    # Add / Flush DTOs
+    PersonalAddRequest,
+    GroupAddRequest,
+    PersonalFlushRequest,
+    GroupFlushRequest,
+    AddResponse,
+    FlushResponse,
 )
-from core.request.timeout_background import timeout_to_background
+from api_specs.dtos.memory import (
+    AgentAddRequest,
+    AgentFlushRequest,
+    AgentFlushClusteringRequest,
+    AgentFlushClusteringResponse,
+)
+from api_specs.dtos.memory_delete import DeleteMemoriesRequest
 from core.request import log_request
+from core.request.app_logic_provider import AppLogicProvider
 from core.component.redis_provider import RedisProvider
-from service.memory_request_log_service import MemoryRequestLogService
+from service.content_enrich_provider import ContentEnrichProvider
+from service.raw_message_service import RawMessageService
+from service.sender_service import SenderService
 from service.memcell_delete_service import MemCellDeleteService
-from service.conversation_meta_service import ConversationMetaService
 from api_specs.memory_types import RawDataType
 from agentic_layer.metrics.memorize_metrics import (
     record_memorize_request,
@@ -76,192 +80,92 @@ class MemoryController(BaseController):
     Memory Controller
     """
 
-    def __init__(self, conversation_meta_service: ConversationMetaService):
+    def __init__(self):
         """Initialize controller"""
         super().__init__(
-            prefix="/api/v1/memories",
-            tags=["Memory Controller"],
-            default_auth="none",  # Adjust authentication strategy based on actual needs
+            prefix="/api/v1/memories", tags=["Memory Controller"], default_auth="none"
         )
         self.memory_manager = MemoryManager()
-        self.conversation_meta_service = conversation_meta_service
-        # Get RedisProvider
         self.redis_provider = get_bean_by_type(RedisProvider)
-        logger.info(
-            "MemoryController initialized with MemoryManager and ConversationMetaService"
-        )
+        self._content_enrich = get_bean_by_type(ContentEnrichProvider)
+        self._app_logic = get_bean_by_type(AppLogicProvider)
+        logger.info("MemoryController initialized with MemoryManager")
 
-    @staticmethod
-    async def _collect_request_params(
-        fastapi_request: FastAPIRequest,
-    ) -> Dict[str, Any]:
-        """Merge query parameters with optional JSON body parameters."""
-        params: Dict[str, Any] = dict(fastapi_request.query_params)
-        if body := await fastapi_request.body():
-            with suppress(json.JSONDecodeError, TypeError):
-                if isinstance(body_data := json.loads(body), dict):
-                    params.update(body_data)
-        return params
+    # =========================================================================
+    # Add Endpoints
+    # =========================================================================
 
     @post(
         "",
-        response_model=MemorizeResponse,
-        summary="Store single message",
-        description="""
-        Store a single message into memory.
-        
-        ## Fields:
-        - **message_id** (required): Unique identifier for the message
-        - **create_time** (required): Message creation time (ISO 8601 format)
-        - **sender** (required): Sender user ID
-        - **content** (required): Message content
-        - **group_id** (optional): Group ID
-        - **group_name** (optional): Group name
-        - **sender_name** (optional): Sender display name (defaults to sender if empty)
-        - **role** (optional): Sender role ("user" or "assistant")
-        - **refer_list** (optional): List of referenced message IDs
-        
-        ## Functionality:
-        - Accepts raw single-message data
-        - Automatically creates memories when sufficient context is available
-        - Returns extraction count and status
-        """,
-        responses={
-            400: {
-                "description": "Request parameter error",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.INVALID_PARAMETER.value,
-                            "message": "Data format error: Required field message_id is missing",
-                            "timestamp": "2025-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories",
-                        }
-                    }
-                },
-            },
-            500: {
-                "description": "Internal server error",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.SYSTEM_ERROR.value,
-                            "message": "Failed to store memory, please try again later",
-                            "timestamp": "2025-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories",
-                        }
-                    }
-                },
-            },
-        },
+        response_model=AddResponse,
+        summary="Store messages (personal)",
+        description="Store batch messages into personal memory space.",
     )
     @log_request()
-    @timeout_to_background()
-    async def memorize_single_message(
-        self,
-        request: FastAPIRequest,
-        request_body: MemorizeMessageRequest = None,  # OpenAPI documentation only
-    ) -> MemorizeResponse:
-        """
-        Store single message memory data
-
-        Convert a single-message payload to a memory request and persist it.
-        If no memory is extracted, the message remains pending for later processing.
-
-        Args:
-            request: FastAPI request object
-            request_body: Message request body (used for OpenAPI documentation only)
-
-        Returns:
-            Dict[str, Any]: Memory storage response with extraction count and status info
-
-        Raises:
-            HTTPException: When request processing fails
-        """
-        del request_body  # Used for OpenAPI documentation only
+    @stage_timed("add")
+    async def add_personal_memories(
+        self, request: FastAPIRequest, request_body: PersonalAddRequest = None
+    ) -> AddResponse:
+        """POST /api/v1/memories - Personal add endpoint."""
+        del request_body
         start_time = time.perf_counter()
-        memory_count = 0
-        # Get space_id for metrics (available from tenant context)
         space_id = get_space_id_for_metrics()
-        # Default raw_data_type, will be updated after conversion
         raw_data_type = get_raw_data_type_label(None)
 
         try:
-            # 1. Get JSON body from request (simple direct format)
-            message_data = await request.json()
-            logger.info("Received memorize request (single message)")
-
-            # 2. Convert directly to MemorizeRequest (unified single-step conversion)
+            request_data = await request.json()
             logger.info(
-                "Starting conversion from simple message format to MemorizeRequest"
-            )
-            memorize_request = await convert_simple_message_to_memorize_request(
-                message_data
+                "Received personal add request: user_id=%s", request_data.get("user_id")
             )
 
-            # Update raw_data_type from request (for subsequent metrics)
-            if memorize_request.raw_data_type:
-                raw_data_type = get_raw_data_type_label(
-                    memorize_request.raw_data_type.value
-                )
+            memorize_request = convert_personal_add_to_memorize_request(request_data)
+            raw_data_type = get_raw_data_type_label(
+                memorize_request.raw_data_type.value
+            )
+            msg_count = len(memorize_request.new_raw_data_list)
 
             record_memorize_message(
                 space_id=space_id,
                 raw_data_type=raw_data_type,
                 status='received',
-                count=1,
+                count=msg_count,
             )
 
-            # Extract metadata for logging
-            group_name = memorize_request.group_name
             group_id = memorize_request.group_id
+            session_id = memorize_request.session_id
 
-            logger.info(
-                "Conversion completed: group_id=%s, group_name=%s", group_id, group_name
+            # Auto-register group
+            if group_id:
+                asyncio.create_task(self._ensure_group_exists(group_id=group_id))
+
+            # Auto-register session (skip for default sentinel)
+            if session_id and session_id != DEFAULT_SESSION_ID:
+                asyncio.create_task(self._ensure_session_exists(session_id=session_id))
+
+            # Auto-register senders from messages
+            messages = request_data.get("messages", [])
+            self._auto_register_senders(messages)
+
+            # Enrich sender_name from DB for messages that didn't provide one
+            await self._enrich_sender_names(
+                messages, memorize_request.new_raw_data_list
             )
 
-            # 3. Save request logs first (sync_status=-1) for better timing control
-            if (
-                memorize_request.raw_data_type == RawDataType.CONVERSATION
-                and memorize_request.new_raw_data_list
-            ):
-                log_service = get_bean_by_type(MemoryRequestLogService)
-                await log_service.save_request_logs(
-                    request=memorize_request,
-                    version="1.0.0",
-                    endpoint_name="memorize_single_message",
-                    method=request.method,
-                    url=str(request.url),
-                    raw_input_dict=message_data,
-                )
-                logger.info(
-                    "Saved %d request logs: group_id=%s",
-                    len(memorize_request.new_raw_data_list),
-                    group_id,
+            # Content enrichment (e.g. multimodal parsing, no-op by default)
+            # Must run BEFORE save_request_logs so that parsed multimodal text
+            # is included in the flat content saved to RawMessage.
+            await self._content_enrich.enrich(memorize_request.new_raw_data_list)
+
+            # Save request logs
+            with timed("persist_raw_messages"):
+                await self._save_raw_messages(
+                    memorize_request, request, "add_personal_memories"
                 )
 
-            # 4. Call memory_manager to process the request
-            logger.info("Starting to process memory request")
-            # memorize returns count of extracted memories (int)
+            # Process
             memory_count = await self.memory_manager.memorize(memorize_request)
 
-            # 5. Return unified response format
-            logger.info(
-                "Memory request processing completed, extracted %s memories",
-                memory_count,
-            )
-
-            # Optimize return message to help users understand runtime status
-            if memory_count > 0:
-                message = f"Extracted {memory_count} memories"
-                status = 'extracted'
-            else:
-                message = "Message queued, awaiting boundary detection"
-                status = 'accumulated'
-
-            # Record success metrics
+            status = 'extracted' if memory_count > 0 else 'accumulated'
             record_memorize_request(
                 space_id=space_id,
                 raw_data_type=raw_data_type,
@@ -269,18 +173,28 @@ class MemoryController(BaseController):
                 duration_seconds=time.perf_counter() - start_time,
             )
 
+            # Publish personal memorize event (fire-and-forget)
+            asyncio.create_task(
+                self._publish_event(
+                    PersonalMemorizeEvent(
+                        user_id=request_data.get("user_id", ""),
+                        session_id=session_id,
+                        group_id=group_id,
+                    )
+                )
+            )
+
             return {
-                "status": ErrorStatus.OK.value,
-                "message": message,
-                "result": {
-                    "saved_memories": [],  # Memories saved to DB, fetch via API
-                    "count": memory_count,
-                    "status_info": "accumulated" if memory_count == 0 else "extracted",
-                },
+                "data": {
+                    "request_id": self._app_logic.get_current_request_id(),
+                    "message_count": msg_count,
+                    "status": status,
+                    "message": "Messages accepted",
+                }
             }
 
         except ValueError as e:
-            logger.error("memorize request parameter error: %s", e)
+            logger.error("Personal add parameter error: %s", e)
             record_memorize_error(
                 space_id=space_id,
                 raw_data_type=raw_data_type,
@@ -293,9 +207,8 @@ class MemoryController(BaseController):
                 status='error',
                 duration_seconds=time.perf_counter() - start_time,
             )
-            raise HTTPException(status_code=400, detail=str(e)) from e
+            raise HTTPException(status_code=422, detail=str(e)) from e
         except HTTPException:
-            # Re-raise HTTPException (already handled errors)
             record_memorize_request(
                 space_id=space_id,
                 raw_data_type=raw_data_type,
@@ -304,7 +217,7 @@ class MemoryController(BaseController):
             )
             raise
         except Exception as e:
-            logger.error("memorize request processing failed: %s", e, exc_info=True)
+            logger.error("Personal add failed: %s", e, exc_info=True)
             error_type = classify_memorize_error(e)
             record_memorize_error(
                 space_id=space_id,
@@ -322,801 +235,823 @@ class MemoryController(BaseController):
                 status_code=500, detail="Failed to store memory, please try again later"
             ) from e
 
-    @get(
-        "",
-        response_model=FetchMemoriesResponse,
-        summary="Fetch user memories",
-        description="""
-        Retrieve memory records by memory_type with optional filters
-        
-        ## Fields:
-        - **user_id** (required): User ID
-        - **memory_type** (optional): Memory type (default: episodic_memory)
-            - profile: user profile
-            - episodic_memory: episodic memory
-            - foresight: prospective memory
-            - event_log: event log (atomic facts)
-        - **limit** (optional): Max records to return (default: 10, max: 100)
-        - **offset** (optional): Pagination offset (default: 0)
-        - **version_range** (optional): Version range filter [start, end]
-        
-        ## Use cases:
-        - User profile display
-        - Personalized recommendation systems
-        - Conversation history review
-        """,
-        responses={
-            400: {
-                "description": "Request parameter error",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.INVALID_PARAMETER.value,
-                            "message": "user_id cannot be empty",
-                            "timestamp": "2024-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories",
-                        }
-                    }
-                },
-            },
-            500: {
-                "description": "Internal server error",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.SYSTEM_ERROR.value,
-                            "message": "Failed to retrieve memory, please try again later",
-                            "timestamp": "2024-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories",
-                        }
-                    }
-                },
-            },
-        },
+    @post(
+        "/group",
+        response_model=AddResponse,
+        summary="Store messages (group)",
+        description="Store batch messages into group memory space.",
     )
-    async def fetch_memories(
-        self,
-        fastapi_request: FastAPIRequest,
-        request_body: FetchMemRequest = None,  # For OpenAPI request body documentation
-    ) -> FetchMemoriesResponse:
-        """
-        Retrieve user memory data
+    @log_request()
+    @stage_timed("add")
+    async def add_group_memories(
+        self, request: FastAPIRequest, request_body: GroupAddRequest = None
+    ) -> AddResponse:
+        """POST /api/v1/memories/group - Group add endpoint."""
+        del request_body
+        start_time = time.perf_counter()
+        space_id = get_space_id_for_metrics()
+        raw_data_type = get_raw_data_type_label(None)
 
-        Fetch memory records by memory_type with optional user/group/time filters.
-        Parameters are accepted from query params or request body (GET with body is supported).
-
-        Args:
-            fastapi_request: FastAPI request object
-            request_body: Request body parameters (used for OpenAPI documentation only)
-
-        Returns:
-            Dict[str, Any]: Memory retrieval response
-
-        Raises:
-            HTTPException: When request processing fails
-        """
-        del request_body  # Used for OpenAPI documentation only
         try:
-            params = await self._collect_request_params(fastapi_request)
-
+            request_data = await request.json()
             logger.info(
-                "Received fetch request: user_id=%s, memory_type=%s",
-                params.get("user_id"),
-                params.get("memory_type"),
+                "Received group add request: group_id=%s", request_data.get("group_id")
             )
 
-            # Directly use converter to transform
-            fetch_request = convert_dict_to_fetch_mem_request(params)
-
-            # Call memory_manager's fetch_mem method
-            response = await self.memory_manager.fetch_mem(fetch_request)
-
-            # Return unified response format
-            memory_count = len(response.memories) if response.memories else 0
-            logger.info(
-                "Fetch request processing completed: user_id=%s, returned %s memories",
-                params.get("user_id"),
-                memory_count,
+            memorize_request = convert_group_add_to_memorize_request(request_data)
+            raw_data_type = get_raw_data_type_label(
+                memorize_request.raw_data_type.value
             )
-            return {
-                "status": ErrorStatus.OK.value,
-                "message": f"Memory retrieval successful, retrieved {memory_count} memories",
-                "result": response,
-            }
+            msg_count = len(memorize_request.new_raw_data_list)
 
-        except ValueError as e:
-            logger.error("Fetch request parameter error: %s", e)
-            raise HTTPException(status_code=400, detail=str(e)) from e
-        except HTTPException:
-            # Re-raise HTTPException
-            raise
-        except Exception as e:
-            logger.error("Fetch request processing failed: %s", e, exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to retrieve memory, please try again later",
-            ) from e
-
-    @get(
-        "/search",
-        response_model=SearchMemoriesResponse,
-        summary="Search relevant memories (keyword/vector/hybrid/rrf/agentic)",
-        description="""
-        Retrieve relevant memory data based on query text using multiple retrieval methods
-        
-        ## Fields:
-        - **query** (optional): Search query text
-        - **user_id** (optional): User ID (at least one of user_id/group_id required)
-        - **group_id** (optional): Group ID (at least one of user_id/group_id required)
-        - **retrieve_method** (optional): Retrieval method (default: keyword)
-            - keyword: keyword retrieval (BM25)
-            - vector: vector semantic retrieval
-            - hybrid: hybrid retrieval (keyword + vector)
-            - rrf: RRF fusion retrieval
-            - agentic: LLM-guided multi-round retrieval
-        - **radius** (optional): Similarity threshold (0.0-1.0) for vector search
-        - **memory_types** (optional): List of memory types to search
-            - episodic_memory
-            - foresight
-            - event_log
-        - **start_time** (optional): Start time (ISO 8601)
-        - **end_time** (optional): End time (ISO 8601)
-        - **top_k** (optional): Max results (default: 10, max: 100)
-        - **include_metadata** (optional): Whether to include metadata (default: true)
-        
-        ## Result description:
-        - Memories returned organized by group
-        - Each group contains multiple relevant memories sorted by time
-        - Groups sorted by importance score, most important group first
-        - Each memory has a relevance score indicating match degree with query
-        """,
-        responses={
-            400: {
-                "description": "Request parameter error",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.INVALID_PARAMETER.value,
-                            "message": "query cannot be empty",
-                            "timestamp": "2024-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories/search",
-                        }
-                    }
-                },
-            },
-            500: {
-                "description": "Internal server error",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.SYSTEM_ERROR.value,
-                            "message": "Failed to retrieve memory, please try again later",
-                            "timestamp": "2024-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories/search",
-                        }
-                    }
-                },
-            },
-        },
-    )
-    async def search_memories(
-        self,
-        fastapi_request: FastAPIRequest,
-        request_body: RetrieveMemRequest = None,  # For OpenAPI request body documentation
-    ) -> SearchMemoriesResponse:
-        """
-        Search relevant memory data
-
-        Retrieve relevant memory data based on query text using keyword, vector, hybrid, RRF, or agentic methods.
-        Parameters are passed via request body (GET with body, similar to Elasticsearch style).
-
-        Args:
-            fastapi_request: FastAPI request object
-            request_body: Request body parameters (used for OpenAPI documentation only)
-
-        Returns:
-            Dict[str, Any]: Memory search response
-
-        Raises:
-            HTTPException: When request processing fails
-        """
-        del request_body  # Used for OpenAPI documentation only
-        try:
-            query_params = await self._collect_request_params(fastapi_request)
-
-            query_text = query_params.get("query")
-            logger.info(
-                "Received search request: user_id=%s, query=%s, retrieve_method=%s",
-                query_params.get("user_id"),
-                query_text,
-                query_params.get("retrieve_method"),
+            record_memorize_message(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status='received',
+                count=msg_count,
             )
 
-            # Directly use converter to transform
-            retrieve_request = convert_dict_to_retrieve_mem_request(
-                query_params, query=query_text
-            )
-            logger.info(
-                "After conversion: retrieve_method=%s", retrieve_request.retrieve_method
-            )
+            group_id = memorize_request.group_id
 
-            # Use retrieve_mem method (supports keyword, vector, hybrid, rrf, agentic)
-            response = await self.memory_manager.retrieve_mem(retrieve_request)
-
-            # Return unified response format
-            group_count = len(response.memories) if response.memories else 0
-            logger.info(
-                "Search request complete: user_id=%s, returned %s groups",
-                query_params.get("user_id"),
-                group_count,
-            )
-            return {
-                "status": ErrorStatus.OK.value,
-                "message": f"Memory search successful, retrieved {group_count} groups",
-                "result": response,
-            }
-
-        except ValueError as e:
-            logger.error("Search request parameter error: %s", e)
-            raise HTTPException(status_code=400, detail=str(e)) from e
-        except HTTPException:
-            # Re-raise HTTPException
-            raise
-        except Exception as e:
-            logger.error("Search request processing failed: %s", e, exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to retrieve memory, please try again later",
-            ) from e
-
-    @get(
-        "/conversation-meta",
-        response_model=GetConversationMetaResponse,
-        summary="Get conversation metadata",
-        description="""
-        Retrieve conversation metadata by group_id with fallback to default config
-        
-        ## Functionality:
-        - Query by group_id to get conversation metadata
-        - If group_id not found, fallback to default config
-        - If group_id not provided, returns default config
-        
-        ## Fallback Logic:
-        - Try exact group_id first, then use default config
-        
-        ## Use Cases:
-        - Get specific group's metadata
-        - Get default settings (group_id not provided or null)
-        - Auto-fallback to defaults when group config not set
-        """,
-        responses={
-            404: {
-                "description": "Conversation metadata not found",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": "failed",
-                            "message": "Conversation metadata not found for group_id: group_123",
-                        }
-                    }
-                },
-            }
-        },
-    )
-    async def get_conversation_meta(
-        self,
-        fastapi_request: FastAPIRequest,
-        request_body: ConversationMetaGetRequest = None,  # OpenAPI documentation only
-    ) -> GetConversationMetaResponse:
-        """
-        Get conversation metadata by group_id with fallback support
-
-        Args:
-            fastapi_request: FastAPI request object
-            request_body: Get request parameters (used for OpenAPI documentation only)
-
-        Returns:
-            Dict[str, Any]: Conversation metadata response
-
-        Raises:
-            HTTPException: When request processing fails
-        """
-        del request_body  # Used for OpenAPI documentation only
-        try:
-            params = await self._collect_request_params(fastapi_request)
-
-            group_id = params.get("group_id")
-
-            logger.info("Received conversation-meta get request: group_id=%s", group_id)
-
-            # Query via service (fallback to default is handled internally)
-            result = await self.conversation_meta_service.get_by_group_id(group_id)
-
-            if not result:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Conversation metadata not found for group_id: {group_id}",
+            # Auto-register group with metadata (only when group_meta is provided)
+            group_meta = request_data.get("group_meta")
+            if group_id and group_meta:
+                asyncio.create_task(
+                    self._ensure_group_exists(
+                        group_id=group_id,
+                        name=group_meta.get("name"),
+                        description=group_meta.get("description"),
+                    )
                 )
 
-            message = (
-                "Using default config"
-                if result.is_default and group_id
-                else "Conversation metadata retrieved successfully"
+            # Auto-register senders
+            messages = request_data.get("messages", [])
+            self._auto_register_senders(messages)
+
+            # Enrich sender_name from DB for messages that didn't provide one
+            await self._enrich_sender_names(
+                messages, memorize_request.new_raw_data_list
+            )
+
+            # Content enrichment (e.g. multimodal parsing, no-op by default)
+            # Must run BEFORE save_request_logs so that parsed multimodal text
+            # is included in the flat content saved to RawMessage.
+            await self._content_enrich.enrich(memorize_request.new_raw_data_list)
+
+            # Save request logs
+            with timed("persist_raw_messages"):
+                await self._save_raw_messages(
+                    memorize_request, request, "add_group_memories"
+                )
+
+            # Process
+            memory_count = await self.memory_manager.memorize(memorize_request)
+
+            status = 'extracted' if memory_count > 0 else 'accumulated'
+            record_memorize_request(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status=status,
+                duration_seconds=time.perf_counter() - start_time,
+            )
+
+            # Publish group memorize event (fire-and-forget)
+            sender_ids = list(
+                {
+                    msg.get("sender_id")
+                    for msg in request_data.get("messages", [])
+                    if msg.get("sender_id")
+                }
+            )
+            asyncio.create_task(
+                self._publish_event(
+                    GroupMemorizeEvent(group_id=group_id, sender_ids=sender_ids)
+                )
             )
 
             return {
-                "status": ErrorStatus.OK.value,
-                "message": message,
-                "result": result.model_dump(),
+                "data": {
+                    "request_id": self._app_logic.get_current_request_id(),
+                    "message_count": msg_count,
+                    "status": status,
+                    "message": "Messages accepted",
+                }
             }
 
+        except ValueError as e:
+            logger.error("Group add parameter error: %s", e)
+            record_memorize_error(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                stage='conversion',
+                error_type='validation_error',
+            )
+            record_memorize_request(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status='error',
+                duration_seconds=time.perf_counter() - start_time,
+            )
+            raise HTTPException(status_code=422, detail=str(e)) from e
         except HTTPException:
+            record_memorize_request(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status='error',
+                duration_seconds=time.perf_counter() - start_time,
+            )
             raise
         except Exception as e:
-            logger.error(
-                "conversation-meta get request processing failed: %s", e, exc_info=True
+            logger.error("Group add failed: %s", e, exc_info=True)
+            error_type = classify_memorize_error(e)
+            record_memorize_error(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                stage='memorize_process',
+                error_type=error_type,
+            )
+            record_memorize_request(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status='error',
+                duration_seconds=time.perf_counter() - start_time,
             )
             raise HTTPException(
-                status_code=500,
-                detail="Failed to retrieve conversation metadata, please try again later",
+                status_code=500, detail="Failed to store memory, please try again later"
+            ) from e
+
+    # =========================================================================
+    # Flush Endpoints
+    # =========================================================================
+
+    @post(
+        "/flush",
+        response_model=FlushResponse,
+        summary="Flush personal memories",
+        description="Trigger boundary detection on accumulated personal messages.",
+    )
+    @log_request()
+    @stage_timed("flush")
+    async def flush_personal_memories(
+        self, request: FastAPIRequest, request_body: PersonalFlushRequest = None
+    ) -> FlushResponse:
+        """POST /api/v1/memories/flush - Personal flush endpoint."""
+        del request_body
+        start_time = time.perf_counter()
+        space_id = get_space_id_for_metrics()
+        raw_data_type = get_raw_data_type_label("Conversation")
+
+        try:
+            request_data = await request.json()
+            logger.info(
+                "Received personal flush: user_id=%s", request_data.get("user_id")
+            )
+
+            memorize_request = convert_personal_flush_to_memorize_request(request_data)
+
+            memory_count = await self.memory_manager.memorize(memorize_request)
+
+            status = 'extracted' if memory_count > 0 else 'no_extraction'
+            record_memorize_request(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status='flush',
+                duration_seconds=time.perf_counter() - start_time,
+            )
+
+            return {
+                "data": {
+                    "request_id": self._app_logic.get_current_request_id(),
+                    "status": status,
+                    "message": "Flush completed",
+                }
+            }
+
+        except ValueError as e:
+            logger.error("Personal flush parameter error: %s", e)
+            raise HTTPException(status_code=422, detail=str(e)) from e
+        except Exception as e:
+            logger.error("Personal flush failed: %s", e, exc_info=True)
+            raise HTTPException(
+                status_code=500, detail="Flush failed, please try again later"
             ) from e
 
     @post(
-        "/conversation-meta",
-        response_model=SaveConversationMetaResponse,
-        summary="Save conversation metadata",
-        description="""
-        Save conversation metadata information, including scene, participants, tags, etc.
-        
-        ## Functionality:
-        - If group_id exists, update the entire record (upsert)
-        - If group_id does not exist, create a new record
-        - If group_id is omitted, save as default config for the scene
-        - All fields must be provided with complete data
-        
-        ## Default Config:
-        - Default config is used as fallback when specific group_id config not found
-        
-        ## Notes:
-        - This is a full update interface that will replace the entire record
-        - If you only need to update partial fields, use the PATCH /conversation-meta interface
-        """,
-        responses={
-            400: {
-                "description": "Request parameter error",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.INVALID_PARAMETER.value,
-                            "message": "Field 'scene': invalid scene value",
-                            "timestamp": "2025-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories/conversation-meta",
-                        }
-                    }
-                },
-            },
-            500: {
-                "description": "Internal server error",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.SYSTEM_ERROR.value,
-                            "message": "Failed to save conversation metadata, please try again later",
-                            "timestamp": "2025-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories/conversation-meta",
-                        }
-                    }
-                },
-            },
-        },
+        "/group/flush",
+        response_model=FlushResponse,
+        summary="Flush group memories",
+        description="Trigger boundary detection on accumulated group messages.",
     )
-    async def save_conversation_meta(
-        self,
-        fastapi_request: FastAPIRequest,
-        request_body: ConversationMetaCreateRequest = None,  # OpenAPI documentation only
-    ) -> SaveConversationMetaResponse:
-        """
-        Save conversation metadata
+    @log_request()
+    @stage_timed("flush")
+    async def flush_group_memories(
+        self, request: FastAPIRequest, request_body: GroupFlushRequest = None
+    ) -> FlushResponse:
+        """POST /api/v1/memories/group/flush - Group flush endpoint."""
+        del request_body
+        start_time = time.perf_counter()
+        space_id = get_space_id_for_metrics()
+        raw_data_type = get_raw_data_type_label("Conversation")
 
-        Save conversation metadata to MongoDB via service
-
-        Args:
-            fastapi_request: FastAPI request object
-            request_body: Conversation metadata request body (used for OpenAPI documentation only)
-
-        Returns:
-            Dict[str, Any]: Save response, containing saved metadata information
-
-        Raises:
-            HTTPException: When request processing fails
-        """
-        del request_body  # Used for OpenAPI documentation only
         try:
-            # 1. Parse request body into DTO
-            request_data = await fastapi_request.json()
-            create_request = ConversationMetaCreateRequest(**request_data)
-
+            request_data = await request.json()
             logger.info(
-                "Received conversation-meta save request: group_id=%s",
-                create_request.group_id,
+                "Received group flush: group_id=%s", request_data.get("group_id")
             )
 
-            # 2. Save via service
-            result = await self.conversation_meta_service.save(create_request)
+            memorize_request = convert_group_flush_to_memorize_request(request_data)
 
-            if not result:
-                raise HTTPException(
-                    status_code=500, detail="Failed to save conversation metadata"
-                )
+            memory_count = await self.memory_manager.memorize(memorize_request)
 
-            # 3. Return success response
+            status = 'extracted' if memory_count > 0 else 'no_extraction'
+            record_memorize_request(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status='flush',
+                duration_seconds=time.perf_counter() - start_time,
+            )
+
             return {
-                "status": ErrorStatus.OK.value,
-                "message": "Conversation metadata saved successfully",
-                "result": result.model_dump(),
-            }
-
-        except ValidationException as e:
-            logger.error(
-                "conversation-meta validation failed: %s", e.message, exc_info=True
-            )
-            raise HTTPException(status_code=400, detail=e.message) from e
-        except ValueError as e:
-            logger.error("conversation-meta request parameter error: %s", e)
-            raise HTTPException(status_code=400, detail=str(e)) from e
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(
-                "conversation-meta request processing failed: %s", e, exc_info=True
-            )
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to save conversation metadata, please try again later",
-            ) from e
-
-    @patch(
-        "/conversation-meta",
-        response_model=PatchConversationMetaResponse,
-        summary="Partially update conversation metadata",
-        description="""
-        Partially update conversation metadata, only updating provided fields
-        
-        ## Functionality:
-        - Locate the conversation metadata to update by group_id
-        - When group_id is null or not provided, updates the default config
-        - Only update fields provided in the request, keep unchanged fields as-is
-        - Suitable for scenarios requiring modification of partial information
-        
-        ## Fields that can be updated:
-        - **name**: Conversation name
-        - **description**: Conversation description
-        - **scene_desc**: Scene description
-        - **tags**: Tag list
-        - **user_details**: User details (will completely replace existing user_details)
-        - **default_timezone**: Default timezone
-        
-        ## Notes:
-        - group_id can be a specific value or omitted (for default config)
-        - If user_details field is provided, it will completely replace existing user details
-        - Not allowed to modify core fields such as version, scene, group_id, conversation_created_at
-        """,
-        responses={
-            400: {
-                "description": "Request parameter error",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.INVALID_PARAMETER.value,
-                            "message": "Missing required field group_id",
-                            "timestamp": "2025-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories/conversation-meta",
-                        }
-                    }
-                },
-            },
-            404: {
-                "description": "Conversation metadata not found",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.RESOURCE_NOT_FOUND.value,
-                            "message": "Specified conversation metadata not found: group_123",
-                            "timestamp": "2025-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories/conversation-meta",
-                        }
-                    }
-                },
-            },
-            500: {
-                "description": "Internal server error",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.SYSTEM_ERROR.value,
-                            "message": "Failed to update conversation metadata, please try again later",
-                            "timestamp": "2025-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories/conversation-meta",
-                        }
-                    }
-                },
-            },
-        },
-    )
-    async def patch_conversation_meta(
-        self,
-        fastapi_request: FastAPIRequest,
-        request_body: ConversationMetaPatchRequest = None,  # OpenAPI documentation only
-    ) -> PatchConversationMetaResponse:
-        """
-        Partially update conversation metadata
-
-        Locate record by group_id, only update fields provided in the request
-
-        Args:
-            fastapi_request: FastAPI request object
-            request_body: Patch request body (used for OpenAPI documentation only)
-
-        Returns:
-            Dict[str, Any]: Update response, containing updated metadata information
-
-        Raises:
-            HTTPException: When request processing fails
-        """
-        del request_body  # Used for OpenAPI documentation only
-        try:
-            # 1. Parse request body into DTO
-            request_data = await fastapi_request.json()
-            patch_request = ConversationMetaPatchRequest(**request_data)
-
-            logger.info(
-                "Received conversation-meta partial update request: group_id=%s",
-                patch_request.group_id,
-            )
-
-            # 2. Patch via service
-            result, updated_fields = await self.conversation_meta_service.patch(
-                patch_request
-            )
-
-            if result is None:
-                detail_msg = (
-                    f"Specified conversation metadata not found: group_id={patch_request.group_id}"
-                    if patch_request.group_id
-                    else "Default config not found"
-                )
-                raise HTTPException(status_code=404, detail=detail_msg)
-
-            # 3. Return success response
-            if not updated_fields:
-                return {
-                    "status": ErrorStatus.OK.value,
-                    "message": "No fields need updating",
-                    "result": {
-                        "id": result.id,
-                        "group_id": result.group_id,
-                        "updated_fields": [],
-                    },
+                "data": {
+                    "request_id": self._app_logic.get_current_request_id(),
+                    "status": status,
+                    "message": "Flush completed",
                 }
-
-            return {
-                "status": ErrorStatus.OK.value,
-                "message": f"Conversation metadata updated successfully, updated {len(updated_fields)} fields",
-                "result": {
-                    "id": result.id,
-                    "group_id": result.group_id,
-                    "scene": result.scene,
-                    "name": result.name,
-                    "updated_fields": updated_fields,
-                    "updated_at": result.updated_at,
-                },
             }
 
-        except ValidationException as e:
-            logger.error(
-                "conversation-meta partial update validation failed: %s",
-                e.message,
-                exc_info=True,
-            )
-            raise HTTPException(status_code=400, detail=e.message) from e
-        except HTTPException:
-            # Re-raise HTTPException
-            raise
-        except KeyError as e:
-            logger.error(
-                "conversation-meta partial update request missing required field: %s", e
-            )
-            raise HTTPException(
-                status_code=400, detail=f"Missing required field: {str(e)}"
-            ) from e
         except ValueError as e:
-            logger.error(
-                "conversation-meta partial update request parameter error: %s", e
-            )
-            raise HTTPException(status_code=400, detail=str(e)) from e
+            logger.error("Group flush parameter error: %s", e)
+            raise HTTPException(status_code=422, detail=str(e)) from e
         except Exception as e:
-            logger.error(
-                "conversation-meta partial update request processing failed: %s",
-                e,
-                exc_info=True,
-            )
+            logger.error("Group flush failed: %s", e, exc_info=True)
             raise HTTPException(
-                status_code=500,
-                detail="Failed to update conversation metadata, please try again later",
+                status_code=500, detail="Flush failed, please try again later"
             ) from e
 
-    @delete(
-        "",
-        response_model=DeleteMemoriesResponse,
-        summary="Delete memories (soft delete)",
-        description="""
-        Soft delete memory records based on combined filter criteria
-        
-        ## Functionality:
-        - Soft delete records matching combined filter conditions
-        - If multiple conditions provided, ALL must be satisfied (AND logic)
-        - At least one filter must be specified
-        
-        ## Filter Parameters (combined with AND):
-        - **event_id**: Filter by specific event_id
-        - **user_id**: Filter by user ID
-        - **group_id**: Filter by group ID
-        
-        ## Examples:
-        - event_id only: Delete specific memory
-        - user_id only: Delete all user's memories
-        - user_id + group_id: Delete user's memories in specific group
-        - event_id + user_id + group_id: Delete if all conditions match
-        
-        ## Soft Delete:
-        - Records are marked as deleted, not physically removed
-        - Deleted records can be restored if needed
-        - Deleted records won't appear in regular queries
-        
-        ## Use cases:
-        - User requests data deletion
-        - Group chat cleanup
-        - Privacy compliance (GDPR, etc.)
-        - Conversation history management
+    @post(
+        "/agent/flush",
+        response_model=FlushResponse,
+        summary="Flush agent memories",
+        description="""Trigger agent-aware boundary detection on accumulated agent trajectory messages.
+
+        Flushes buffered agent messages for the specified user, triggering memory extraction
+        (agent cases and skills) if a conversation boundary is detected.
+
+        ## Request Body Fields:
+        - **user_id** (required, string): Owner user ID
+        - **session_id** (optional, string): Target session to flush. If omitted, flushes all sessions for the user.
+
+        ## Request Examples:
+
+        **Flush all sessions:**
+        ```json
+        {"user_id": "user_01"}
+        ```
+
+        **Flush specific session:**
+        ```json
+        {"user_id": "user_01", "session_id": "sess_agent_001"}
+        ```
+
+        ## Response:
+        - **data.request_id**: Request tracking ID (reserved)
+        - **data.status**: `extracted` (memory extraction triggered) or `no_extraction` (no boundary detected)
+        - **data.message**: Human-readable status description
         """,
         responses={
-            400: {
+            200: {
+                "description": "Flush completed",
+                "content": {
+                    "application/json": {
+                        "examples": {
+                            "no_extraction": {
+                                "summary": "No boundary detected",
+                                "value": {
+                                    "data": {
+                                        "request_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                        "status": "no_extraction",
+                                        "message": "Flush completed",
+                                    }
+                                },
+                            },
+                            "extracted": {
+                                "summary": "Memory extraction triggered",
+                                "value": {
+                                    "data": {
+                                        "request_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                        "status": "extracted",
+                                        "message": "Flush completed",
+                                    }
+                                },
+                            },
+                        }
+                    }
+                },
+            },
+            422: {
                 "description": "Request parameter error",
                 "content": {
                     "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.INVALID_PARAMETER.value,
-                            "message": "At least one of event_id, user_id, or group_id must be provided",
-                            "timestamp": "2025-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories",
-                        }
-                    }
-                },
-            },
-            404: {
-                "description": "Memory not found",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.RESOURCE_NOT_FOUND.value,
-                            "message": "No memories found matching the criteria or already deleted",
-                            "timestamp": "2025-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories",
-                        }
-                    }
-                },
-            },
-            500: {
-                "description": "Internal server error",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": ErrorStatus.FAILED.value,
-                            "code": ErrorCode.SYSTEM_ERROR.value,
-                            "message": "Failed to delete memories, please try again later",
-                            "timestamp": "2025-01-15T10:30:00+00:00",
-                            "path": "/api/v1/memories",
+                        "examples": {
+                            "missing_user_id": {
+                                "summary": "Missing required user_id",
+                                "value": {"detail": "Missing required field: user_id"},
+                            }
                         }
                     }
                 },
             },
         },
     )
-    async def delete_memories(
-        self,
-        fastapi_request: FastAPIRequest,
-        request_body: DeleteMemoriesRequestDTO = None,  # OpenAPI documentation (body params)
-    ) -> DeleteMemoriesResponse:
-        """
-        Soft delete memory data based on combined filter criteria
-
-        Filters are combined with AND logic. Omit any filter you do not want to apply.
-
-        Args:
-            fastapi_request: FastAPI request object
-            request_body: Request body parameters (used for OpenAPI documentation only)
-
-        Returns:
-            Dict[str, Any]: Delete result response
-
-        Raises:
-            HTTPException: When request processing fails
-        """
-        del request_body  # Used for OpenAPI documentation only
+    @log_request()
+    @stage_timed("agent_flush")
+    async def flush_agent_memories(
+        self, request: FastAPIRequest, request_body: AgentFlushRequest = None
+    ) -> FlushResponse:
+        """POST /api/v1/memories/agent/flush - Agent flush endpoint."""
+        del request_body
+        start_time = time.perf_counter()
+        space_id = get_space_id_for_metrics()
+        raw_data_type = get_raw_data_type_label("AgentConversation")
 
         try:
-            from core.oxm.constants import MAGIC_ALL
+            request_data = await request.json()
+            logger.info("Received agent flush: user_id=%s", request_data.get("user_id"))
 
-            params = await self._collect_request_params(fastapi_request)
+            with timed("convert_request"):
+                memorize_request = convert_agent_flush_to_memorize_request(request_data)
 
-            # Extract and validate parameters using DeleteMemoriesRequestDTO
-            try:
-                delete_request = DeleteMemoriesRequestDTO(
-                    event_id=params.get("event_id", MAGIC_ALL),
-                    user_id=params.get("user_id", MAGIC_ALL),
-                    group_id=params.get("group_id", MAGIC_ALL),
-                )
-            except ValueError as e:
-                logger.error("Delete request validation failed: %s", e)
-                raise HTTPException(status_code=400, detail=str(e)) from e
+            with timed("memorize"):
+                memory_count = await self.memory_manager.memorize(memorize_request)
 
-            logger.info(
-                "Received delete request: event_id=%s, user_id=%s, group_id=%s",
-                delete_request.event_id,
-                delete_request.user_id,
-                delete_request.group_id,
+            status = 'extracted' if memory_count > 0 else 'no_extraction'
+            record_memorize_request(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status='flush',
+                duration_seconds=time.perf_counter() - start_time,
             )
 
-            # Get delete service
-            delete_service = get_bean_by_type(MemCellDeleteService)
-
-            # Execute delete operation (combined filters)
-            result = await delete_service.delete_by_combined_criteria(
-                event_id=delete_request.event_id,
-                user_id=delete_request.user_id,
-                group_id=delete_request.group_id,
-            )
-
-            # Check if deletion was successful
-            if not result["success"]:
-                error_msg = result.get(
-                    "error",
-                    "No memories found matching the criteria or already deleted",
-                )
-                logger.warning("Delete operation returned no results: %s", result)
-                raise HTTPException(status_code=404, detail=error_msg)
-
-            # Log successful deletion
-            logger.info(
-                "Delete request completed successfully: filters=%s, count=%d",
-                result["filters"],
-                result["count"],
-            )
-
-            # Return success response
             return {
-                "status": ErrorStatus.OK.value,
-                "message": f"Successfully deleted {result['count']} {'memory' if result['count'] == 1 else 'memories'}",
-                "result": {"filters": result["filters"], "count": result["count"]},
+                "data": {
+                    "request_id": self._app_logic.get_current_request_id(),
+                    "status": status,
+                    "message": "Flush completed",
+                }
             }
 
-        except HTTPException:
-            # Re-raise HTTPException
-            raise
+        except ValueError as e:
+            logger.error("Agent flush parameter error: %s", e)
+            raise HTTPException(status_code=422, detail=str(e)) from e
         except Exception as e:
-            logger.error("Delete request processing failed: %s", e, exc_info=True)
+            logger.error("Agent flush failed: %s", e, exc_info=True)
+            raise HTTPException(
+                status_code=500, detail="Flush failed, please try again later"
+            ) from e
+
+    # =========================================================================
+    # Flush Clustering (POST /memories/agent/flush-clustering)
+    # =========================================================================
+
+    @post(
+        "/agent/flush-clustering",
+        response_model=AgentFlushClusteringResponse,
+        summary="Flush pending clustering",
+        description="Force-drain all pending memcells for a group and run batch clustering. "
+        "Use this when cluster_batch_size > 1 and you want to trigger clustering immediately.",
+    )
+    @log_request()
+    @stage_timed("flush_clustering")
+    async def flush_clustering_endpoint(
+        self, request: FastAPIRequest, request_body: AgentFlushClusteringRequest = None
+    ) -> AgentFlushClusteringResponse:
+        """POST /api/v1/memories/agent/flush-clustering - Force batch clustering."""
+        del request_body
+
+        try:
+            request_data = await request.json()
+            user_id = request_data.get("user_id")
+            if not user_id:
+                raise ValueError("user_id is required")
+
+            logger.info(
+                "Received flush-clustering: user_id=%s",
+                user_id,
+            )
+
+            from biz_layer.mem_memorize import flush_clustering
+
+            pending_count = await flush_clustering(user_id=user_id)
+
+            status = 'clustered' if pending_count > 0 else 'no_clustering'
+            return {
+                "data": {
+                    "request_id": self._app_logic.get_current_request_id(),
+                    "status": status,
+                    "message": "Flush clustering completed",
+                }
+            }
+
+        except ValueError as e:
+            logger.error("Flush-clustering parameter error: %s", e)
+            raise HTTPException(status_code=422, detail=str(e)) from e
+        except Exception as e:
+            logger.error("Flush-clustering failed: %s", e, exc_info=True)
             raise HTTPException(
                 status_code=500,
-                detail="Failed to delete memories, please try again later",
+                detail="Flush clustering failed, please try again later",
             ) from e
+
+    # =========================================================================
+    # Helper Methods
+    # =========================================================================
+
+    def _auto_register_senders(self, messages: list) -> None:
+        """Fire-and-forget auto-register senders from message list."""
+        seen = set()
+        for msg in messages:
+            sender_id = msg.get("sender_id")
+            if sender_id and sender_id not in seen:
+                seen.add(sender_id)
+                asyncio.create_task(
+                    self._ensure_sender_exists(
+                        sender_id=sender_id, sender_name=msg.get("sender_name")
+                    )
+                )
+
+    # =========================================================================
+    # Agent Add
+    # =========================================================================
+
+    @post(
+        "/agent",
+        response_model=AddResponse,
+        summary="Store agent trajectory messages",
+        description="""Store agent trajectory messages (user/assistant/tool) into memory.
+        Supports tool_calls and tool_call_id for OpenAI-format function calling.
+
+        ## Request Body Fields:
+        - **user_id** (required, string): Owner user ID
+        - **session_id** (optional, string): Session identifier for conversation isolation
+        - **messages** (required, array, 1-500): Agent trajectory messages
+
+        ## Message Fields:
+        - **role** (required): `user`, `assistant`, or `tool`
+        - **timestamp** (required, int): Message timestamp in unix milliseconds
+        - **content** (required, string or array): Accepts plain string shorthand `"hello"` or array of content items `[{type: "text", text: "hello"}]`
+        - **message_id** (optional): Message unique ID
+        - **sender_id** (optional): Sender identifier
+        - **sender_name** (optional): Sender display name
+        - **tool_calls** (optional): Tool calls made by the assistant (OpenAI format). Only when role='assistant'
+        - **tool_call_id** (optional): ID of the tool call this message responds to. Required when role='tool'
+
+        ## Request Example (with tool calls):
+        ```json
+        {
+          "user_id": "user_01",
+          "session_id": "sess_agent_001",
+          "messages": [
+            {
+              "role": "user",
+              "timestamp": 1710835200000,
+              "content": "What is the weather in Tokyo?"
+            },
+            {
+              "role": "assistant",
+              "timestamp": 1710835201000,
+              "content": "Let me check the weather for you.",
+              "tool_calls": [
+                {
+                  "id": "call_abc123",
+                  "type": "function",
+                  "function": {"name": "get_weather", "arguments": "{\\"city\\": \\"Tokyo\\"}"}
+                }
+              ]
+            },
+            {
+              "role": "tool",
+              "timestamp": 1710835202000,
+              "tool_call_id": "call_abc123",
+              "content": [{"type": "text", "text": "Tokyo: 18C, partly cloudy"}]
+            },
+            {
+              "role": "assistant",
+              "timestamp": 1710835203000,
+              "content": [{"type": "text", "text": "The weather in Tokyo is 18C and partly cloudy."}]
+            }
+          ]
+        }
+        ```
+
+        ## Response:
+        - **data.request_id**: Request tracking ID (reserved)
+        - **data.message_count**: Number of messages accepted
+        - **data.status**: `accumulated` (buffered) or `extracted` (memory extraction triggered)
+        - **data.message**: Human-readable status description
+        """,
+        responses={
+            200: {
+                "description": "Messages accepted",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "data": {
+                                "request_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                "message_count": 4,
+                                "status": "accumulated",
+                                "message": "Messages accepted",
+                            }
+                        }
+                    }
+                },
+            },
+            422: {
+                "description": "Request parameter error",
+                "content": {
+                    "application/json": {
+                        "examples": {
+                            "missing_user_id": {
+                                "summary": "Missing required user_id",
+                                "value": {"detail": "Missing required field: user_id"},
+                            },
+                            "invalid_role": {
+                                "summary": "Invalid message role",
+                                "value": {
+                                    "detail": "Invalid value for messages[].role: 'invalid'. Must be 'user', 'assistant', or 'tool'"
+                                },
+                            },
+                            "missing_tool_call_id": {
+                                "summary": "Missing tool_call_id for tool message",
+                                "value": {
+                                    "detail": "Missing required field: messages[].tool_call_id (required when role='tool')"
+                                },
+                            },
+                        }
+                    }
+                },
+            },
+        },
+    )
+    @log_request()
+    @stage_timed("agent_add")
+    async def add_agent_memories(
+        self, request: FastAPIRequest, request_body: AgentAddRequest = None
+    ) -> AddResponse:
+        """POST /api/v1/memories/agent - Agent add endpoint."""
+        del request_body
+        start_time = time.perf_counter()
+        space_id = get_space_id_for_metrics()
+        raw_data_type = get_raw_data_type_label(None)
+
+        try:
+            request_data = await request.json()
+            logger.info(
+                "Received agent add request: user_id=%s", request_data.get("user_id")
+            )
+
+            with timed("convert_request"):
+                memorize_request = convert_agent_add_to_memorize_request(request_data)
+            raw_data_type = get_raw_data_type_label(
+                memorize_request.raw_data_type.value
+            )
+            msg_count = len(memorize_request.new_raw_data_list)
+
+            record_memorize_message(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status='received',
+                count=msg_count,
+            )
+
+            group_id = memorize_request.group_id
+            session_id = memorize_request.session_id
+
+            # Auto-register group
+            if group_id:
+                asyncio.create_task(self._ensure_group_exists(group_id=group_id))
+
+            # Auto-register session (skip for default sentinel)
+            if session_id and session_id != DEFAULT_SESSION_ID:
+                asyncio.create_task(self._ensure_session_exists(session_id=session_id))
+
+            # Auto-register senders (skip role=tool as they are not real users)
+            messages = request_data.get("messages", [])
+            for msg in messages:
+                if msg.get("role") != "tool":
+                    sender_id = msg.get("sender_id")
+                    if sender_id:
+                        asyncio.create_task(
+                            self._ensure_sender_exists(
+                                sender_id=sender_id, sender_name=msg.get("sender_name")
+                            )
+                        )
+
+            # Save request logs
+            with timed("persist_raw_messages"):
+                await self._save_raw_messages(
+                    memorize_request, request, "add_agent_memories"
+                )
+
+            # Process
+            with timed("memorize"):
+                memory_count = await self.memory_manager.memorize(memorize_request)
+
+            status = 'extracted' if memory_count > 0 else 'accumulated'
+            record_memorize_request(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status=status,
+                duration_seconds=time.perf_counter() - start_time,
+            )
+
+            # Publish personal memorize event (agent is solo scene)
+            asyncio.create_task(
+                self._publish_event(
+                    PersonalMemorizeEvent(
+                        user_id=request_data.get("user_id", ""),
+                        session_id=session_id,
+                        group_id=group_id,
+                    )
+                )
+            )
+
+            return {
+                "data": {
+                    "request_id": self._app_logic.get_current_request_id(),
+                    "message_count": msg_count,
+                    "status": status,
+                    "message": "Messages accepted",
+                }
+            }
+
+        except ValueError as e:
+            logger.error("Agent add parameter error: %s", e)
+            record_memorize_error(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                stage='conversion',
+                error_type='validation_error',
+            )
+            record_memorize_request(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status='error',
+                duration_seconds=time.perf_counter() - start_time,
+            )
+            raise HTTPException(status_code=422, detail=str(e)) from e
+        except HTTPException:
+            record_memorize_request(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status='error',
+                duration_seconds=time.perf_counter() - start_time,
+            )
+            raise
+        except Exception as e:
+            logger.error("Agent add failed: %s", e, exc_info=True)
+            record_memorize_error(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                stage='memorize',
+                error_type=classify_memorize_error(e),
+            )
+            record_memorize_request(
+                space_id=space_id,
+                raw_data_type=raw_data_type,
+                status='error',
+                duration_seconds=time.perf_counter() - start_time,
+            )
+            raise HTTPException(
+                status_code=500, detail="Failed to store memory, please try again later"
+            ) from e
+
+    # =========================================================================
+    # Helper methods
+    # =========================================================================
+
+    async def _save_raw_messages(
+        self, memorize_request, request, endpoint_name: str
+    ) -> None:
+        """Save individual messages from the request as RawMessage documents."""
+        if memorize_request.new_raw_data_list:
+            raw_message_service = get_bean_by_type(RawMessageService)
+            await raw_message_service.save_raw_messages(
+                request=memorize_request,
+                version="1.0.0",
+                endpoint_name=endpoint_name,
+                method=request.method,
+                url=str(request.url),
+            )
+
+    async def _ensure_group_exists(
+        self, group_id: str, name: str | None = None, description: str | None = None
+    ) -> None:
+        """Auto-register group when memory is ingested."""
+        try:
+            from service.group_service import GroupService
+
+            group_service = get_bean_by_type(GroupService)
+            await group_service.ensure_group_exists(
+                group_id=group_id, name=name, description=description
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to auto-register group: group_id=%s, error=%s", group_id, e
+            )
+
+    async def _enrich_sender_names(self, messages: list, raw_data_list: list) -> None:
+        """Enrich sender_name from DB for messages that didn't provide one.
+
+        Collects sender_ids where sender_name was not explicitly provided,
+        batch queries the Sender collection, and updates the corresponding
+        RawData content dicts in place.
+
+        Args:
+            messages: Original request messages list
+            raw_data_list: RawData objects from MemorizeRequest.new_raw_data_list
+        """
+        # Collect sender_ids that need enrichment
+        missing_sender_ids = set()
+        for msg in messages:
+            if not msg.get("sender_name") and msg.get("sender_id"):
+                missing_sender_ids.add(msg["sender_id"])
+
+        if not missing_sender_ids:
+            return
+
+        try:
+            sender_service = get_bean_by_type(SenderService)
+            name_map = await sender_service.batch_get_sender_names(
+                list(missing_sender_ids)
+            )
+            if not name_map:
+                return
+
+            # Update RawData content dicts in place
+            for raw_data in raw_data_list:
+                sid = raw_data.content.get("sender_id")
+                if sid in name_map:
+                    raw_data.content["sender_name"] = name_map[sid]
+        except Exception as e:
+            logger.warning("Failed to enrich sender names: %s", e)
+
+    async def _ensure_sender_exists(
+        self, sender_id: str, sender_name: str = None
+    ) -> None:
+        """Auto-register sender when memory is ingested."""
+        try:
+            from service.sender_service import SenderService
+
+            sender_service = get_bean_by_type(SenderService)
+            await sender_service.ensure_sender_exists(
+                sender_id=sender_id, name=sender_name
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to auto-register sender: sender_id=%s, error=%s", sender_id, e
+            )
+
+    async def _publish_event(self, event) -> None:
+        """Publish an event via ApplicationEventPublisher (fire-and-forget)."""
+        try:
+            publisher = get_bean_by_type(ApplicationEventPublisher)
+            await publisher.publish(event)
+        except Exception as e:
+            logger.warning("Failed to publish event %s: %s", type(event).__name__, e)
+
+    async def _ensure_session_exists(self, session_id: str) -> None:
+        """Auto-register session when memory is ingested."""
+        try:
+            from service.session_service import SessionService
+
+            session_service = get_bean_by_type(SessionService)
+            await session_service.ensure_session_exists(session_id=session_id)
+        except Exception as e:
+            logger.warning(
+                "Failed to auto-register session: session_id=%s, error=%s",
+                session_id,
+                e,
+            )
+
+    @post(
+        "/delete",
+        status_code=204,
+        summary="Delete memories (soft delete)",
+        description="Soft delete memories by ID or by filter conditions. "
+        "Two modes: single delete (by memory_id) or batch delete (by filters). "
+        "Returns 204 No Content on success.",
+    )
+    @stage_timed("delete")
+    async def delete_memories(self, request_body: DeleteMemoriesRequest) -> None:
+        """Soft delete memories by ID or by filter conditions."""
+        delete_service = get_bean_by_type(MemCellDeleteService)
+
+        if request_body.memory_id is not None:
+            await delete_service.delete_by_id(request_body.memory_id)
+        else:
+            await delete_service.delete_by_filters(
+                user_id=request_body.user_id,
+                group_id=request_body.group_id,
+                session_id=request_body.session_id,
+                sender_id=request_body.sender_id,
+            )

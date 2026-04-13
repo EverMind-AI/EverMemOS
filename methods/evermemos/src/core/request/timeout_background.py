@@ -61,11 +61,11 @@ def is_background_mode_enabled(request: Optional[Request] = None) -> bool:
     # Check if sync_mode=true is in query params
     sync_mode = request.query_params.get(SYNC_MODE_PARAM, "true").lower()
     if sync_mode in ("false", "0", "no"):
-        return False
+        return True
 
     # Enable background mode by default
     if sync_mode in ("true", "1", "yes"):
-        return True
+        return False
 
     return True
 

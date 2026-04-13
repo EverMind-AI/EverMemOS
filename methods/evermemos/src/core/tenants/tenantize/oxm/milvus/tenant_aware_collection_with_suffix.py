@@ -1,3 +1,4 @@
+# skip-sensitive-file
 """
 Tenant-aware Milvus Collection Management Class with Suffix and Alias Mechanism
 
@@ -7,8 +8,9 @@ This module combines the functionalities of TenantAwareCollection and MilvusColl
 3. Alias mechanism: Real table names include timestamps, accessed via alias
 """
 
+import os
 from typing import Optional
-from pymilvus import connections, Collection
+from pymilvus import connections, Collection, DataType, FieldSchema
 from pymilvus.client.types import ConsistencyLevel
 
 from core.observation.logger import get_logger
@@ -22,9 +24,21 @@ from core.tenants.tenantize.oxm.milvus.tenant_aware_collection import (
 from core.tenants.tenantize.oxm.milvus.config_utils import (
     get_tenant_aware_collection_name,
 )
+from core.tenants.tenant_constants import TENANT_ID_FIELD, TENANT_ID_MAX_LENGTH
+from core.tenants.tenant_contextvar import get_current_tenant
 from pymilvus import utility
 
 logger = get_logger(__name__)
+
+# Standard tenant_id FieldSchema for Milvus collections.
+# is_partition_key=True enables automatic partition routing by tenant_id,
+# so queries with tenant_id filter only scan the relevant partition.
+TENANT_ID_FIELD_SCHEMA = FieldSchema(
+    name=TENANT_ID_FIELD,
+    dtype=DataType.VARCHAR,
+    max_length=TENANT_ID_MAX_LENGTH,
+    is_partition_key=True,
+)
 
 
 class TenantAwareMilvusCollectionWithSuffix(MilvusCollectionWithSuffix):
@@ -35,6 +49,11 @@ class TenantAwareMilvusCollectionWithSuffix(MilvusCollectionWithSuffix):
     1. Automatically selects the correct Milvus connection based on tenant context
     2. Supports tenant-aware table names (automatically adds tenant prefix)
     3. Retains all functionalities of MilvusCollectionWithSuffix (suffix, alias, creation management, etc.)
+
+    Partition key:
+    - tenant_id is auto-appended as partition_key to all subclass schemas
+    - _NUM_PARTITIONS defaults to 256 for balanced tenant isolation in shared mode
+    - Subclasses can override _NUM_PARTITIONS if needed
 
     Key features:
     - Tenant isolation: Different tenants use different connections and table names
@@ -96,6 +115,70 @@ class TenantAwareMilvusCollectionWithSuffix(MilvusCollectionWithSuffix):
             mgr.ensure_all()
             mgr.collection.insert([...])
     """
+
+    # Default partition count for partition_key routing.
+    # Configurable via MILVUS_NUM_PARTITIONS env var (default 256).
+    # Milvus max is 4096. Subclasses can override.
+    _NUM_PARTITIONS: int = int(os.getenv("MILVUS_NUM_PARTITIONS", "256"))
+
+    @staticmethod
+    def _resolve_num_partitions(class_default: Optional[int]) -> Optional[int]:
+        """Resolve num_partitions: storage_info > class attribute > env var.
+
+        Priority:
+        1. tenant storage_info.milvus.num_partitions (set per-tenant at init time)
+        2. class attribute _NUM_PARTITIONS (set via env var or subclass override)
+        """
+        tenant = get_current_tenant()
+        if tenant:
+            milvus_config = tenant.get_storage_info("milvus")
+            if milvus_config and "num_partitions" in milvus_config:
+                return int(milvus_config["num_partitions"])
+        return class_default
+
+    def __init_subclass__(cls, **kwargs):
+        """Auto-append tenant_id FieldSchema to _SCHEMA when a subclass is defined.
+
+        Always appends regardless of tenant mode, so schema is consistent
+        across all environments (aligned with ES and MongoDB behavior).
+        In non-tenant mode the field exists but is never populated.
+        """
+        super().__init_subclass__(**kwargs)
+
+        # Auto-append tenant_id FieldSchema (partition_key)
+        schema = getattr(cls, "_SCHEMA", None)
+        if schema is not None:
+            existing_names = {f.name for f in schema.fields}
+            if TENANT_ID_FIELD not in existing_names:
+                schema.add_field(
+                    field_name=TENANT_ID_FIELD_SCHEMA.name,
+                    datatype=TENANT_ID_FIELD_SCHEMA.dtype,
+                    max_length=TENANT_ID_FIELD_SCHEMA.max_length,
+                    is_partition_key=TENANT_ID_FIELD_SCHEMA.is_partition_key,
+                )
+                logger.info(
+                    "Auto-appended tenant_id (partition_key) to %s._SCHEMA",
+                    cls.__name__,
+                )
+
+        # Auto-append tenant_id scalar index for filter performance
+        index_configs = getattr(cls, "_INDEX_CONFIGS", None)
+        if index_configs is not None:
+            existing_index_fields = {cfg.field_name for cfg in index_configs}
+            if TENANT_ID_FIELD not in existing_index_fields:
+                from core.oxm.milvus.milvus_collection_base import IndexConfig
+
+                index_configs.append(
+                    IndexConfig(
+                        field_name=TENANT_ID_FIELD,
+                        index_type="AUTOINDEX",
+                        index_name="idx_tenant_id",
+                    )
+                )
+                logger.info(
+                    "Auto-appended tenant_id scalar index to %s._INDEX_CONFIGS",
+                    cls.__name__,
+                )
 
     def __init__(self, suffix: Optional[str] = None):
         """
@@ -183,12 +266,23 @@ class TenantAwareMilvusCollectionWithSuffix(MilvusCollectionWithSuffix):
 
             # Create tenant-aware Collection
             # Use native Collection, need to explicitly pass using parameter
-            _coll = Collection(
-                name=tenant_aware_new_real_name,
-                schema=self._SCHEMA,
-                consistency_level=ConsistencyLevel.Bounded,
-                using=using,
+            create_kwargs = {
+                "name": tenant_aware_new_real_name,
+                "schema": self._SCHEMA,
+                "consistency_level": ConsistencyLevel.Bounded,
+                "using": using,
+            }
+            num_partitions = self._resolve_num_partitions(
+                getattr(self, "_NUM_PARTITIONS", None)
             )
+            if num_partitions is not None:
+                create_kwargs["num_partitions"] = num_partitions
+            logger.info(
+                "Creating tenant-aware Collection: %s (num_partitions=%s)",
+                tenant_aware_new_real_name,
+                num_partitions,
+            )
+            Collection(**create_kwargs)
 
             # Create alias pointing to new Collection
             # Note: First delete any existing old alias
@@ -259,15 +353,23 @@ class TenantAwareMilvusCollectionWithSuffix(MilvusCollectionWithSuffix):
 
         # Create new tenant-aware collection
         # Use native Collection, need to explicitly pass using parameter
-        _coll = Collection(
-            name=tenant_aware_new_real_name,
-            schema=self._SCHEMA,
-            consistency_level=ConsistencyLevel.Bounded,
-            using=using,
+        create_kwargs = {
+            "name": tenant_aware_new_real_name,
+            "schema": self._SCHEMA,
+            "consistency_level": ConsistencyLevel.Bounded,
+            "using": using,
+        }
+        num_partitions = self._resolve_num_partitions(
+            getattr(self, "_NUM_PARTITIONS", None)
         )
+        if num_partitions is not None:
+            create_kwargs["num_partitions"] = num_partitions
+        _coll = Collection(**create_kwargs)
 
         logger.info(
-            "New tenant-aware Collection created: %s", tenant_aware_new_real_name
+            "New tenant-aware Collection created: %s (num_partitions=%s)",
+            tenant_aware_new_real_name,
+            num_partitions,
         )
 
         # Create indexes for new collection and load
@@ -371,6 +473,41 @@ class TenantAwareMilvusCollectionWithSuffix(MilvusCollectionWithSuffix):
             )
         except Exception:
             pass
+
+    # ==================== Tenant Field Isolation ====================
+
+    @classmethod
+    def async_collection(cls):
+        """Get asynchronous Collection instance wrapped with tenant field isolation proxy.
+
+        Override parent to wrap AsyncCollection in TenantFieldCollectionProxy.
+        This ensures all data operations (insert/search/query/delete) automatically
+        inject tenant_id, while control-plane operations pass through.
+
+        In non-tenant mode, the proxy is a transparent passthrough.
+        """
+        inner = super().async_collection()
+
+        from core.tenants.tenantize.oxm.milvus.tenant_field_collection_proxy import (
+            TenantFieldCollectionProxy,
+        )
+
+        return TenantFieldCollectionProxy(inner)
+
+    @classmethod
+    def collection(cls):
+        """Get synchronous Collection instance.
+
+        Blocked: synchronous Collection bypasses the TenantFieldCollectionProxy
+        and cannot enforce tenant isolation. Use async_collection() instead.
+        """
+        raise RuntimeError(
+            f"{cls.__name__}.collection() is blocked. "
+            f"Synchronous Collection cannot enforce tenant field isolation. "
+            f"Use async_collection() instead."
+        )
+
+    # ==================== Collection Management ====================
 
     def exists(self) -> bool:
         """

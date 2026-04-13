@@ -4,6 +4,7 @@ Lifecycle factory
 Provides factory methods for dynamically obtaining and creating lifecycles.
 """
 
+import os
 from typing import List
 from abc import abstractmethod, ABC
 from core.di.utils import get_beans_by_type, get_bean
@@ -117,12 +118,30 @@ class LifespanFactory:
 
     def create_auto_lifespan(self):
         """
-        Automatically create a lifecycle containing all registered providers
+        Automatically create a lifecycle containing all registered providers.
+
+        Supports disabling specific providers via the LIFESPAN_DISABLED environment variable.
+        Example: LIFESPAN_DISABLED=milvus,elasticsearch
 
         Returns:
             callable: FastAPI lifecycle context manager
         """
         providers = get_beans_by_type(LifespanProvider)
+
+        # Filter out disabled providers
+        disabled_raw = os.getenv("LIFESPAN_DISABLED", "").strip()
+        if disabled_raw:
+            disabled_names = {n.strip() for n in disabled_raw.split(",") if n.strip()}
+            before_count = len(providers)
+            providers = [p for p in providers if p.name not in disabled_names]
+            skipped = before_count - len(providers)
+            if skipped:
+                logger.info(
+                    "LIFESPAN_DISABLED=%s — skipped %d provider(s)",
+                    disabled_raw,
+                    skipped,
+                )
+
         # Sort by order
         sorted_providers = sorted(providers, key=lambda x: x.order)
         return create_lifespan_with_providers(sorted_providers)

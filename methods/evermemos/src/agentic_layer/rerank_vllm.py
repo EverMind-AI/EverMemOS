@@ -10,8 +10,13 @@ import logging
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
-from agentic_layer.rerank_interface import RerankServiceInterface, RerankError
-from api_specs.memory_models import MemoryType
+from agentic_layer.rerank_interface import (
+    RerankServiceInterface,
+    RerankError,
+    extract_text_from_hit,
+)
+from core.di.utils import get_bean_by_type
+from core.component.token_usage_collector import TokenUsageCollector
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +28,8 @@ class VllmRerankConfig:
     api_key: str = "EMPTY"
     base_url: str = "http://localhost:12000/v1/rerank"
     model: str = "Qwen/Qwen3-Reranker-4B"  # skip-sensitive-check
-    timeout: int = 30
-    max_retries: int = 3
+    timeout: int = 3
+    max_retries: int = 2
     batch_size: int = 10
     max_concurrent_requests: int = 5
 
@@ -40,7 +45,7 @@ class VllmRerankService(RerankServiceInterface):
         self.session: Optional[aiohttp.ClientSession] = None
         self._semaphore = asyncio.Semaphore(config.max_concurrent_requests)
         logger.info(
-            f"Initialized VllmRerankService | url={config.base_url} | model={config.model}"
+            f"Initialized VllmRerankService | url={config.base_url} | model={config.model}"  # skip-sensitive-check
         )
 
     async def _ensure_session(self):
@@ -123,7 +128,7 @@ class VllmRerankService(RerankServiceInterface):
                                 )
                 except asyncio.TimeoutError:
                     logger.warning(
-                        f"vLLM rerank timeout (attempt {attempt + 1}/{self.config.max_retries})"
+                        f"vLLM rerank timeout (attempt {attempt + 1}/{self.config.max_retries}), timeout={self.config.timeout}s"
                     )
                     if attempt < self.config.max_retries - 1:
                         await asyncio.sleep(2**attempt)
@@ -195,6 +200,13 @@ class VllmRerankService(RerankServiceInterface):
             for r in results_sorted:
                 all_scores.append(r.get("relevance_score", 0.0))
 
+        # Report rerank call to token usage collector
+        try:
+            collector = get_bean_by_type(TokenUsageCollector)
+            collector.add(self.config.model, 0, 0, call_type="rerank")
+        except Exception:
+            pass
+
         # Convert to same format as DeepInfra
         return self._convert_response_format(all_scores, len(documents))
 
@@ -214,44 +226,6 @@ class VllmRerankService(RerankServiceInterface):
             results.append({"index": original_index, "score": score, "rank": rank})
 
         return {"results": results}
-
-    def _extract_text_from_hit(self, hit: Dict[str, Any]) -> str:
-        """Extract and concatenate text based on memory_type"""
-        source = hit.get('_source', hit)
-        memory_type = hit.get('memory_type', '')
-
-        # Extract text based on memory_type
-        match memory_type:
-            case MemoryType.EPISODIC_MEMORY.value:
-                episode = source.get('episode', '')
-                if episode:
-                    return f"Episode Memory: {episode}"
-            case MemoryType.FORESIGHT.value:
-                foresight = source.get('foresight', '') or source.get('content', '')
-                evidence = source.get('evidence', '')
-                if foresight:
-                    if evidence:
-                        return f"Foresight: {foresight} (Evidence: {evidence})"
-                    return f"Foresight: {foresight}"
-            case MemoryType.EVENT_LOG.value:
-                atomic_fact = source.get('atomic_fact', '')
-                if atomic_fact:
-                    return f"Atomic Fact: {atomic_fact}"
-
-        # Generic fallback
-        if source.get('episode'):
-            return source['episode']
-        if source.get('atomic_fact'):
-            return source['atomic_fact']
-        if source.get('foresight'):
-            return source['foresight']
-        if source.get('content'):
-            return source['content']
-        if source.get('summary'):
-            return source['summary']
-        if source.get('subject'):
-            return source['subject']
-        return str(hit)
 
     async def rerank_memories(
         self,
@@ -278,7 +252,7 @@ class VllmRerankService(RerankServiceInterface):
         # Extract text content from hits for reranking
         documents = []
         for hit in hits:
-            text = self._extract_text_from_hit(hit)
+            text = extract_text_from_hit(hit)
             documents.append(text)
 
         if not documents:
@@ -331,11 +305,8 @@ class VllmRerankService(RerankServiceInterface):
 
         except Exception as e:
             logger.error(f"Error in rerank_memories: {e}")
-            # If reranking fails, return original results (sorted by original score)
-            sorted_hits = sorted(hits, key=lambda x: x.get('score', 0), reverse=True)
-            if top_k is not None and top_k > 0:
-                sorted_hits = sorted_hits[:top_k]
-            return sorted_hits
+            # Re-raise exception to allow HybridRerankService fallback
+            raise
 
     def get_model_name(self) -> str:
         """Get the current model name"""

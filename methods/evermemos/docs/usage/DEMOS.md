@@ -40,7 +40,7 @@ The fastest way to experience EverMemOS! Perfect for first-time users.
 
 ```bash
 # Terminal 1: Start the API server
-uv run python src/run.py --port 1995
+uv run python src/run.py --port 8001
 
 # Terminal 2: Run the simple demo
 uv run python src/bootstrap.py demo/simple_demo.py
@@ -122,7 +122,7 @@ Experience the complete EverMemOS workflow: memory extraction from conversations
 
 ```bash
 # Terminal 1: Start the API server (keep running)
-uv run python src/run.py --port 1995
+uv run python src/run.py --port 8001
 ```
 
 **2. Configure Environment:**
@@ -150,13 +150,13 @@ uv run python src/bootstrap.py demo/extract_memory.py
    - Resets MongoDB, Elasticsearch, Milvus, and Redis to empty state
    - Ensures demo starts fresh
 
-2. **Loads conversation data** from `data/assistant_chat_zh.json`
+2. **Loads conversation data** from `data/solo_chat_zh.json`
    - Sample conversations in Chinese
    - For English data, modify the `data_file` constant
 
 3. **Processes each message** through the Memory API
-   - Appends `scene="assistant"` to indicate one-on-one conversation
-   - Streams entries to `http://localhost:1995/api/v1/memories`
+   - Appends `scene="solo"` to indicate one-on-one conversation
+   - Streams entries to `http://localhost:8001/api/v0/memories`
 
 4. **Creates memories in databases**
    - MemCells extracted from conversations
@@ -170,13 +170,13 @@ Edit `demo/extract_memory.py` to customize:
 
 ```python
 # API endpoint
-base_url = "http://localhost:1995"
+base_url = "http://localhost:8001"
 
 # Data file
-data_file = "data/assistant_chat_zh.json"  # or assistant_chat_en.json
+data_file = "data/solo_chat_zh.json"  # or solo_chat_en.json
 
 # Scene type
-profile_scene = "assistant"  # or "group_chat"
+profile_scene = "solo"  # or "team"
 ```
 
 #### Expected Output
@@ -188,7 +188,7 @@ Clearing all existing memories...
 ✓ Cleared Milvus collections
 ✓ Cleared Redis cache
 
-Loading conversation data from data/assistant_chat_zh.json...
+Loading conversation data from data/solo_chat_zh.json...
 Found 150 messages
 
 Processing messages:
@@ -311,7 +311,7 @@ and tennis. You particularly love playing soccer on weekends and watching Barcel
 
 You can use your own conversation data with the demos:
 
-1. **Prepare your data** in the GroupChatFormat (see [Format Specification](../../data_format/group_chat/group_chat_format.md))
+1. **Prepare your data** in the ConversationFormat (see [Format Specification](../../data_format/conversation/conversation_format.md))
 2. **Edit `demo/extract_memory.py`** to point to your data file
 3. **Run the extraction script** to process your data
 4. **Chat with your memories!**
@@ -319,13 +319,13 @@ You can use your own conversation data with the demos:
 ### Demo Parameters
 
 **Extraction Script:**
-- `base_url` - API server endpoint (default: http://localhost:1995)
+- `base_url` - API server endpoint (default: http://localhost:8001)
 - `data_file` - Path to conversation data file
-- `profile_scene` - Scene type: "assistant" or "group_chat"
+- `profile_scene` - Scene type: "solo" or "team"
 
 **Chat Script:**
 - Language selection (en/zh)
-- Scenario mode (assistant/group_chat)
+- Scenario mode (solo/team)
 - Retrieval mode (rrf/embedding/bm25/agentic)
 
 ---
@@ -337,7 +337,7 @@ You can use your own conversation data with the demos:
 **Problem**: Demo scripts fail to run
 
 **Solutions:**
-- Verify API server is running: `curl http://localhost:1995/health`
+- Verify API server is running: `curl http://localhost:8001/health`
 - Check .env file has required API keys
 - Ensure Docker services are running: `docker-compose ps`
 - Verify Python version: `python --version` (should be 3.10+)

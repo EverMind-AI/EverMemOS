@@ -221,9 +221,11 @@ env.template         # Configuration template (reference, need to fill in real v
 Reference `env.template` file, your `.env` file typically contains the following types of configuration:
 
 ```bash
+# Tenant (required for local dev)
+TENANT_SINGLE_TENANT_ID=t_yourname
+
 # MongoDB
 MONGODB_URI=mongodb://...
-MONGODB_DATABASE=...
 
 # Redis
 REDIS_HOST=...

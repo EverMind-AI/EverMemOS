@@ -1,9 +1,8 @@
 """
-Foresight Milvus Collection Definition
+V1 Foresight Record Milvus Collection Definition
 
-Foresight-specific Collection class implemented based on MilvusCollectionWithSuffix.
-Provides Schema definition and index configuration compatible with ForesightMilvusRepository.
-Supports both personal foresight and group foresight.
+Based on MongoDB v1_foresight_records collection.
+Simplified for vector semantic retrieval of foresight predictions.
 """
 
 from pymilvus import DataType, FieldSchema, CollectionSchema
@@ -16,18 +15,15 @@ from memory_layer.constants import VECTORIZE_DIMENSIONS
 
 class ForesightCollection(TenantAwareMilvusCollectionWithSuffix):
     """
-    Foresight Milvus Collection
-
-    Supports both personal foresight and group foresight, distinguished by the group_id field.
+    V1 Foresight Record Milvus Collection
 
     Usage:
-        # Use Collection
         collection.async_collection().insert([...])
         collection.async_collection().search([...])
     """
 
-    # Base name of the Collection
-    _COLLECTION_NAME = "foresight"
+    # Base name for the Collection
+    _COLLECTION_NAME = "v1_foresight_record"
 
     # Collection Schema definition
     _SCHEMA = CollectionSchema(
@@ -38,25 +34,31 @@ class ForesightCollection(TenantAwareMilvusCollectionWithSuffix):
                 is_primary=True,
                 auto_id=False,
                 max_length=100,
-                description="Unique identifier for foresight",
+                description="Record unique identifier",
             ),
             FieldSchema(
                 name="vector",
                 dtype=DataType.FLOAT_VECTOR,
-                dim=VECTORIZE_DIMENSIONS,  # Vector dimension of BAAI/bge-m3 model
-                description="Text vector",
+                dim=VECTORIZE_DIMENSIONS,
+                description="Foresight content vector for semantic search",
             ),
             FieldSchema(
                 name="user_id",
                 dtype=DataType.VARCHAR,
-                max_length=100,
+                max_length=256,
                 description="User ID",
             ),
             FieldSchema(
                 name="group_id",
                 dtype=DataType.VARCHAR,
-                max_length=100,
+                max_length=256,
                 description="Group ID",
+            ),
+            FieldSchema(
+                name="session_id",
+                dtype=DataType.VARCHAR,
+                max_length=100,
+                description="Session identifier",
             ),
             FieldSchema(
                 name="participants",
@@ -64,29 +66,31 @@ class ForesightCollection(TenantAwareMilvusCollectionWithSuffix):
                 element_type=DataType.VARCHAR,
                 max_capacity=100,
                 max_length=100,
-                description="List of related participants",
+                description="List of participant sender_ids",
             ),
             FieldSchema(
-                name="parent_type",
-                dtype=DataType.VARCHAR,
+                name="sender_ids",
+                dtype=DataType.ARRAY,
+                element_type=DataType.VARCHAR,
+                max_capacity=100,
                 max_length=100,
-                description="Parent memory type (memcell/episode)",
+                description="Sender IDs of related participants",
             ),
             FieldSchema(
-                name="parent_id",
+                name="type",
                 dtype=DataType.VARCHAR,
-                max_length=100,
-                description="Parent memory ID",
+                max_length=50,
+                description="Foresight type (e.g., Conversation)",
             ),
             FieldSchema(
                 name="start_time",
                 dtype=DataType.INT64,
-                description="Foresight start timestamp",
+                description="Foresight start time (epoch milliseconds)",
             ),
             FieldSchema(
                 name="end_time",
                 dtype=DataType.INT64,
-                description="Foresight end timestamp",
+                description="Foresight end time (epoch milliseconds)",
             ),
             FieldSchema(
                 name="duration_days",
@@ -94,61 +98,34 @@ class ForesightCollection(TenantAwareMilvusCollectionWithSuffix):
                 description="Duration in days",
             ),
             FieldSchema(
-                name="content",
+                name="parent_type",
                 dtype=DataType.VARCHAR,
-                max_length=5000,
-                description="Foresight content",
+                max_length=100,
+                description="Parent memory type (e.g., memcell, episodic_memory)",
             ),
             FieldSchema(
-                name="evidence",
+                name="parent_id",
                 dtype=DataType.VARCHAR,
-                max_length=2000,
-                description="Evidence supporting this foresight",
-            ),
-            FieldSchema(
-                name="search_content",
-                dtype=DataType.VARCHAR,
-                max_length=5000,
-                description="Search content (in JSON format)",
-            ),
-            FieldSchema(
-                name="metadata",
-                dtype=DataType.VARCHAR,
-                max_length=50000,
-                description="Detailed information JSON (metadata)",
-            ),
-            FieldSchema(
-                name="created_at",
-                dtype=DataType.INT64,
-                description="Creation timestamp",
-            ),
-            FieldSchema(
-                name="updated_at", dtype=DataType.INT64, description="Update timestamp"
+                max_length=100,
+                description="Parent memory ID (for MongoDB back-reference)",
             ),
         ],
-        description="Vector collection for personal foresight",
+        description="V1 vector collection for foresight records",
         enable_dynamic_field=True,
     )
 
     # Index configuration
     _INDEX_CONFIGS = [
-        # Vector field index (for similarity search)
+        # Vector field index
         IndexConfig(
             field_name="vector",
-            index_type="HNSW",  # Efficient approximate nearest neighbor search
-            metric_type="COSINE",  # Cosine similarity
-            params={
-                "M": 16,  # Maximum number of connections per node
-                "efConstruction": 200,  # Search width during construction
-            },
+            index_type="HNSW",
+            metric_type="COSINE",
+            params={"M": 16, "efConstruction": 200},
         ),
-        # Scalar field indexes (for filtering)
-        IndexConfig(
-            field_name="user_id",
-            index_type="AUTOINDEX",  # Automatically select the most suitable index type
-        ),
+        # Scalar field indexes
+        IndexConfig(field_name="user_id", index_type="AUTOINDEX"),
         IndexConfig(field_name="group_id", index_type="AUTOINDEX"),
+        IndexConfig(field_name="session_id", index_type="AUTOINDEX"),
         IndexConfig(field_name="parent_id", index_type="AUTOINDEX"),
-        IndexConfig(field_name="start_time", index_type="AUTOINDEX"),
-        IndexConfig(field_name="end_time", index_type="AUTOINDEX"),
     ]

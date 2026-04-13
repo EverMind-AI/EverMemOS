@@ -1,6 +1,6 @@
-"""Foresight and event log synchronization service
+"""Foresight and atomic fact synchronization service
 
-Responsible for writing unified foresight and event logs into Milvus / Elasticsearch.
+Responsible for writing unified foresight and atomic facts into Milvus / Elasticsearch.
 """
 
 from typing import Optional, List, Dict, Any
@@ -16,26 +16,26 @@ from infra_layer.adapters.out.search.elasticsearch.converter.foresight_converter
 from infra_layer.adapters.out.search.milvus.converter.foresight_milvus_converter import (
     ForesightMilvusConverter,
 )
-from infra_layer.adapters.out.persistence.document.memory.event_log_record import (
-    EventLogRecord,
+from infra_layer.adapters.out.persistence.document.memory.atomic_fact_record import (
+    AtomicFactRecord,
 )
-from infra_layer.adapters.out.search.elasticsearch.converter.event_log_converter import (
-    EventLogConverter,
+from infra_layer.adapters.out.search.elasticsearch.converter.atomic_fact_converter import (
+    AtomicFactConverter,
 )
-from infra_layer.adapters.out.search.milvus.converter.event_log_milvus_converter import (
-    EventLogMilvusConverter,
+from infra_layer.adapters.out.search.milvus.converter.atomic_fact_milvus_converter import (
+    AtomicFactMilvusConverter,
 )
 from infra_layer.adapters.out.search.repository.foresight_milvus_repository import (
     ForesightMilvusRepository,
 )
-from infra_layer.adapters.out.search.repository.event_log_milvus_repository import (
-    EventLogMilvusRepository,
+from infra_layer.adapters.out.search.repository.atomic_fact_milvus_repository import (
+    AtomicFactMilvusRepository,
 )
 from infra_layer.adapters.out.search.repository.foresight_es_repository import (
     ForesightEsRepository,
 )
-from infra_layer.adapters.out.search.repository.event_log_es_repository import (
-    EventLogEsRepository,
+from infra_layer.adapters.out.search.repository.atomic_fact_es_repository import (
+    AtomicFactEsRepository,
 )
 from core.di import get_bean_by_type, service
 from common_utils.datetime_utils import get_now_with_timezone
@@ -45,34 +45,34 @@ logger = logging.getLogger(__name__)
 
 @service(name="memory_sync_service", primary=True)
 class MemorySyncService:
-    """Foresight and event log synchronization service"""
+    """Foresight and atomic fact synchronization service"""
 
     def __init__(
         self,
         foresight_milvus_repo: Optional[ForesightMilvusRepository] = None,
-        eventlog_milvus_repo: Optional[EventLogMilvusRepository] = None,
+        atomic_fact_milvus_repo: Optional[AtomicFactMilvusRepository] = None,
         foresight_es_repo: Optional[ForesightEsRepository] = None,
-        eventlog_es_repo: Optional[EventLogEsRepository] = None,
+        atomic_fact_es_repo: Optional[AtomicFactEsRepository] = None,
     ):
         """Initialize synchronization service
 
         Args:
             foresight_milvus_repo: Foresight Milvus repository instance (optional, obtained from DI if not provided)
-            eventlog_milvus_repo: Event log Milvus repository instance (optional, obtained from DI if not provided)
+            atomic_fact_milvus_repo: Atomic fact Milvus repository instance (optional, obtained from DI if not provided)
             foresight_es_repo: Foresight ES repository instance (optional, obtained from DI if not provided)
-            eventlog_es_repo: Event log ES repository instance (optional, obtained from DI if not provided)
+            atomic_fact_es_repo: Atomic fact ES repository instance (optional, obtained from DI if not provided)
         """
         self.foresight_milvus_repo = foresight_milvus_repo or get_bean_by_type(
             ForesightMilvusRepository
         )
-        self.eventlog_milvus_repo = eventlog_milvus_repo or get_bean_by_type(
-            EventLogMilvusRepository
+        self.atomic_fact_milvus_repo = atomic_fact_milvus_repo or get_bean_by_type(
+            AtomicFactMilvusRepository
         )
         self.foresight_es_repo = foresight_es_repo or get_bean_by_type(
             ForesightEsRepository
         )
-        self.eventlog_es_repo = eventlog_es_repo or get_bean_by_type(
-            EventLogEsRepository
+        self.atomic_fact_es_repo = atomic_fact_es_repo or get_bean_by_type(
+            AtomicFactEsRepository
         )
 
         logger.info("MemorySyncService initialization completed")
@@ -141,50 +141,50 @@ class MemorySyncService:
 
         return stats
 
-    async def sync_event_log(
+    async def sync_atomic_fact(
         self,
-        event_log: EventLogRecord,
+        atomic_fact_record: AtomicFactRecord,
         sync_to_es: bool = True,
         sync_to_milvus: bool = True,
     ) -> Dict[str, int]:
-        """Synchronize a single event log to Milvus/ES
+        """Synchronize a single atomic fact to Milvus/ES
 
         Args:
-            event_log: EventLogRecord document object
+            atomic_fact_record: AtomicFactRecord document object
             sync_to_es: Whether to sync to ES (default True)
             sync_to_milvus: Whether to sync to Milvus (default True)
 
         Returns:
-            Synchronization statistics {"event_log": 1}
+            Synchronization statistics {"atomic_fact": 1}
         """
-        stats = {"event_log": 0, "es_records": 0}
+        stats = {"atomic_fact": 0, "es_records": 0}
 
         try:
             # Read existing vector from MongoDB
-            if not event_log.vector:
+            if not atomic_fact_record.vector:
                 logger.warning(
-                    f"Event log {event_log.id} has no embedding, skipping sync"
+                    f"Atomic fact {atomic_fact_record.id} has no embedding, skipping sync"
                 )
                 return stats
 
             # Sync to Milvus
             if sync_to_milvus:
                 # Use converter to generate Milvus entity
-                milvus_entity = EventLogMilvusConverter.from_mongo(event_log)
-                await self.eventlog_milvus_repo.insert(milvus_entity, flush=False)
-                stats["event_log"] += 1
-                logger.debug(f"Event log synced to Milvus: {event_log.id}")
+                milvus_entity = AtomicFactMilvusConverter.from_mongo(atomic_fact_record)
+                await self.atomic_fact_milvus_repo.insert(milvus_entity, flush=False)
+                stats["atomic_fact"] += 1
+                logger.debug(f"Atomic fact synced to Milvus: {atomic_fact_record.id}")
 
             # Sync to ES
             if sync_to_es:
                 # Use converter to generate correct ES document (including jieba tokenized search_content)
-                es_doc = EventLogConverter.from_mongo(event_log)
-                await self.eventlog_es_repo.create(es_doc)
+                es_doc = AtomicFactConverter.from_mongo(atomic_fact_record)
+                await self.atomic_fact_es_repo.create(es_doc)
                 stats["es_records"] += 1
-                logger.debug(f"Event log synced to ES: {event_log.id}")
+                logger.debug(f"Atomic fact synced to ES: {atomic_fact_record.id}")
 
         except Exception as e:
-            logger.error(f"Failed to sync event log: {e}", exc_info=True)
+            logger.error(f"Failed to sync atomic fact: {e}", exc_info=True)
             raise
 
         return stats
@@ -227,41 +227,41 @@ class MemorySyncService:
 
         return total_stats
 
-    async def sync_batch_event_logs(
+    async def sync_batch_atomic_facts(
         self,
-        event_logs: List[EventLogRecord],
+        atomic_facts: List[AtomicFactRecord],
         sync_to_es: bool = True,
         sync_to_milvus: bool = True,
     ) -> Dict[str, int]:
-        """Batch synchronize event logs
+        """Batch synchronize atomic facts
 
         Args:
-            event_logs: List of EventLogRecord
+            atomic_facts: List of AtomicFactRecord
             sync_to_es: Whether to sync to ES (default True)
             sync_to_milvus: Whether to sync to Milvus (default True)
 
         Returns:
             Synchronization statistics
         """
-        total_stats = {"event_log": 0, "es_records": 0}
+        total_stats = {"atomic_fact": 0, "es_records": 0}
 
-        for evt_log in event_logs:
+        for fact_record in atomic_facts:
             try:
-                stats = await self.sync_event_log(
-                    evt_log, sync_to_es=sync_to_es, sync_to_milvus=sync_to_milvus
+                stats = await self.sync_atomic_fact(
+                    fact_record, sync_to_es=sync_to_es, sync_to_milvus=sync_to_milvus
                 )
-                total_stats["event_log"] += stats.get("event_log", 0)
+                total_stats["atomic_fact"] += stats.get("atomic_fact", 0)
                 total_stats["es_records"] += stats.get("es_records", 0)
             except Exception as e:
                 logger.error(
-                    f"Failed to batch sync event log: {evt_log.id}, error: {e}",
+                    f"Failed to batch sync atomic fact: {fact_record.id}, error: {e}",
                     exc_info=True,
                 )
                 # Do not silently swallow exceptions, let it surface
                 raise
 
         logger.info(
-            f"✅ Event log Milvus flush completed: {total_stats['event_log']} records"
+            f"Atomic fact Milvus flush completed: {total_stats['atomic_fact']} records"
         )
 
         return total_stats

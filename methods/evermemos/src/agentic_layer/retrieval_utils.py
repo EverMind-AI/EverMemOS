@@ -20,38 +20,6 @@ from .vectorize_service import get_vectorize_service
 logger = logging.getLogger(__name__)
 
 
-def _safe_cosine_similarity(
-    query_vec: np.ndarray, query_norm: float, candidate: Any
-) -> Optional[float]:
-    """Compute cosine similarity for a candidate without raising."""
-    if query_norm <= 0:
-        return None
-
-    try:
-        candidate_extend = getattr(candidate, "extend", None)
-        if not isinstance(candidate_extend, dict):
-            return None
-
-        doc_vec = np.asarray(candidate_extend.get("embedding", []), dtype=float)
-        if doc_vec.size == 0:
-            return None
-
-        if doc_vec.shape != query_vec.shape:
-            return None
-
-        doc_norm = np.linalg.norm(doc_vec)
-        if doc_norm <= 0:
-            return None
-
-        similarity = float(np.dot(query_vec, doc_vec) / (query_norm * doc_norm))
-        if np.isnan(similarity) or np.isinf(similarity):
-            return None
-
-        return similarity
-    except (TypeError, ValueError):
-        return None
-
-
 def build_bm25_index(candidates):
     """Build BM25 index (supports Chinese and English)"""
     try:
@@ -202,23 +170,25 @@ async def lightweight_retrieval(
     emb_results = []
     try:
         vectorize_service = get_vectorize_service()
-        query_vec = np.asarray(
-            await vectorize_service.get_embedding(query), dtype=float
-        )
+        query_vec = await vectorize_service.get_embedding(query)
         query_norm = np.linalg.norm(query_vec)
 
         if query_norm > 0:
             scores = []
             for mem in candidates:
-                sim = _safe_cosine_similarity(query_vec, query_norm, mem)
-                if sim is not None:
-                    scores.append((mem, sim))
+                try:
+                    doc_vec = np.array(mem.extend.get("embedding", []))
+                    if len(doc_vec) > 0:
+                        doc_norm = np.linalg.norm(doc_vec)
+                        if doc_norm > 0:
+                            sim = np.dot(query_vec, doc_vec) / (query_norm * doc_norm)
+                            scores.append((mem, float(sim)))
+                except:
+                    continue
 
             emb_results = sorted(scores, key=lambda x: x[1], reverse=True)[:emb_top_n]
     except Exception as e:
-        logger.warning(
-            "Embedding retrieval failed in lightweight_retrieval, falling back: %s", e
-        )
+        pass
 
     metadata["emb_count"] = len(emb_results)
 
@@ -470,16 +440,16 @@ async def rerank_candidates(
                 hit["summary"] = getattr(doc, "summary", "")
                 hit["subject"] = getattr(doc, "subject", "")
 
-                # Try to extract event_log (if exists)
-                if hasattr(doc, "event_log"):
-                    event_log = doc.event_log
-                    if isinstance(event_log, dict):
-                        hit["event_log"] = event_log
-                    elif event_log:
+                # Try to extract atomic_fact (if exists)
+                if hasattr(doc, "atomic_fact"):
+                    atomic_fact_val = doc.atomic_fact
+                    if isinstance(atomic_fact_val, dict):
+                        hit["atomic_fact"] = atomic_fact_val
+                    elif atomic_fact_val:
                         # If it's an object, convert to dictionary
-                        hit["event_log"] = {
-                            "atomic_fact": getattr(event_log, "atomic_fact", []),
-                            "time": getattr(event_log, "time", ""),
+                        hit["atomic_fact"] = {
+                            "atomic_fact": getattr(atomic_fact_val, "atomic_fact", []),
+                            "time": getattr(atomic_fact_val, "time", ""),
                         }
 
             candidates_for_rerank.append(hit)
@@ -530,7 +500,7 @@ async def agentic_retrieval(
 
     Process:
     1. Round 1: Hybrid retrieval → Top 20
-    2. Rerank → Top 5 → LLM judge sufficiency
+    2. Rerank → Top 10 → LLM judge sufficiency
     3. If sufficient: return original Top 20
     4. If insufficient:
        - LLM generates multiple improved queries (2-3)
@@ -616,9 +586,9 @@ async def agentic_retrieval(
         metadata["total_latency_ms"] = (time.time() - start_time) * 1000
         return [], metadata
 
-    # ========== Rerank Top 20 → Top 5 for Sufficiency Check ==========
+    # ========== Rerank Top 20 → Top 10 for Sufficiency Check ==========
     if config.use_reranker:
-        logger.info("Reranking Top 20 to get Top 5 for sufficiency check...")
+        logger.info("Reranking Top 20 to get Top 10 for sufficiency check...")
 
         try:
             rerank_service = get_rerank_service()
@@ -633,14 +603,14 @@ async def agentic_retrieval(
             logger.info(f"Rerank: Got Top {len(reranked_top5)} for sufficiency check")
 
         except Exception as e:
-            logger.error(f"Rerank failed: {e}, using original Top 5")
+            logger.error(f"Rerank failed: {e}, using original Top 10")
             reranked_top5 = round1_results[: config.round1_rerank_top_n]
             metadata["round1_reranked_count"] = len(reranked_top5)
     else:
-        # No reranker, directly take first 5
+        # No reranker, directly take first 10
         reranked_top5 = round1_results[: config.round1_rerank_top_n]
         metadata["round1_reranked_count"] = len(reranked_top5)
-        logger.info("No Rerank: Using original Top 5 for sufficiency check")
+        logger.info("No Rerank: Using original Top 10 for sufficiency check")
 
     if not reranked_top5:
         logger.warning("No results for sufficiency check, returning Round 1 results")
@@ -648,7 +618,7 @@ async def agentic_retrieval(
         return round1_results, metadata
 
     # ========== LLM Sufficiency Check ==========
-    logger.info("LLM: Checking sufficiency on Top 5...")
+    logger.info("LLM: Checking sufficiency on Top 10...")
 
     try:
         is_sufficient, reasoning, missing_info = await check_sufficiency(

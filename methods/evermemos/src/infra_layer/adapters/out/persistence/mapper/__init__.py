@@ -3,8 +3,8 @@
 Persistence layer mappers
 """
 
-from infra_layer.adapters.out.persistence.mapper.memory_request_log_mapper import (
-    MemoryRequestLogMapper,
+from infra_layer.adapters.out.persistence.mapper.raw_message_mapper import (
+    RawMessageMapper,
 )
 
-__all__ = ["MemoryRequestLogMapper"]
+__all__ = ["RawMessageMapper"]

@@ -67,6 +67,12 @@ class TenantDetail:
     tenant_info: Optional[Dict[str, Any]] = field(default=None)
     storage_info: Optional[Dict[str, Any]] = field(default=None)
 
+    # Isolation mode: "shared" (logical isolation, default) or "exclusive" (physical isolation).
+    # Both modes inject tenant_id on all reads and writes (interceptor behavior is identical).
+    # The difference is storage-level: shared uses common tables/indices, exclusive uses dedicated ones.
+    # Default "shared" — all new tenants use shared mode.
+    isolation_mode: str = field(default="shared")
+
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert TenantDetail to dictionary
@@ -74,7 +80,11 @@ class TenantDetail:
         Returns:
             Dict[str, Any]: Dictionary containing tenant_info and storage_info
         """
-        return {'tenant_info': self.tenant_info, 'storage_info': self.storage_info}
+        return {
+            'tenant_info': self.tenant_info,
+            'storage_info': self.storage_info,
+            'isolation_mode': self.isolation_mode,
+        }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'TenantDetail':
@@ -88,7 +98,9 @@ class TenantDetail:
             TenantDetail: Newly created instance
         """
         return cls(
-            tenant_info=data.get('tenant_info'), storage_info=data.get('storage_info')
+            tenant_info=data.get('tenant_info'),
+            storage_info=data.get('storage_info'),
+            isolation_mode=data.get('isolation_mode', 'shared'),
         )
 
 
@@ -111,6 +123,11 @@ class TenantInfo:
     tenant_detail: TenantDetail
     origin_tenant_data: Dict[str, Any] = field(default_factory=dict)
     tenant_info_patch: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def is_shared_mode(self) -> bool:
+        """Whether this tenant uses shared (logical) isolation mode."""
+        return self.tenant_detail.isolation_mode == "shared"
 
     def get_storage_info(self, storage_type: str) -> Optional[Dict[str, Any]]:
         """

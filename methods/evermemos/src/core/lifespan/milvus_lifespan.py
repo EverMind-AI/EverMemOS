@@ -19,13 +19,13 @@ logger = get_logger(__name__)
 class MilvusLifespanProvider(LifespanProvider):
     """Milvus lifespan provider"""
 
-    def __init__(self, name: str = "milvus", order: int = 20):
+    def __init__(self, name: str = "milvus", order: int = 18):
         """
         Initialize Milvus lifespan provider
 
         Args:
             name (str): Provider name
-            order (int): Execution order, Milvus starts after database connections
+            order (int): Execution order, must start before business_lifespan(20)
         """
         super().__init__(name, order)
         self._milvus_factory = None

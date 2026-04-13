@@ -181,7 +181,7 @@ class AliasSupportDoc(DocBase):
 
 def AliasDoc(
     doc_name: str,
-    number_of_shards: int = 2,
+    number_of_shards: int = 3,
     number_of_replicas: int = 1,
     refresh_interval: str = "10s",
 ) -> Type[AsyncDocument]:

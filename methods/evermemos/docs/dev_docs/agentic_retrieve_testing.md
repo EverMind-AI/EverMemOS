@@ -19,7 +19,7 @@ This document explains how to test the Agentic retrieval feature of the V1 API. 
 ### API Endpoint
 
 ```
-POST /api/v1/memories/search
+POST /api/v0/memories/search
 ```
 
 ### Request Format

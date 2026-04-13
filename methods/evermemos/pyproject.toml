@@ -47,12 +47,14 @@ dependencies = [
     "asyncpg>=0.29.0",
     "psycopg[binary,pool]>=3.1.0",
     # MongoDB ODM - MongoDB Object Document Mapper
-    "beanie>=1.26.0",  # Async MongoDB ODM based on Pydantic
-    "pymongo>=4.15.4",  # Official MongoDB Python driver (Beanie's underlying dependency)
+    "beanie>=1.26.0,<3",  # Async MongoDB ODM based on Pydantic (pin major to avoid breaking changes)
+    "pymongo>=4.15.4,<5",  # Official MongoDB Python driver (pin major: 5.x has breaking changes)
     # Elasticsearch
-    "elasticsearch-dsl[async]>=8.17.1,<9",
+    "elasticsearch>=8.17.0,<9",  # ES Python client (pin major: 9.x may change perform_request API)
+    "elasticsearch-dsl[async]>=8.17.1,<9",  # ES DSL (pin major, must match elasticsearch major)
+    "elastic-transport>=8.17.0,<9",  # ES transport layer (pin major, transport API stability)
     # Milvus
-    "pymilvus~=2.5.0",
+    "pymilvus>=2.5.0,<2.6",  # Pin minor: 2.6.x may change Collection/search API
     # Tokenization
     "jieba==0.42.1",
     # Graph Processing
@@ -124,6 +126,7 @@ dev = [
     "isort>=6.0.1",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.0.0",
     "nest-asyncio",
     "typer",
     "pyinstrument",
@@ -159,7 +162,7 @@ evaluation = [
 # Evaluation + all online API clients (full testing environment)
 evaluation-full = [
     {include-group = "evaluation"},
-    # Online Memory Systems API clients
+    # Online Memory Systems API 客户端
     "mem0ai>=1.0.0",          # Mem0
     "zep-cloud>=2.0.0",       # Zep
 ]

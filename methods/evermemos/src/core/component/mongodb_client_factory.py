@@ -158,6 +158,21 @@ class MongoDBClientWrapper:
                     len(writable_models),
                 )
                 if writable_models:
+                    model_info_list = []
+                    for model in writable_models:
+                        try:
+                            collection_name = (
+                                model.get_collection_name()
+                                if hasattr(model, 'get_collection_name')
+                                else "unknown"
+                            )
+                        except Exception:
+                            collection_name = "unknown"
+                        model_info_list.append(f"{model.__name__} -> {collection_name}")
+                    logger.info(
+                        "📋 Writable models to initialize: [%s]",
+                        ", ".join(model_info_list),
+                    )
                     await init_beanie(
                         database=self.database,
                         document_models=writable_models,
@@ -170,6 +185,21 @@ class MongoDBClientWrapper:
                     len(readonly_models),
                 )
                 if readonly_models:
+                    model_info_list = []
+                    for model in readonly_models:
+                        try:
+                            collection_name = (
+                                model.get_collection_name()
+                                if hasattr(model, 'get_collection_name')
+                                else "unknown"
+                            )
+                        except Exception:
+                            collection_name = "unknown"
+                        model_info_list.append(f"{model.__name__} -> {collection_name}")
+                    logger.info(
+                        "📋 Readonly models to initialize: [%s]",
+                        ", ".join(model_info_list),
+                    )
                     await init_beanie(
                         database=self.database,
                         document_models=readonly_models,

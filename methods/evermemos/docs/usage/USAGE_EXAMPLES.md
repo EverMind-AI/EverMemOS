@@ -24,7 +24,7 @@ Before using these examples, ensure you have:
 1. **Completed installation** - See [Setup Guide](../installation/SETUP.md)
 2. **Started the API server**:
    ```bash
-   uv run python src/run.py --port 1995
+   uv run python src/run.py --port 8001
    ```
 3. **Configured .env** with required API keys
 
@@ -45,7 +45,7 @@ The fastest way to experience EverMemOS! Just 2 steps to see memory storage and 
 
 ```bash
 # Terminal 1: Start the API server
-uv run python src/run.py --port 1995
+uv run python src/run.py --port 8001
 
 # Terminal 2: Run the simple demo
 uv run python src/bootstrap.py demo/simple_demo.py
@@ -82,7 +82,7 @@ Experience the complete EverMemOS workflow: memory extraction from conversations
 
 ```bash
 # Terminal 1: Start the API server (required)
-uv run python src/run.py --port 1995
+uv run python src/run.py --port 8001
 ```
 
 > 💡 **Tip**: Keep the API server running throughout. All following operations should be performed in another terminal.
@@ -102,7 +102,7 @@ uv run python src/bootstrap.py demo/extract_memory.py
 
 1. Calls `demo.tools.clear_all_data.clear_all_memories()` so the demo starts from an empty MongoDB/Elasticsearch/Milvus/Redis state. Ensure the dependency stack launched by `docker-compose` is running before executing the script, otherwise the wipe step will fail.
 
-2. Loads `data/assistant_chat_zh.json`, appends `scene="assistant"` to each message, and streams every entry to `http://localhost:1995/api/v1/memories`.
+2. Loads `data/solo_chat_zh.json`, appends `scene="solo"` to each message, and streams every entry to `http://localhost:8001/api/v0/memories`.
 
 3. Update the `base_url`, `data_file`, or `profile_scene` constants in `demo/extract_memory.py` if you host the API on another endpoint or want to ingest a different scenario.
 
@@ -225,7 +225,7 @@ Use the Memory API to integrate EverMemOS into your application.
 **Start the API Server:**
 
 ```bash
-uv run python src/run.py --port 1995
+uv run python src/run.py --port 8001
 ```
 
 > 💡 **Tip**: Keep the API server running throughout. All following API calls should be performed in another terminal.
@@ -234,12 +234,12 @@ uv run python src/run.py --port 1995
 
 ### Store Single Message Memory
 
-Use the `/api/v1/memories` endpoint to store individual messages:
+Use the `/api/v0/memories` endpoint to store individual messages:
 
 **Minimal Example (Required Fields Only):**
 
 ```bash
-curl -X POST http://localhost:1995/api/v1/memories \
+curl -X POST http://localhost:8001/api/v0/memories \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
@@ -252,7 +252,7 @@ curl -X POST http://localhost:1995/api/v1/memories \
 **With Optional Fields:**
 
 ```bash
-curl -X POST http://localhost:1995/api/v1/memories \
+curl -X POST http://localhost:8001/api/v0/memories \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
@@ -271,8 +271,8 @@ curl -X POST http://localhost:1995/api/v1/memories \
 
 ### API Endpoints
 
-- **`POST /api/v1/memories`**: Store single message memory
-- **`GET /api/v1/memories/search`**: Memory retrieval (supports keyword/vector/hybrid search modes)
+- **`POST /api/v0/memories`**: Store single message memory
+- **`GET /api/v0/memories/search`**: Memory retrieval (supports keyword/vector/hybrid search modes)
 
 For complete API documentation, see [Memory API Documentation](../api_docs/memory_api.md).
 
@@ -293,7 +293,7 @@ Fast retrieval for latency-sensitive scenarios.
 | `query` | Yes* | Natural language query (*optional for profile type) |
 | `user_id` | No* | User ID |
 | `group_id` | No* | Group ID |
-| `memory_types` | No | `["episodic_memory"]` / `["event_log"]` / `["foresight"]` (default: `["episodic_memory"]`) |
+| `memory_types` | No | `["episodic_memory"]` / `["atomic_fact"]` / `["foresight"]` (default: `["episodic_memory"]`) |
 | `retrieve_method` | No | `keyword` / `vector` / `hybrid` / `rrf` (recommended) / `agentic` |
 | `current_time` | No | Filter valid foresight (format: ISO 8601) |
 | `top_k` | No | Number of results (default: 40, max: 100) |
@@ -303,7 +303,7 @@ Fast retrieval for latency-sensitive scenarios.
 **Example 1: Personal Memory**
 
 ```bash
-curl -X GET http://localhost:1995/api/v1/memories/search \
+curl -X GET http://localhost:8001/api/v0/memories/search \
   -H "Content-Type: application/json" \
   -d '{
     "query": "What sports does the user like?",
@@ -316,7 +316,7 @@ curl -X GET http://localhost:1995/api/v1/memories/search \
 **Example 2: Group Memory**
 
 ```bash
-curl -X GET http://localhost:1995/api/v1/memories/search \
+curl -X GET http://localhost:8001/api/v0/memories/search \
   -H "Content-Type: application/json" \
   -d '{
     "query": "Discuss project progress",
@@ -341,30 +341,30 @@ See the dedicated [Batch Operations Guide](BATCH_OPERATIONS.md) for complete inf
 ```bash
 # Batch store group chat messages (Chinese data)
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat_zh.json \
-  --api-url http://localhost:1995/api/v1/memories \
-  --scene group_chat
+  --input data/team_chat_zh.json \
+  --api-url http://localhost:8001/api/v0/memories \
+  --scene team
 
 # Or use English data
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat_en.json \
-  --api-url http://localhost:1995/api/v1/memories \
-  --scene group_chat
+  --input data/team_chat_en.json \
+  --api-url http://localhost:8001/api/v0/memories \
+  --scene team
 
 # Validate file format
 uv run python src/bootstrap.py src/run_memorize.py \
-  --input data/group_chat_en.json \
-  --scene group_chat \
+  --input data/team_chat_en.json \
+  --scene team \
   --validate-only
 ```
 
 > ℹ️ **Scene Parameter Explanation**: The `scene` parameter is required and specifies the memory extraction strategy:
-> - Use `assistant` for one-on-one conversations with AI assistant
-> - Use `group_chat` for multi-person group discussions
+> - Use `solo` for one-on-one conversations with AI assistant
+> - Use `team` for multi-person group discussions
 
 For complete details, see:
 - [Batch Operations Guide](BATCH_OPERATIONS.md)
-- [Group Chat Format Specification](../../data_format/group_chat/group_chat_format.md)
+- [Conversation Format Specification](../../data_format/conversation/conversation_format.md)
 
 ---
 
@@ -378,19 +378,19 @@ Use EverMemOS in your Python applications:
 import requests
 
 class EverMemOSClient:
-    def __init__(self, base_url="http://localhost:1995"):
+    def __init__(self, base_url="http://localhost:8001"):
         self.base_url = base_url
 
     def store_memory(self, message):
         """Store a single message memory."""
-        url = f"{self.base_url}/api/v1/memories"
+        url = f"{self.base_url}/api/v0/memories"
         response = requests.post(url, json=message)
         response.raise_for_status()
         return response.json()
 
     def search_memories(self, query, user_id=None, **kwargs):
         """Search for relevant memories."""
-        url = f"{self.base_url}/api/v1/memories/search"
+        url = f"{self.base_url}/api/v0/memories/search"
         params = {"query": query, **kwargs}
         if user_id:
             params["user_id"] = user_id

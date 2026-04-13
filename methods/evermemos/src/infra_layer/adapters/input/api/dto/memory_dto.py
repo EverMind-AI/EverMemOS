@@ -10,70 +10,51 @@ These models are re-exported from api_specs.dtos for backward compatibility.
 from api_specs.dtos import (
     # Base API Response
     BaseApiResponse,
+    # Add / Flush DTOs
+    PersonalAddRequest,
+    GroupAddRequest,
+    PersonalFlushRequest,
+    GroupFlushRequest,
+    AddResult,
+    AddResponse,
+    FlushResult,
+    FlushResponse,
     # Command DTOs
-    MemorizeMessageRequest,
     DeleteMemoriesRequest as DeleteMemoriesRequestDTO,
     # Request DTOs
-    FetchMemRequest,
     RetrieveMemRequest,
-    UserDetail,
-    ConversationMetaCreateRequest,
-    ConversationMetaGetRequest,
-    ConversationMetaPatchRequest,
     # Response DTOs (result data)
-    FetchMemResponse,
     RetrieveMemResponse,
-    ConversationMetaResponse,
-    PatchConversationMetaResult,
     DeleteMemoriesResult,
-    MemorizeResult,
     # API Response wrappers
-    MemorizeResponse,
-    FetchMemoriesResponse,
     SearchMemoriesResponse,
-    GetConversationMetaResponse,
-    SaveConversationMetaResponse,
-    PatchConversationMetaResponse,
-    DeleteMemoriesResponse,
 )
 
 # Backward compatibility aliases
-FetchMemoriesParams = FetchMemRequest
 SearchMemoriesRequest = RetrieveMemRequest
-UserDetailRequest = UserDetail
-DeleteMemoriesRequest = DeleteMemoriesRequestDTO
 
 __all__ = [
     # Base Response
     "BaseApiResponse",
+    # Add / Flush DTOs
+    "PersonalAddRequest",
+    "GroupAddRequest",
+    "PersonalFlushRequest",
+    "GroupFlushRequest",
+    "AddResult",
+    "AddResponse",
+    "FlushResult",
+    "FlushResponse",
     # Command DTOs
-    "MemorizeMessageRequest",
     "DeleteMemoriesRequest",
     "DeleteMemoriesRequestDTO",
     # Query DTOs (Requests)
-    "FetchMemRequest",
     "RetrieveMemRequest",
-    "UserDetail",
-    "ConversationMetaCreateRequest",
-    "ConversationMetaGetRequest",
-    "ConversationMetaPatchRequest",
     # Response DTOs (result data)
-    "FetchMemResponse",
     "RetrieveMemResponse",
-    "ConversationMetaResponse",
-    "PatchConversationMetaResult",
     "DeleteMemoriesResult",
-    "MemorizeResult",
     # API Response wrappers
-    "MemorizeResponse",
-    "FetchMemoriesResponse",
     "SearchMemoriesResponse",
-    "GetConversationMetaResponse",
-    "SaveConversationMetaResponse",
-    "PatchConversationMetaResponse",
-    "DeleteMemoriesResponse",
     # Backward compatibility aliases
-    "FetchMemoriesParams",
     "SearchMemoriesRequest",
-    "UserDetailRequest",
 ]

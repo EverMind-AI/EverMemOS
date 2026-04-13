@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from api_specs.memory_types import ScenarioType
 
 load_dotenv()
 
@@ -23,7 +24,7 @@ class ExperimentConfig:
     cluster_max_time_gap_days: float = 7.0
 
     # Profile configuration
-    profile_scenario: str = "assistant"  # group_chat or assistant
+    profile_scenario: str = ScenarioType.SOLO.value  # solo or team
     profile_min_confidence: float = 0.6
     profile_min_memcells: int = 1
 
@@ -73,7 +74,7 @@ class ExperimentConfig:
 
     # Stage4 parameter: select top-k from event_ids to build context
     response_top_k: int = 10
-    
+
     llm_service: str = "openai"  # openai, vllm
     llm_config: dict = {
         "openai": {

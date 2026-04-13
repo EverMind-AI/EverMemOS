@@ -19,7 +19,9 @@ Use cases:
 from typing import TypeVar, Callable, Optional, Union
 from core.observation.logger import get_logger
 from core.tenants.tenant_contextvar import get_current_tenant
-from core.tenants.tenant_config import get_tenant_config
+from core.tenants.tenant_config import (
+    get_tenant_config,
+)  # still needed for app_ready check
 from core.tenants.tenant_models import TenantPatchKey
 
 logger = get_logger(__name__)
@@ -37,10 +39,9 @@ def get_or_compute_tenant_cache(
     Get or compute tenant cache value (supports lazy evaluation fallback)
 
     This is a generic tenant-aware cache function that encapsulates common caching patterns:
-    1. Check if in non-tenant mode -> if yes, return fallback (lazy evaluation)
-    2. Get tenant information -> if not available, return fallback (lazy evaluation)
-    3. Check patch cache -> if hit, return cached value
-    4. Call compute_func to calculate new value -> cache to patch -> return new value
+    1. Get tenant information -> if not available, return fallback (lazy evaluation)
+    2. Check patch cache -> if hit, return cached value
+    3. Call compute_func to calculate new value -> cache to patch -> return new value
 
     Performance optimization:
     - Fallback supports lazy evaluation: fallback function is only called when actually needed
@@ -49,7 +50,7 @@ def get_or_compute_tenant_cache(
     Args:
         patch_key: TenantPatchKey enum value, used to identify the cache item
         compute_func: Computation function, called when cache miss occurs. Should be a parameterless Callable
-        fallback: Fallback value when not in tenant mode or no tenant context (optional)
+        fallback: Fallback value when no tenant context is available (optional)
                  - Can be a concrete value (e.g., "default")
                  - Or a parameterless function (lazy evaluation, e.g., lambda: get_default_database_name())
         cache_description: Description of the cache item, used for logging (optional, default is "value")
@@ -58,7 +59,7 @@ def get_or_compute_tenant_cache(
         T: Cached value or computed value
 
     Raises:
-        RuntimeError: If fallback is None and in non-tenant mode or without tenant context
+        RuntimeError: If fallback is None and no tenant context is available
 
     Usage examples:
         >>> # Example 1: Get tenant-aware connection alias (fallback is a concrete value)
@@ -89,21 +90,7 @@ def get_or_compute_tenant_cache(
     try:
         config = get_tenant_config()
 
-        # Step 1: Non-tenant mode -> return fallback value (lazy evaluation)
-        if config.non_tenant_mode:
-            fallback_value = _resolve_fallback(fallback, cache_description)
-            if fallback_value is None:
-                raise RuntimeError(
-                    f"fallback parameter must be provided in non-tenant mode [cache_key={patch_key.value}]"
-                )
-            logger.debug(
-                "⚠️ Non-tenant mode, using fallback %s [fallback=%s]",
-                cache_description,
-                fallback_value,
-            )
-            return fallback_value
-
-        # Step 2: Get tenant information
+        # Step 1: Get tenant information
         tenant_info = get_current_tenant()
         if not tenant_info:
             # Strict check mode: after app startup, tenant context must exist in tenant mode

@@ -43,7 +43,7 @@ class RequestHistoryEvent(BaseEvent):
         ...     endpoint_name="create_user",
         ...     controller_name="UserController",
         ...     method="POST",
-        ...     url="http://localhost:8000/api/v1/users?page=1",
+        ...     url="http://localhost:8000/api/v0/users?page=1",
         ...     headers={"Content-Type": "application/json"},
         ...     body='{"name": "John"}',
         ... )
