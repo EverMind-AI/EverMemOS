@@ -30,7 +30,6 @@
 - [Evaluation & Benchmarking](#evaluation--benchmarking)
 - [Documentation](#documentation)
 - [GitHub Codespaces](#github-codespaces)
-- [Community](#community)
 - [Citation](#citation)
 - [Contributing](#contributing)
 
@@ -44,25 +43,25 @@ EverOS is built around two pillars — **Methods** give agents memory and evolut
 
 ```
 EverOS/
-└── benchmarks/
+├── benchmarks/
 │   ├── evermembench/        # Memory quality evaluation
 │   └── evoagentbench/       # Agent self-evolution evaluation
-├── methods/
-│   ├── everos/             # Long-term memory operating system
-│   └── hypermem/           # Hypergraph memory architecture
+└── methods/
+    ├── everos/              # Long-term memory operating system
+    └── hypermem/            # Hypergraph memory architecture
 ```
 
 <br>
 
-### EverMind Ecosystem
+<!-- ### EverMind Ecosystem
 
 Large language models are evolving from single-turn chatbots to long-lived interactive agents. But when an agent needs to stay coherent across weeks of conversation, it hits a hard ceiling: finite context windows and fragmented memory.
 
 Expanding the context window is not the answer — ultra-long contexts are expensive and degrade with distance. The future of long-term agents depends on **structured memory organization**.
 
-EverOS is a memory operating system that transforms unlimited interaction streams into a structured "digital brain" through a three-stage memory lifecycle: **episodic trace formation**, **semantic consolidation**, and **reconstructive recall** — enabling agents to continuously convert raw interactions into structured, evolving knowledge.
+EverOS is a memory operating system that transforms unlimited interaction streams into a structured "digital brain" through a three-stage memory lifecycle: **episodic trace formation**, **semantic consolidation**, and **reconstructive recall** — enabling agents to continuously convert raw interactions into structured, evolving knowledge. -->
 
-<div align="center">
+<!-- <div align="center">
 
 Benchmark Stats
 
@@ -74,7 +73,7 @@ Benchmark Stats
   </tr>
 </table>
 
-</div>
+</div> -->
 
 ### Methods
 
@@ -147,7 +146,7 @@ Agent self-evolution evaluation — not static snapshots, but longitudinal growt
 
 ### Memory Performance
 
-<div align="center">
+<!-- <div align="center"> -->
 
 | System | LoCoMo | LongMemEval-S |
 | :--- | :----: | :----: |
@@ -157,7 +156,7 @@ Agent self-evolution evaluation — not static snapshots, but longitudinal growt
 | MemOS | 74.2% | — |
 | Zep | 71.6% | — |
 
-</div>
+<!-- </div> -->
 
 ### Self-Evolution Gains
 
@@ -556,16 +555,8 @@ Read our [Contribution Guidelines][contributing-doc] for code standards and Git 
 [benchmark-image]: figs/benchmark_2.png
 
 <!-- Badges -->
-[license-badge]: https://img.shields.io/badge/License-Apache%202.0-blue?labelColor=gray&style=flat-square
-[arxiv-evermemos-badge]: https://img.shields.io/badge/arXiv-EverOS-b31b1b?style=flat-square&logo=arxiv&logoColor=white
-[arxiv-hypermem-badge]: https://img.shields.io/badge/arXiv-HyperMem-b31b1b?style=flat-square&logo=arxiv&logoColor=white
-[arxiv-evermembench-badge]: https://img.shields.io/badge/arXiv-EverMemBench-b31b1b?style=flat-square&logo=arxiv&logoColor=white
-[hf-badge]: https://img.shields.io/badge/🤗_EverMemBench--Dynamic-F5C842?style=flat-square
-[deepwiki-badge]: https://deepwiki.com/badge.svg
 [back-to-top]: https://img.shields.io/badge/-Back_to_top-gray?style=flat-square
 [codespaces-badge]: https://github.com/codespaces/badge.svg
-[discord-members-badge]: https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv10%2Finvites%2FgYep5nQRZJ%3Fwith_counts%3Dtrue&query=%24.approximate_presence_count&suffix=%20online&label=Discord&color=404EED&style=flat-square&logo=discord&logoColor=white
-[wechat-badge]: https://img.shields.io/badge/WeChat-EverMind-07C160?style=flat-square&logo=wechat&logoColor=white
 
 <!-- Primary Links -->
 [license]: https://github.com/EverMind-AI/EverOS/blob/main/LICENSE
