@@ -87,7 +87,7 @@ Benchmark Stats
 
 A self-organizing memory operating system inspired by biological imprinting. Extracts, structures, and retrieves long-term knowledge from conversations — enabling agents to remember, understand, and continuously evolve.
 
-[Paper][arxiv-evermemos-link] · [Docs](methods/evermemos/)
+[Paper][arxiv-everos-link] · [Docs](methods/everos/)
 
 </td>
 <td width="50%">
@@ -258,17 +258,17 @@ Then navigate to the component you need:
 
 | | Use Case | Entry Point |
 | :-- | :--- | :--- |
-| **EverMemos** | Build agents with long-term memory | [methods/evermemos/](methods/evermemos/) |
+| **everos** | Build agents with long-term memory | [methods/everos/](methods/everos/) |
 | **HyperMem** | Use the hypergraph memory architecture | [methods/hypermem/](methods/hypermem/) |
 | **EverMemBench** | Evaluate memory system quality | [benchmarks/evermembench/](benchmarks/evermembench/) |
 | **EvoAgentBench** | Measure agent self-evolution | [benchmarks/evoagentbench/](benchmarks/evoagentbench/) |
 
 > Each component has its own installation guide, dependency configuration, and usage examples.
 
-### EverMemos Quick Start
+### everos Quick Start
 
 ```bash
-cd methods/evermemos
+cd methods/everos
 
 # Start Docker services
 docker compose up -d
@@ -386,13 +386,13 @@ EverOS achieves **93% overall accuracy** on the LoCoMo benchmark, outperforming 
 uv sync --group evaluation
 
 # Run smoke test (quick verification)
-uv run python -m evaluation.cli --dataset locomo --system evermemos --smoke
+uv run python -m evaluation.cli --dataset locomo --system everos --smoke
 
 # Run full evaluation
-uv run python -m evaluation.cli --dataset locomo --system evermemos
+uv run python -m evaluation.cli --dataset locomo --system everos
 
 # View results
-cat evaluation/results/locomo-evermemos/report.txt
+cat evaluation/results/locomo-everos/report.txt
 ```
 
 [Full Evaluation Guide][evaluation-guide] · [Complete Results][evaluation-results-link]
@@ -468,8 +468,8 @@ All infrastructure services (MongoDB, Elasticsearch, Milvus, Redis) start automa
 If EverOS helps your research, please cite:
 
 ```bibtex
-@article{evermemos2025,
-  title   = {EverMemOS: A Self-Organizing Memory Operating System for AI Agents},
+@article{everos2025,
+  title   = {everos: A Self-Organizing Memory Operating System for AI Agents},
   author  = {EverMind Team},
   journal = {arXiv preprint arXiv:2601.02163},
   year    = {2025}
@@ -564,16 +564,16 @@ Read our [Contribution Guidelines][contributing-doc] for code standards and Git 
 [deepwiki]: https://deepwiki.com/EverMind-AI/EverOS
 
 <!-- arXiv Links -->
-[arxiv-evermemos-link]: https://arxiv.org/abs/2601.02163
+[arxiv-everos-link]: https://arxiv.org/abs/2601.02163
 [arxiv-hypermem-link]: https://arxiv.org/abs/2604.08256
 [arxiv-evermembench-link]: https://arxiv.org/abs/2602.01313
 [hf-link]: https://huggingface.co/datasets/EverMind-AI/EverMemBench-Dynamic
 
 <!-- Use Case Links -->
-[usecase-openclaw-link]: https://github.com/EverMind-AI/EverMemOS/tree/agent_memory
-[usecase-openclaw-plugin-link]: https://github.com/EverMind-AI/EverMemOS/tree/agent_memory/evermemos-openclaw-plugin
+[usecase-openclaw-link]: https://github.com/EverMind-AI/everos/tree/agent_memory
+[usecase-openclaw-plugin-link]: https://github.com/EverMind-AI/everos/tree/agent_memory/everos-openclaw-plugin
 [ten-framework-link]: https://github.com/TEN-framework/ten-framework
-[usecase-live2d-link]: https://github.com/TEN-framework/ten-framework/tree/main/ai_agents/agents/examples/voice-assistant-with-EverMemOS
+[usecase-live2d-link]: https://github.com/TEN-framework/ten-framework/tree/main/ai_agents/agents/examples/voice-assistant-with-everos
 [usecase-computer-link]: https://screenshot-analysis-vercel.vercel.app/
 [usecase-got-link]: https://github.com/EverMind-AI/evermem_got_demo
 [usecase-claude-link]: https://github.com/EverMind-AI/evermem-claude-code
@@ -599,7 +599,7 @@ Read our [Contribution Guidelines][contributing-doc] for code standards and Git 
 [locomo-link]: https://github.com/snap-research/locomo
 [longmemeval-link]: https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned
 [personamem-link]: https://huggingface.co/datasets/bowen-upenn/PersonaMem
-[evaluation-results-link]: https://huggingface.co/datasets/EverMind-AI/EverMemOS_Eval_Results
+[evaluation-results-link]: https://huggingface.co/datasets/EverMind-AI/everos_Eval_Results
 
 <!-- Infrastructure Links -->
 [codespaces-link]: https://github.com/features/codespaces
