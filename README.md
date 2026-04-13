@@ -44,11 +44,11 @@ EverOS is built around two pillars — **Methods** give agents memory and evolut
 ```
 EverOS/
 ├── benchmarks/
-│   ├── evermembench/        # Memory quality evaluation
-│   └── evoagentbench/       # Agent self-evolution evaluation
+│   ├── EverMemBench/        # Memory quality evaluation
+│   └── EvoAgentBench/       # Agent self-evolution evaluation
 └── methods/
     ├── everos/              # Long-term memory operating system
-    └── hypermem/            # Hypergraph memory architecture
+    └── HyperMem/            # Hypergraph memory architecture
 ```
 
 <br>
@@ -98,7 +98,7 @@ A self-organizing memory operating system inspired by biological imprinting. Ext
 
 A hypergraph-based hierarchical memory architecture that captures high-order associations through hyperedges. Organizes memory into topic, event, and fact layers for coarse-to-fine long-term conversation retrieval. LoCoMo 92.73%.
 
-[Paper][arxiv-hypermem-link] · [Docs](methods/hypermem/)
+[Paper][arxiv-hypermem-link] · [Docs](methods/HyperMem/)
 
 </td>
 </tr>
@@ -116,7 +116,7 @@ A hypergraph-based hierarchical memory architecture that captures high-order ass
 
 Three-layer memory quality evaluation: factual recall, applied reasoning, and personalized generalization. Evaluates memory systems and LLMs under a unified standard.
 
-[Paper][arxiv-evermembench-link] · [Dataset][hf-link] · [Docs](benchmarks/evermembench/)
+[Paper][arxiv-evermembench-link] · [Dataset][hf-link] · [Docs](benchmarks/EverMemBench/)
 
 </td>
 <td width="50%">
@@ -127,7 +127,7 @@ Three-layer memory quality evaluation: factual recall, applied reasoning, and pe
 
 Agent self-evolution evaluation — not static snapshots, but longitudinal growth curves. Measures transfer efficiency, error avoidance, and skill-hit quality through controlled experiments with and without evolution.
 
-[Docs](benchmarks/evoagentbench/)
+[Docs](benchmarks/EvoAgentBench/)
 
 </td>
 </tr>
@@ -259,9 +259,9 @@ Then navigate to the component you need:
 | | Use Case | Entry Point |
 | :-- | :--- | :--- |
 | **everos** | Build agents with long-term memory | [methods/everos/](methods/everos/) |
-| **HyperMem** | Use the hypergraph memory architecture | [methods/hypermem/](methods/hypermem/) |
-| **EverMemBench** | Evaluate memory system quality | [benchmarks/evermembench/](benchmarks/evermembench/) |
-| **EvoAgentBench** | Measure agent self-evolution | [benchmarks/evoagentbench/](benchmarks/evoagentbench/) |
+| **HyperMem** | Use the hypergraph memory architecture | [methods/HyperMem/](methods/HyperMem/) |
+| **EverMemBench** | Evaluate memory system quality | [benchmarks/EverMemBench/](benchmarks/EverMemBench/) |
+| **EvoAgentBench** | Measure agent self-evolution | [benchmarks/EvoAgentBench/](benchmarks/EvoAgentBench/) |
 
 > Each component has its own installation guide, dependency configuration, and usage examples.
 
