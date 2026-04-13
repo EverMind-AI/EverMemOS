@@ -146,8 +146,6 @@ Agent self-evolution evaluation — not static snapshots, but longitudinal growt
 
 ### Memory Performance
 
-<!-- <div align="center"> -->
-
 | System | LoCoMo | LongMemEval-S |
 | :--- | :----: | :----: |
 | **EverOS** | **93.05%** | **83.00%** |
@@ -156,11 +154,8 @@ Agent self-evolution evaluation — not static snapshots, but longitudinal growt
 | MemOS | 74.2% | — |
 | Zep | 71.6% | — |
 
-<!-- </div> -->
 
 ### Self-Evolution Gains
-
-<div align="center">
 
 | Task Type | Agent + LLM | Baseline | + EverOS Skills | Delta |
 | :--- | :--- | :----: | :----: | :----: |
@@ -169,7 +164,6 @@ Agent self-evolution evaluation — not static snapshots, but longitudinal growt
 | General (GDPVAL) | OpenClaw + Qwen3.5-397B | 29% | 69% | **+40%** |
 | General (GDPVAL) | OpenClaw + Qwen3.5-27B | 41% | 61% | **+20%** |
 
-</div>
 
 <br>
 <div align="right">
