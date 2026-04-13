@@ -450,6 +450,7 @@ class SearchMemoryService:
                     # keyword / vector / agentic → keep original logic
                     search_tasks.append(
                         self._search_episodic_memory(
+                            query=query,
                             query_words=query_words,
                             query_vector=query_vector,
                             method=method,
@@ -584,6 +585,7 @@ class SearchMemoryService:
 
     async def _search_episodic_memory(
         self,
+        query: str,
         query_words: List[str],
         query_vector: Optional[List[float]],
         method: str,
@@ -801,7 +803,7 @@ class SearchMemoryService:
                 stage_start = time.perf_counter()
                 rerank_service = get_rerank_service()
                 reranked_hits = await rerank_service.rerank_memories(
-                    query=query_words[0] if query_words else "",
+                    query=query,
                     hits=merged_hits,
                     top_k=top_k if top_k > 0 else DEFAULT_TOP_K,
                 )
@@ -860,7 +862,7 @@ class SearchMemoryService:
                 # Agentic: LLM-guided multi-round retrieval
                 with timed("agentic_retrieval"):
                     results = await self._search_agentic_episodic_memory(
-                        query_words=query_words,
+                        query=query,
                         filter_values=filter_values,
                         top_k=top_k,
                     )
@@ -971,7 +973,7 @@ class SearchMemoryService:
             return []
 
     async def _search_agentic_episodic_memory(
-        self, query_words: List[str], filter_values: Dict[str, Any], top_k: int
+        self, query: str, filter_values: Dict[str, Any], top_k: int
     ) -> List[SearchEpisodeItem]:
         """Search episodic memories using agentic retrieval (LLM-guided multi-round).
 
@@ -982,16 +984,13 @@ class SearchMemoryService:
         - Final rerank and merge
 
         Args:
-            query_words: Query words for search
+            query: Original search query text (passed through to embedding/rerank/LLM)
             filter_values: Filter values dict
             top_k: Max results to return
 
         Returns:
             List of SearchEpisodeItem with agentic retrieval results
         """
-        # Build query from query_words
-        query = " ".join(query_words) if query_words else ""
-
         # Build RetrieveMemRequest for MemoryManager
         retrieve_request = RetrieveMemRequest(
             query=query,
@@ -1086,6 +1085,7 @@ class SearchMemoryService:
             if filter_values.get("end_time"):
                 date_range["lte"] = filter_values["end_time"].isoformat()
             return await self._search_episodic_memory(
+                query=query,
                 query_words=query_words,
                 query_vector=query_vector,
                 method="hybrid",
