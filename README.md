@@ -18,6 +18,15 @@
 
 <br>
 
+> [!UPDATE]
+>
+> ### [Memory Sparse Attention](https://github.com/EverMind-AI/MSA)
+>
+> We've unified EverCore, HyperMem, EverMemBench, and EvoAgentBench — along with usecases — into a single repository called EverOS.
+>
+> EverOS gives developers one place to build, evaluate, and integrate long-term memory into their self-evolving agents. 🎉
+
+
 <!-- <details open>
 <summary><kbd>Table of Contents</kbd></summary>
 
@@ -36,6 +45,8 @@
 <br>
 
 </details> -->
+
+<br>
 
 ## Project Overview
 
