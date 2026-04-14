@@ -612,8 +612,8 @@ class OpenClawAdapter(BaseAdapter):
         calls hit a 500 is wasteful; cap the retries so a real outage
         still surfaces.
         """
-        max_retries = int(self._openclaw_cfg.get("flush_max_retries", 4))
-        base_delay = float(self._openclaw_cfg.get("flush_retry_base_seconds", 2.0))
+        max_retries = int(self._openclaw_cfg.get("flush_max_retries", 6))
+        base_delay = float(self._openclaw_cfg.get("flush_retry_base_seconds", 3.0))
 
         async def _call(system_prompt: str, user_prompt: str) -> str:
             provider = self._get_llm_provider()
