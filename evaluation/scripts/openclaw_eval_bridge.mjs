@@ -34,8 +34,15 @@ function readStdin() {
   return readFileSync(0, "utf8");
 }
 
-function resolveLauncher() {
-  const repo = process.env.OPENCLAW_REPO_PATH;
+function resolveLauncher(input) {
+  // Prefer repo_path from the BridgeCommand payload so the system YAML
+  // actually drives which OpenClaw repo we spawn. Fall back to
+  // OPENCLAW_REPO_PATH env for developer convenience (and for the stub
+  // contract tests which intentionally leave the env unset).
+  const repo =
+    (input && typeof input.repo_path === "string" && input.repo_path.trim())
+      ? input.repo_path.trim()
+      : process.env.OPENCLAW_REPO_PATH;
   if (!repo) return null;
   const launcher = path.join(repo, "openclaw.mjs");
   return existsSync(launcher) ? launcher : null;
@@ -260,7 +267,7 @@ try {
   fail(`invalid input json: ${err.message}`, undefined);
 }
 
-const launcher = resolveLauncher();
+const launcher = resolveLauncher(input);
 const command = input.command;
 
 (async () => {

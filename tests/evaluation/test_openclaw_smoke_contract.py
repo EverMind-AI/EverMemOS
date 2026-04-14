@@ -138,3 +138,27 @@ def test_stub_reports_unknown_command():
             BRIDGE_PATH,
             {"command": "nuke", "workspace_dir": "/tmp", "state_dir": "/tmp"},
         )
+
+
+def test_repo_path_in_payload_is_honored_over_env(monkeypatch, tmp_path):
+    """P0-2: bridge prefers repo_path from the BridgeCommand payload so the
+    system YAML value actually drives which launcher we spawn.
+
+    Using a bogus repo_path should flip the bridge into stub mode even if
+    OPENCLAW_REPO_PATH points at a valid repo, because the payload wins.
+    """
+    monkeypatch.setenv("OPENCLAW_REPO_PATH", "/Data3/shutong.shan/openclaw/repo")
+    # bogus path the payload ships - repo doesn't exist
+    res = run_bridge(
+        BRIDGE_PATH,
+        {
+            "command": "status",
+            "repo_path": str(tmp_path / "nope"),
+            "workspace_dir": str(tmp_path),
+            "state_dir": str(tmp_path),
+        },
+    )
+    # stub mode returns the deterministic happy-path response, not OpenClaw's
+    # real payload. `native: true` would appear if we had hit the launcher.
+    assert res["command"] == "status"
+    assert res.get("native") is not True

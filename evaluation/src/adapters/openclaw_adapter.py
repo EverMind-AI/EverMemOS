@@ -212,10 +212,8 @@ class OpenClawAdapter(BaseAdapter):
             retrieval_start = time.perf_counter()
 
             search_payload = {
+                **self._bridge_base_payload(sandbox),
                 "command": "search",
-                "config_path": sandbox.get("resolved_config_path", ""),
-                "workspace_dir": sandbox.get("workspace_dir", ""),
-                "state_dir": sandbox.get("native_store_dir", ""),
                 "query": query,
                 "top_k": top_k,
             }
@@ -276,10 +274,8 @@ class OpenClawAdapter(BaseAdapter):
                 enriched.append(hit)
                 continue
             get_payload = {
+                **self._bridge_base_payload(sandbox),
                 "command": "get",
-                "config_path": sandbox.get("resolved_config_path", ""),
-                "workspace_dir": sandbox.get("workspace_dir", ""),
-                "state_dir": sandbox.get("native_store_dir", ""),
                 "artifact_locator": locator,
             }
             try:
@@ -373,6 +369,21 @@ class OpenClawAdapter(BaseAdapter):
 
     def _bridge_script_path(self) -> Path:
         return Path(__file__).parent.parent.parent / "scripts" / "openclaw_eval_bridge.mjs"
+
+    def _bridge_base_payload(self, sandbox: dict) -> dict:
+        """Fields every BridgeCommand needs: where OpenClaw lives, where the
+        sandbox lives, and which config to read. repo_path comes from the
+        yaml (preferred) so the config surface is authoritative; bridge
+        still falls back to the env var for developer convenience.
+        """
+        return {
+            "repo_path": self._openclaw_repo_path,
+            "config_path": sandbox.get("resolved_config_path", ""),
+            "workspace_dir": sandbox.get("workspace_dir", ""),
+            "state_dir": sandbox.get("native_store_dir", ""),
+            "home_dir": sandbox.get("home_dir", ""),
+            "cwd_dir": sandbox.get("cwd_dir", ""),
+        }
 
     # ===================================================== internal helpers
     def _resolve_run_root(self, output_dir: Any) -> Path:
@@ -508,10 +519,8 @@ class OpenClawAdapter(BaseAdapter):
         index_resp = await arun_bridge(
             self._bridge_script_path(),
             {
+                **self._bridge_base_payload(sandbox),
                 "command": "index",
-                "config_path": sandbox["resolved_config_path"],
-                "workspace_dir": sandbox["workspace_dir"],
-                "state_dir": sandbox["native_store_dir"],
             },
             timeout=self._index_timeout(),
         )
@@ -540,15 +549,7 @@ class OpenClawAdapter(BaseAdapter):
 
         status_resp = await arun_bridge(
             self._bridge_script_path(),
-            {
-                "command": "status",
-                "config_path": sandbox["resolved_config_path"],
-                "workspace_dir": sandbox["workspace_dir"],
-                "state_dir": sandbox["native_store_dir"],
-                "repo_path": self._openclaw_repo_path,
-                "home_dir": sandbox.get("home_dir", ""),
-                "cwd_dir": sandbox.get("cwd_dir", ""),
-            },
+            {**self._bridge_base_payload(sandbox), "command": "status"},
             timeout=self._status_timeout(),
         )
         sandbox["last_flush_epoch"] = int(status_resp.get("flush_epoch") or 0)
