@@ -205,7 +205,6 @@ def test_build_benchmark_summary_shape():
     }
     diagnostics = {
         "add_latency_ms_mean": 1000.0,
-        "time_to_visible_ms_mean": 500.0,
         "retrieval_latency_ms_mean": 30.0,
         "answer_latency_ms_mean": 120.0,
         "final_context_tokens_mean": 100.0,
@@ -226,3 +225,24 @@ def test_build_benchmark_summary_shape():
     assert summary["retrieval_level"]["evidence_hit_at_5"] == 0.5
     assert summary["retrieval_level"]["mrr"] == 0.5
     assert summary["diagnostics"]["retrieval_latency_ms_mean"] == 30.0
+    # Summary no longer aliases time_to_visible - field absent entirely.
+    assert "time_to_visible_ms_mean" not in summary["diagnostics"]
+
+
+def test_build_benchmark_summary_preserves_none_for_missing_sources():
+    """P2-2: missing upstream data must stay None so reports can
+    distinguish 'system scored 0' from 'source didn't run'."""
+    summary = build_benchmark_summary(
+        system="stub",
+        dataset="stub",
+        eval_result=None,
+        retrieval_metrics=None,
+        answer_aux_metrics=None,
+        diagnostics=None,
+        k=5,
+    )
+    assert summary["answer_level"]["accuracy"] is None
+    assert summary["answer_level"]["f1_mean"] is None
+    assert summary["retrieval_level"]["evidence_hit_at_5"] is None
+    assert summary["retrieval_level"]["mrr"] is None
+    assert summary["diagnostics"]["retrieval_latency_ms_mean"] is None

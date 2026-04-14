@@ -71,7 +71,12 @@ def aggregate_diagnostics(
 
     return {
         "add_latency_ms_mean": _safe_mean(add_latencies),
-        "time_to_visible_ms_mean": _safe_mean(add_latencies),  # alias in this build
+        # We previously reported a time_to_visible_ms_mean alias that was
+        # literally identical to add_latency_ms_mean. The two concepts are
+        # distinct (total add() wall time vs. file-write-to-queryable
+        # delta) and we don't measure the latter separately yet, so the
+        # alias was misleading. Dropped. A future change can add a real
+        # measurement by wrapping the flush_and_settle wait.
         "retrieval_latency_ms_mean": _safe_mean(retrieval_latencies),
         "scheduler_wait_ms_mean": _safe_mean(scheduler_waits),
         "answer_latency_ms_mean": _safe_mean(answer_latencies),

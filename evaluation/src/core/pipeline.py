@@ -803,7 +803,12 @@ class Pipeline:
             if retrieval:
                 report_lines.append("Retrieval-level:")
                 for key, value in retrieval.items():
-                    report_lines.append(f"  {key}: {value:.4f}" if isinstance(value, (int, float)) else f"  {key}: {value}")
+                    if value is None:
+                        report_lines.append(f"  {key}: n/a")
+                    elif isinstance(value, (int, float)):
+                        report_lines.append(f"  {key}: {value:.4f}")
+                    else:
+                        report_lines.append(f"  {key}: {value}")
                 report_lines.append("")
 
             diag = benchmark_summary.get("diagnostics") or {}
