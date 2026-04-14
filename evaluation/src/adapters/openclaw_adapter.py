@@ -70,6 +70,13 @@ class OpenClawAdapter(BaseAdapter):
         self._conversation_semaphores: dict[str, asyncio.Semaphore] = {}
         self._llm_provider = None  # lazy
         self._shared_prompt_template: Optional[str] = None
+        # repo_path resolution: yaml > env (env is still honored as a
+        # fallback so smoke tests that only set OPENCLAW_REPO_PATH keep
+        # working). P0-2 makes the bridge honor the payload value
+        # unconditionally so the yaml setting is no longer cosmetic.
+        self._openclaw_repo_path: str = (
+            (self._openclaw_cfg.get("repo_path") or "").strip()
+        )
 
     # ----------------------------------------------------------------- prepare
     async def prepare(
@@ -119,7 +126,13 @@ class OpenClawAdapter(BaseAdapter):
             t0 = time.perf_counter()
             try:
                 await self._ingest_conversation(sandbox, conv)
+                # _flush_and_settle_if_needed is authoritative for
+                # visibility_state. It raises if visibility_mode=='settled'
+                # and the OpenClaw status check does not confirm settled,
+                # so we never persist a handle that claims 'settled' when
+                # the backend disagrees.
                 await self._flush_and_settle_if_needed(sandbox)
+                self._assert_visibility_contract(sandbox)
             except Exception as err:
                 sandbox["run_status"] = "failed"
                 self._write_handle(sandbox, add_summary={"error": str(err)})
@@ -127,12 +140,13 @@ class OpenClawAdapter(BaseAdapter):
                 raise
             add_latency_ms = (time.perf_counter() - t0) * 1000.0
             sandbox["run_status"] = "ready"
-            sandbox["visibility_state"] = "settled"
             self._write_handle(
                 sandbox,
                 add_summary={
                     "conversation_id": conv.conversation_id,
                     "add_latency_ms": add_latency_ms,
+                    "visibility_state": sandbox.get("visibility_state"),
+                    "visibility_mode": sandbox.get("visibility_mode"),
                 },
             )
             conversations_map[conv.conversation_id] = sandbox
@@ -155,11 +169,19 @@ class OpenClawAdapter(BaseAdapter):
             if not handle_path.exists():
                 continue
             handle = json.loads(handle_path.read_text())
-            if (
-                handle.get("run_status") != "ready"
-                or handle.get("visibility_state") != "settled"
-            ):
+            if handle.get("run_status") != "ready":
                 continue
+            # visibility_mode decides what visibility_state is acceptable:
+            #   settled mode   -> only 'settled' (strict)
+            #   eventual mode  -> 'indexed' or 'settled' (search re-syncs)
+            mode = handle.get("visibility_mode")
+            state = handle.get("visibility_state")
+            if mode == "settled":
+                if state != "settled":
+                    continue
+            else:
+                if state not in ("indexed", "settled"):
+                    continue
             handles[conv.conversation_id] = handle
         return {
             "type": "openclaw_sandboxes",
@@ -501,13 +523,16 @@ class OpenClawAdapter(BaseAdapter):
         )
 
     async def _flush_and_settle_if_needed(self, sandbox: dict) -> None:
-        """Verify OpenClaw reports the sandbox as settled before search.
+        """Transition visibility_state to its final value per visibility_mode.
 
-        When visibility_mode == 'settled' (the default), we poll ``status``
-        once and trust its ``settled`` field. If it comes back false we
-        retry a bounded number of times before giving up - production
-        OpenClaw re-indexes in the background on onSearch, so this is
-        usually instant when run after a force-index.
+        Post-conditions:
+          * visibility_mode == 'settled': visibility_state becomes 'settled'
+            **only** when OpenClaw's ``memory status`` returns settled=true.
+            Otherwise this method raises so add() fails fast rather than
+            persisting a handle that lies about being queryable.
+          * visibility_mode == 'eventual': we do not wait; visibility_state
+            stays at 'indexed' and the caller accepts that search() may
+            trigger a background re-sync via memorySearch.sync.onSearch.
         """
         if sandbox.get("visibility_mode") != "settled":
             sandbox["visibility_state"] = "indexed"
@@ -520,27 +545,39 @@ class OpenClawAdapter(BaseAdapter):
                 "config_path": sandbox["resolved_config_path"],
                 "workspace_dir": sandbox["workspace_dir"],
                 "state_dir": sandbox["native_store_dir"],
+                "repo_path": self._openclaw_repo_path,
+                "home_dir": sandbox.get("home_dir", ""),
+                "cwd_dir": sandbox.get("cwd_dir", ""),
             },
             timeout=self._status_timeout(),
         )
-        if status_resp.get("settled") is not True:
-            logger.warning(
-                "openclaw status reported not settled for %s: %s",
-                sandbox.get("conversation_id"),
-                status_resp,
-            )
         sandbox["last_flush_epoch"] = int(status_resp.get("flush_epoch") or 0)
-        sandbox["visibility_state"] = "indexed"
+        settled = status_resp.get("settled") is True
         self._append_events(
             sandbox,
             [
                 {
                     "event": "status_checked",
-                    "settled": bool(status_resp.get("settled")),
+                    "settled": settled,
                     "flush_epoch": sandbox["last_flush_epoch"],
                 }
             ],
         )
+        if not settled:
+            raise RuntimeError(
+                "openclaw status reported not settled for "
+                f"{sandbox.get('conversation_id')!r}: {status_resp!r}"
+            )
+        sandbox["visibility_state"] = "settled"
+
+    def _assert_visibility_contract(self, sandbox: dict) -> None:
+        """Guard the plan's settled-mode guarantee at the add() boundary."""
+        if sandbox.get("visibility_mode") == "settled":
+            vs = sandbox.get("visibility_state")
+            if vs != "settled":
+                raise RuntimeError(
+                    f"settled mode requires visibility_state=='settled' but got {vs!r}"
+                )
 
     # -- helpers -----------------------------------------------------------
 
