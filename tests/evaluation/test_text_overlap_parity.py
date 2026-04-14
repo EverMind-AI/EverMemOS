@@ -26,6 +26,14 @@ def test_compute_f1_empty_inputs():
     assert compute_f1("anything", "") == 0.0
 
 
+def test_compute_f1_and_bleu_handle_non_string_inputs():
+    # LoCoMo sometimes has integer golden_answers (e.g. year = 2022).
+    # The metric must coerce rather than raise.
+    assert compute_f1("It was in 2022", 2022) > 0.0
+    assert compute_bleu1("Year 2022", 2022) >= 0.0
+    assert compute_f1(None, "anything") == 0.0  # None coerces to "None" -> no overlap
+
+
 def test_compute_bleu1_is_positive_for_overlap():
     assert compute_bleu1("the cat sat", "the cat sat on the mat") > 0.0
 

@@ -23,10 +23,14 @@ def simple_tokenize(text: str) -> list[str]:
     return normalized.split()
 
 
-def compute_f1(prediction: str, reference: str) -> float:
-    """Set-based F1: intersection of unique tokens / precision + recall."""
-    pred_tokens = set(simple_tokenize(prediction))
-    ref_tokens = set(simple_tokenize(reference))
+def compute_f1(prediction, reference) -> float:
+    """Set-based F1: intersection of unique tokens / precision + recall.
+
+    Coerces non-string args to str so LoCoMo integer ``golden_answer``
+    values (e.g. years) do not crash the tokenizer.
+    """
+    pred_tokens = set(simple_tokenize(str(prediction)))
+    ref_tokens = set(simple_tokenize(str(reference)))
     if not pred_tokens or not ref_tokens:
         return 0.0
     common = pred_tokens & ref_tokens
@@ -39,16 +43,23 @@ def compute_f1(prediction: str, reference: str) -> float:
     return 2 * precision * recall / (precision + recall)
 
 
-def compute_bleu1(prediction: str, reference: str) -> float:
-    """BLEU-1 with method-1 smoothing (nltk)."""
+def compute_bleu1(prediction, reference) -> float:
+    """BLEU-1 with method-1 smoothing (nltk).
+
+    Accepts non-string prediction / reference (LoCoMo sometimes ships
+    ``golden_answer`` as an int, e.g. a year) and coerces to str before
+    tokenization to avoid AttributeError on .lower().
+    """
+    pred_str = str(prediction)
+    ref_str = str(reference)
     try:
         import nltk
         from nltk.translate.bleu_score import SmoothingFunction, sentence_bleu
     except ImportError:  # pragma: no cover - nltk is a hard dep in practice
-        return _fallback_bleu1(prediction, reference)
+        return _fallback_bleu1(pred_str, ref_str)
 
-    pred_tokens = _ensure_nltk_tokenize(nltk, prediction.lower())
-    ref_tokens = _ensure_nltk_tokenize(nltk, reference.lower())
+    pred_tokens = _ensure_nltk_tokenize(nltk, pred_str.lower())
+    ref_tokens = _ensure_nltk_tokenize(nltk, ref_str.lower())
     if not pred_tokens or not ref_tokens:
         return 0.0
     smooth = SmoothingFunction().method1
