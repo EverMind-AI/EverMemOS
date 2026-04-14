@@ -490,9 +490,30 @@ If EverOS helps your research, please cite:
 
 </div>
 
+## 🌟 Stay Tuned
+
+![star us gif][star-gif]
+
+<br>
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
+
 ## Contributing
 
-Browse [Issues][issues-link] to find your entry point or connect with maintainers — [@elliotchen200][elliot-x-link] on X and [@cyfyifanchen][cyfyifanchen-link] on GitHub.
+We love open-source energy! Whether you are squashing bugs, shipping features, sharpening docs, or just tossing in wild ideas, every PR moves EverOS forward. Browse [Issues][issues-link] to find your perfect entry point, then show us what you have got. Let us build the future of memory together.
+
+<br>
+
+> [!TIP]
+>
+> **Welcome all kinds of contributions** 🎉
+>
+> Join us in building EverOS better! Every contribution makes a difference, from code to documentation. Share your projects on social media to inspire others!
+>
+> Connect with one of the EverOS maintainers [@elliotchen200][elliot-x-link] on 𝕏 or [@cyfyifanchen][cyfyifanchen-link] on GitHub for project updates, discussions, and collaboration opportunities.
 
 ![divider][divider-light]
 ![divider][divider-dark]
@@ -501,17 +522,27 @@ Browse [Issues][issues-link] to find your entry point or connect with maintainer
 
 [![EverOS Contributors][contributors-image]][contributors]
 
-<!-- ### Contribution Guidelines
+![divider][divider-light]
+![divider][divider-dark]
 
-Read our [Contribution Guidelines][contributing-doc] for code standards and Git workflow. -->
+### Contribution Guidelines
+
+Read our [Contribution Guidelines][contributing-doc] for code standards and Git workflow.
 
 ![divider][divider-light]
 ![divider][divider-dark]
 
+### License & Citation & Acknowledgments
 
-### License
+[Apache 2.0][license] • [Citation][citation-doc] • [Acknowledgments][acknowledgments-doc]
 
-[Apache 2.0][license]
+<br>
+
+<div align="right">
+
+[![][back-to-top]][readme-top]
+
+</div>
 
 <!-- Navigation -->
 [readme-top]: #readme-top
@@ -521,7 +552,7 @@ Read our [Contribution Guidelines][contributing-doc] for code standards and Git 
 [divider-dark]: https://github.com/user-attachments/assets/d57fad08-4f49-4a1c-bdfc-f659a5d86150#gh-dark-mode-only
 
 <!-- Images -->
-[banner-gif]: https://github.com/user-attachments/assets/646e813a-a7a7-4ba2-bda8-d8bdf884a890
+[banner-gif]: https://github.com/user-attachments/assets/c2cef808-3e93-4f81-a194-dffe02ddd984
 [usecase-openclaw-image]: https://github.com/user-attachments/assets/0e06da2b-0236-430f-89b4-980b8b6a855f
 [usecase-live2d-image]: https://github.com/user-attachments/assets/a80bdab3-e5d0-43b9-9e8d-0a9605012a26
 [usecase-computer-image]: https://github.com/user-attachments/assets/0d306b4c-bcd7-4e9e-a244-22fa3cb7b727
@@ -593,4 +624,4 @@ Read our [Contribution Guidelines][contributing-doc] for code standards and Git 
 [cyfyifanchen-link]: https://github.com/cyfyifanchen
 [contributors-image]: https://contrib.rocks/image?repo=EverMind-AI/EverOS
 [contributors]: https://github.com/EverMind-AI/EverOS/graphs/contributors
-[contributing-doc]: CONTRIBUTING.md
+[contributing-doc]: methods/evermemos/CONTRIBUTING.md

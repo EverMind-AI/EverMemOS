@@ -1,6 +1,6 @@
-# Contributing to EverMemOS
+# Contributing to EverOS
 
-Thank you for your interest in contributing to EverMemOS! We welcome contributions from the community.
+Thank you for your interest in contributing to EverOS! We welcome contributions from the community.
 
 ## 🚀 Getting Started
 
@@ -14,8 +14,8 @@ Thank you for your interest in contributing to EverMemOS! We welcome contributio
 
 1. Fork and clone the repository:
 ```bash
-git clone https://github.com/YOUR_USERNAME/EverMemOS.git
-cd EverMemOS
+git clone https://github.com/YOUR_USERNAME/EverOS.git
+cd EverOS
 ```
 
 2. Install dependencies:
@@ -142,7 +142,7 @@ git push origin feature/your-feature-name
 
 ## 🐛 Reporting Bugs
 
-Please report bugs by [creating a bug report](https://github.com/EverMind-AI/EverMemOS/issues/new?template=bug_report.md) with:
+Please report bugs by [creating a bug report](https://github.com/EverMind-AI/EverOS/issues/new?template=bug_report.md) with:
 
 - Clear, descriptive title
 - Steps to reproduce
@@ -152,7 +152,7 @@ Please report bugs by [creating a bug report](https://github.com/EverMind-AI/Eve
 
 ## 💡 Suggesting Features
 
-Feature requests are welcome! Please [submit a feature request](https://github.com/EverMind-AI/EverMemOS/issues/new?template=feature_request.md) with:
+Feature requests are welcome! Please [submit a feature request](https://github.com/EverMind-AI/EverOS/issues/new?template=feature_request.md) with:
 
 - Check if the feature is already requested
 - Provide clear use cases
@@ -161,7 +161,7 @@ Feature requests are welcome! Please [submit a feature request](https://github.c
 
 ## 📄 License
 
-By contributing to EverMemOS, you agree that your contributions will be licensed under the [Apache License 2.0](LICENSE).
+By contributing to EverOS, you agree that your contributions will be licensed under the [Apache License 2.0](LICENSE).
 
 ## 🤝 Code of Conduct
 
@@ -172,11 +172,11 @@ By contributing to EverMemOS, you agree that your contributions will be licensed
 
 ## 📞 Questions?
 
-- Open a [Discussion](https://github.com/EverMind-AI/EverMemOS/discussions)
+- Open a [Discussion](https://github.com/EverMind-AI/EverOS/discussions)
 - Join our community channels
 - Email: evermind@shanda.com
 
 ---
 
-Thank you for contributing to EverMemOS! 🎉
+Thank you for contributing to EverOS! 🎉
 
