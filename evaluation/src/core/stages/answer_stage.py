@@ -125,12 +125,42 @@ async def run_answer_stage(
         print(f"Already processed: {processed_count} questions (from checkpoint)")
         print(f"Remaining: {total_qa_count - processed_count} questions")
     
-    # Prepare pending tasks
-    # qa_pairs and search_results should have matching order (both use numeric sort by conversation_id)
+    # Pair qa with its search_result by question_id (stashed by
+    # search_stage in retrieval_metadata). Positional zip was previously
+    # used and would silently misalign whenever the upstream checkpoint /
+    # subset filter changed order.
+    search_by_id: dict[str, "SearchResult"] = {}
+    positional_fallback: list["SearchResult"] = []
+    for sr in search_results:
+        qid = (sr.retrieval_metadata or {}).get("question_id")
+        if qid is not None:
+            search_by_id[qid] = sr
+        else:
+            positional_fallback.append(sr)
+    if len(search_by_id) != len(search_results):
+        # Absorb checkpoint / test SearchResults that never saw search_stage
+        # into the map positionally, matched against qa_pairs with no id yet.
+        unpaired = [qa for qa in qa_pairs if qa.question_id not in search_by_id]
+        for qa, sr in zip(unpaired, positional_fallback):
+            search_by_id[qa.question_id] = sr
+
     pending_tasks = []
-    for qa, sr in zip(qa_pairs, search_results):
-        if qa.question_id not in all_answer_results:
-            pending_tasks.append((qa, sr))
+    for qa in qa_pairs:
+        if qa.question_id in all_answer_results:
+            continue
+        sr = search_by_id.get(qa.question_id)
+        if sr is None:
+            # No retrieval output for this question - build an empty one
+            # so the stage proceeds (answer_stage is resilient to empty
+            # context but we must not drop the qa).
+            sr = SearchResult(
+                query=qa.question,
+                conversation_id=qa.metadata.get("conversation_id", ""),
+                results=[],
+                retrieval_metadata={"question_id": qa.question_id,
+                                    "error": "no search_result for question_id"},
+            )
+        pending_tasks.append((qa, sr))
     
     if not pending_tasks:
         print(f"✅ All questions already processed!")

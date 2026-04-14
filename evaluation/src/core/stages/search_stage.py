@@ -137,6 +137,16 @@ async def run_search_stage(
                             retrieval_metadata={"error": f"Search error: {str(e)}"}
                         )
             
+            # Stash question_id in retrieval_metadata so downstream
+            # consumers (retrieval_metrics, answer_stage) can pair by id
+            # instead of positional zip. Defensive: adapters may not have
+            # populated retrieval_metadata, and some error paths construct
+            # SearchResult in this file without question_id visibility.
+            if result is not None:
+                meta = dict(result.retrieval_metadata or {})
+                meta.setdefault("question_id", qa.question_id)
+                result.retrieval_metadata = meta
+
             pbar.update(1)  # Update progress bar after each question
             return result
     

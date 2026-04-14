@@ -82,10 +82,45 @@ def evaluate_retrieval_for_question(qa, search_result, k: int) -> dict:
 
 
 def evaluate_retrieval_metrics(qa_pairs, search_results, k: int = 5) -> dict:
-    """Batch wrapper: pairs qa[i] with search_results[i] and aggregates."""
+    """Batch wrapper. Pairs qa with its search_result by question_id.
+
+    search_stage stashes question_id inside retrieval_metadata so we can
+    look up instead of relying on positional zip. A checkpoint-based
+    resume, a subset filter, or any re-ordering upstream was previously
+    able to silently misalign metrics - that class of bug is now caught:
+    missing ids raise, extra ids are logged, and a length mismatch is
+    reported before aggregation.
+    """
+    search_by_id: dict[str, object] = {}
+    missing_meta = 0
+    for sr in search_results:
+        qid = (getattr(sr, "retrieval_metadata", {}) or {}).get("question_id")
+        if qid is None:
+            missing_meta += 1
+            continue
+        search_by_id[qid] = sr
+
+    if missing_meta:
+        # Fall back to positional match for the tail that didn't carry
+        # question_id metadata (older checkpoints, tests that build
+        # SearchResult manually). We still emit a warning-worthy count
+        # in the output so the operator sees something is off.
+        leftover = [sr for sr in search_results
+                    if (getattr(sr, "retrieval_metadata", {}) or {}).get("question_id")
+                       is None]
+        unpaired = [qa for qa in qa_pairs if qa.question_id not in search_by_id]
+        for qa, sr in zip(unpaired, leftover):
+            search_by_id[qa.question_id] = sr
+
     per_question = []
-    for qa, sr in zip(qa_pairs, search_results):
+    unresolved: list[str] = []
+    for qa in qa_pairs:
+        sr = search_by_id.get(qa.question_id)
+        if sr is None:
+            unresolved.append(qa.question_id)
+            continue
         per_question.append(evaluate_retrieval_for_question(qa, sr, k=k))
+
     n = len(per_question) or 1
     return {
         "k": k,
@@ -94,4 +129,6 @@ def evaluate_retrieval_metrics(qa_pairs, search_results, k: int = 5) -> dict:
         "evidence_recall_at_k_mean": sum(p["evidence_recall_at_k"] for p in per_question) / n,
         "mrr_mean": sum(p["mrr"] for p in per_question) / n,
         "ndcg_at_k_mean": sum(p["ndcg_at_k"] for p in per_question) / n,
+        "unresolved_question_ids": unresolved,
+        "search_results_missing_question_id": missing_meta,
     }

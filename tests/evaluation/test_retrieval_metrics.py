@@ -70,6 +70,48 @@ def test_retrieval_metrics_zero_when_no_match():
     assert metrics["evidence_recall_at_k"] == 0.0
 
 
+def test_batch_pairs_by_question_id_not_position():
+    """P1-1: batch wrapper must pair by retrieval_metadata.question_id so
+    upstream re-ordering (checkpoint resume, subset filter) can't silently
+    misalign which search_result scores which qa."""
+    qas = [
+        QAPair(question_id="qa-A", question="", answer="",
+               evidence=["D0:0"], metadata={"conversation_id": "c0"}),
+        QAPair(question_id="qa-B", question="", answer="",
+               evidence=["D1:0"], metadata={"conversation_id": "c0"}),
+    ]
+    # search_results are in REVERSED order; ids carried in retrieval_metadata
+    # still let us pair correctly.
+    srs = [
+        SearchResult("", "c0", [{"metadata": {"source_sessions": ["S1"]}}],
+                     {"question_id": "qa-B"}),
+        SearchResult("", "c0", [{"metadata": {"source_sessions": ["S0"]}}],
+                     {"question_id": "qa-A"}),
+    ]
+    metrics = evaluate_retrieval_metrics(qas, srs, k=1)
+    # qa-A should score hit=1 (S0 matches gold D0:0 -> S0)
+    # qa-B should score hit=1 (S1 matches gold D1:0 -> S1)
+    assert metrics["per_question"][0]["question_id"] == "qa-A"
+    assert metrics["per_question"][0]["evidence_hit_at_k"] == 1.0
+    assert metrics["per_question"][1]["question_id"] == "qa-B"
+    assert metrics["per_question"][1]["evidence_hit_at_k"] == 1.0
+
+
+def test_batch_reports_unresolved_when_id_missing():
+    qas = [
+        QAPair(question_id="qa-A", question="", answer="",
+               evidence=["D0:0"], metadata={"conversation_id": "c0"}),
+    ]
+    srs = [
+        # search result for a DIFFERENT question - must not be paired.
+        SearchResult("", "c0", [{"metadata": {"source_sessions": ["S9"]}}],
+                     {"question_id": "qa-OTHER"}),
+    ]
+    metrics = evaluate_retrieval_metrics(qas, srs, k=1)
+    assert metrics["unresolved_question_ids"] == ["qa-A"]
+    assert metrics["per_question"] == []
+
+
 def test_evaluate_retrieval_metrics_batch_aggregates_mean():
     qas = [
         QAPair(question_id="q1", question="", answer="", evidence=["D0:0"],
