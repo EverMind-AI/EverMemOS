@@ -10,6 +10,7 @@ from typing import List, Dict, Any, Optional
 
 from evaluation.src.core.data_models import (
     Dataset,
+    QAPair,
     SearchResult,
     AnswerResult,
     EvaluationResult,
@@ -28,6 +29,12 @@ from evaluation.src.core.stages.add_stage import run_add_stage
 from evaluation.src.core.stages.search_stage import run_search_stage
 from evaluation.src.core.stages.answer_stage import run_answer_stage
 from evaluation.src.core.stages.evaluate_stage import run_evaluate_stage
+
+# Benchmark-extension metrics (used by *_artifact helpers below)
+from evaluation.src.metrics.retrieval_metrics import evaluate_retrieval_metrics
+from evaluation.src.metrics.answer_aux_metrics import build_answer_aux_metrics
+from evaluation.src.metrics.diagnostics import aggregate_diagnostics
+from evaluation.src.metrics.benchmark_summary import build_benchmark_summary
 
 
 class Pipeline:
@@ -326,6 +333,17 @@ class Pipeline:
                 "search_results.json",
             )
             results["search_results"] = search_results
+
+            # Benchmark-extension: session-level retrieval metrics
+            try:
+                results["retrieval_metrics"] = self._write_retrieval_metrics_artifact(
+                    dataset.qa_pairs, search_results
+                )
+            except Exception as err:  # noqa: BLE001
+                self.logger.warning(
+                    "retrieval metrics write failed (non-fatal): %s", err
+                )
+
             self.logger.info("✅ Stage 2 completed")
 
             # Save checkpoint
@@ -384,6 +402,17 @@ class Pipeline:
                 "answer_results.json",
             )
             results["answer_results"] = answer_results
+
+            # Benchmark-extension: answer-level aux (F1 / BLEU-1)
+            try:
+                results["answer_aux_metrics"] = self._write_answer_aux_metrics_artifact(
+                    answer_results
+                )
+            except Exception as err:  # noqa: BLE001
+                self.logger.warning(
+                    "answer aux metrics write failed (non-fatal): %s", err
+                )
+
             self.logger.info("✅ Stage 3 completed")
 
             # Save checkpoint
@@ -446,6 +475,24 @@ class Pipeline:
                 self._eval_result_to_dict(eval_result), "eval_results.json"
             )
             results["eval_result"] = eval_result
+
+            # Benchmark-extension: diagnostics + summary
+            try:
+                system_info = self.adapter.get_system_info() if self.adapter else {}
+                results["benchmark_summary"] = self._write_diagnostics_and_summary_artifact(
+                    system_name=system_info.get("name", "unknown"),
+                    dataset_name=dataset.dataset_name,
+                    search_results=results.get("search_results") or [],
+                    answer_results=results.get("answer_results") or [],
+                    eval_result=eval_result,
+                    retrieval_metrics=results.get("retrieval_metrics") or {},
+                    answer_aux_metrics=results.get("answer_aux_metrics") or {},
+                    index=results.get("index"),
+                )
+            except Exception as err:  # noqa: BLE001
+                self.logger.warning(
+                    "benchmark summary write failed (non-fatal): %s", err
+                )
 
             # Save checkpoint
             self.completed_stages.add("evaluate")
@@ -665,6 +712,68 @@ class Pipeline:
             },
         )
 
+    # ========================================================================
+    # Benchmark-extension artifact writers (Task 7). These are called from
+    # run() at each stage boundary so a normal pipeline run also produces
+    # retrieval_metrics.json / answer_aux_metrics.json / diagnostics.json /
+    # benchmark_summary.json alongside the existing stage artifacts.
+    # ========================================================================
+
+    def _benchmark_k(self) -> int:
+        cfg = getattr(self.adapter, "config", {}) if self.adapter else {}
+        return int(cfg.get("search", {}).get("response_top_k", 5))
+
+    def _write_retrieval_metrics_artifact(
+        self, qa_pairs: List[QAPair], search_results: List[SearchResult], k: Optional[int] = None
+    ) -> dict:
+        k = k or self._benchmark_k()
+        metrics = evaluate_retrieval_metrics(qa_pairs, search_results, k=k)
+        self.saver.save_json(metrics, "retrieval_metrics.json")
+        return metrics
+
+    def _write_answer_aux_metrics_artifact(
+        self, answer_results: List[AnswerResult]
+    ) -> dict:
+        metrics = build_answer_aux_metrics(answer_results)
+        self.saver.save_json(metrics, "answer_aux_metrics.json")
+        return metrics
+
+    def _write_diagnostics_and_summary_artifact(
+        self,
+        *,
+        system_name: str,
+        dataset_name: str,
+        search_results: List[SearchResult],
+        answer_results: List[AnswerResult],
+        eval_result: EvaluationResult,
+        retrieval_metrics: dict,
+        answer_aux_metrics: dict,
+        index: Optional[dict] = None,
+        k: Optional[int] = None,
+    ) -> dict:
+        k = k or self._benchmark_k()
+        answer_metadata = [ar.metadata or {} for ar in answer_results]
+        diagnostics = aggregate_diagnostics(
+            search_results=search_results,
+            answer_results_metadata=answer_metadata,
+            index=index,
+        )
+        self.saver.save_json(diagnostics, "diagnostics.json")
+
+        summary = build_benchmark_summary(
+            system=system_name,
+            dataset=dataset_name,
+            eval_result={
+                "accuracy": getattr(eval_result, "accuracy", 0.0),
+            },
+            retrieval_metrics=retrieval_metrics,
+            answer_aux_metrics=answer_aux_metrics,
+            diagnostics=diagnostics,
+            k=k,
+        )
+        self.saver.save_json(summary, "benchmark_summary.json")
+        return summary
+
     def _generate_report(self, results: Dict[str, Any], elapsed_time: float):
         """Generate evaluation report."""
         report_lines = []
@@ -686,6 +795,37 @@ class Pipeline:
             report_lines.append(f"Correct: {eval_result.correct}")
             report_lines.append(f"Accuracy: {eval_result.accuracy:.2%}")
             report_lines.append("")
+
+        # Benchmark-extension: retrieval + diagnostics sections
+        benchmark_summary = results.get("benchmark_summary")
+        if benchmark_summary:
+            retrieval = benchmark_summary.get("retrieval_level") or {}
+            if retrieval:
+                report_lines.append("Retrieval-level:")
+                for key, value in retrieval.items():
+                    report_lines.append(f"  {key}: {value:.4f}" if isinstance(value, (int, float)) else f"  {key}: {value}")
+                report_lines.append("")
+
+            diag = benchmark_summary.get("diagnostics") or {}
+            if diag:
+                report_lines.append("Diagnostics:")
+                for key, value in diag.items():
+                    if value is None:
+                        report_lines.append(f"  {key}: n/a")
+                    elif isinstance(value, (int, float)):
+                        report_lines.append(f"  {key}: {value:.2f}")
+                    else:
+                        report_lines.append(f"  {key}: {value}")
+                report_lines.append("")
+
+            answer = benchmark_summary.get("answer_level") or {}
+            if answer.get("f1_mean") is not None or answer.get("bleu1_mean") is not None:
+                report_lines.append("Answer-level (aux):")
+                for key in ("f1_mean", "bleu1_mean"):
+                    value = answer.get(key)
+                    if value is not None:
+                        report_lines.append(f"  {key}: {value:.4f}")
+                report_lines.append("")
 
         report_lines.append("=" * 60)
 
