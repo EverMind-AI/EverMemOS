@@ -1,3 +1,11 @@
+# OpenClaw benchmark preset - with sophnet embedding, search_then_get.
+#
+# All configuration except flush_mode is aligned with OpenClaw's upstream
+# defaults (src/agents/memory-search.ts + extensions/memory-core/src/
+# flush-plan.ts). The only deliberate deviation is that OpenClaw's own
+# compaction.memoryFlush.enabled is kept off because the benchmark's
+# shared_llm flush happens at ingest time; see evaluation/docs/
+# openclaw_adapter.md for the fidelity table.
 adapter: "openclaw"
 
 llm:
@@ -10,7 +18,7 @@ llm:
 
 search:
   top_k: 6                                  # OpenClaw default maxResults
-  response_top_k: 5
+  response_top_k: 5                         # benchmark's k for hit@k / ndcg@k
   num_workers: 5
   max_inflight_queries_per_conversation: 1
 
@@ -21,16 +29,17 @@ openclaw:
   repo_path: "${OPENCLAW_REPO_PATH}"
   visibility_mode: "settled"
   retrieval_route: "search_then_get"
-  backend_mode: "vector"
-  flush_mode: "disabled"
+  backend_mode: "hybrid"                    # BM25 + sophnet embedding
+  flush_mode: "shared_llm"                  # native prompt via buildMemoryFlushPlan
+  honor_silent_token: false                 # benchmark: retry-on-NO_REPLY
   embedding:
     provider: "${OPENCLAW_EMBED_PROVIDER:sophnet}"
     model: "${OPENCLAW_EMBED_MODEL:text-embeddings}"
     api_key: "${SOPH_API_KEY}"
     base_url: "${SOPH_EMBED_URL:https://www.sophnet.com/api/open-apis/projects/6RT1wCDeN59dVd1L10UMRz/easyllms/embeddings}"
     easyllm_id: "${SOPH_EMBED_EASYLLM_ID:1aKhWpzR3QKay9sZZ1TqWi}"
-    output_dimensionality: 1024
+    output_dimensionality: 1024             # DEFAULT_SOPHNET_DIMENSIONS
   prompts:
     memory_mode: "native_compiled"
-    flush_mode: "disabled"
+    flush_mode: "native"
     answer_mode: "shared"

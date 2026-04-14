@@ -1,0 +1,38 @@
+# OpenClaw benchmark preset - no embedding, search_then_get.
+#
+# All configuration except flush_mode is aligned with OpenClaw's upstream
+# defaults (src/agents/memory-search.ts + extensions/memory-core/src/
+# flush-plan.ts). The only deliberate deviation is that OpenClaw's own
+# compaction.memoryFlush.enabled is kept off because the benchmark's
+# shared_llm flush happens at ingest time; see evaluation/docs/
+# openclaw_adapter.md for the fidelity table.
+adapter: "openclaw"
+
+llm:
+  provider: "openai"
+  model: "gpt-4o-mini"
+  api_key: "${LLM_API_KEY}"
+  base_url: "${LLM_BASE_URL:https://www.sophnet.com/api/open-apis/v1}"
+  temperature: 0.0
+  max_tokens: 1024
+
+search:
+  top_k: 6                                  # OpenClaw default maxResults
+  response_top_k: 5                         # benchmark's k for hit@k / ndcg@k
+  num_workers: 5
+  max_inflight_queries_per_conversation: 1
+
+answer:
+  max_retries: 3
+
+openclaw:
+  repo_path: "${OPENCLAW_REPO_PATH}"
+  visibility_mode: "settled"                # benchmark wants deterministic post-add visibility
+  retrieval_route: "search_then_get"
+  backend_mode: "fts_only"
+  flush_mode: "shared_llm"                  # native prompt via buildMemoryFlushPlan
+  honor_silent_token: false                 # benchmark: retry-on-NO_REPLY
+  prompts:
+    memory_mode: "native_compiled"
+    flush_mode: "native"
+    answer_mode: "shared"

@@ -9,7 +9,7 @@ llm:
   max_tokens: 1024
 
 search:
-  top_k: 30
+  top_k: 6                                  # OpenClaw default maxResults
   response_top_k: 5
   num_workers: 5
   max_inflight_queries_per_conversation: 1
