@@ -22,8 +22,8 @@ openclaw:
   visibility_mode: "settled"
   retrieval_route: "search_only"
   backend_mode: "fts_only"
-  flush_mode: "native"
+  flush_mode: "shared_llm"
   prompts:
     memory_mode: "native_compiled"
-    flush_mode: "native"
+    flush_mode: "shared_llm"
     answer_mode: "shared"

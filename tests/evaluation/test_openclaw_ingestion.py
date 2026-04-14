@@ -97,7 +97,7 @@ async def test_write_session_files_disabled_mode(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_write_session_files_native_mode_uses_llm(tmp_path):
+async def test_write_session_files_shared_llm_mode_uses_llm(tmp_path):
     conv = _conv()
     memory_dir = tmp_path / "memory"
     calls = []
@@ -109,7 +109,7 @@ async def test_write_session_files_native_mode_uses_llm(tmp_path):
     rows = await write_session_files(
         conversation=conv,
         memory_dir=memory_dir,
-        flush_mode="native",
+        flush_mode="shared_llm",
         llm_generate=fake_llm,
     )
     assert len(rows) == 2
@@ -122,12 +122,12 @@ async def test_write_session_files_native_mode_uses_llm(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_write_session_files_native_requires_llm():
+async def test_write_session_files_shared_llm_requires_llm():
     with pytest.raises(ValueError):
         await write_session_files(
             conversation=_conv(),
             memory_dir=Path("/tmp/should-not-exist-xyz"),
-            flush_mode="native",
+            flush_mode="shared_llm",
             llm_generate=None,
         )
 
@@ -221,7 +221,7 @@ def test_build_openclaw_resolved_config_hybrid_with_embedding(tmp_path):
         workspace_dir=str(tmp_path / "ws"),
         native_store_dir=str(tmp_path / "state"),
         backend_mode="hybrid",
-        flush_mode="native",
+        flush_mode="shared_llm",
         embedding={
             "provider": "sophnet",
             "model": "text-embeddings",

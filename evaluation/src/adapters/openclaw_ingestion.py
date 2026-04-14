@@ -9,11 +9,17 @@ Two modes controlled by config["openclaw"]["flush_mode"]:
 * ``disabled``: dump the raw session transcript as markdown bullets. Matches
   v0.1 / v0.2 behaviour exactly so numbers stay comparable.
 
-* ``native``: send each session transcript through an LLM with a prompt
+* ``shared_llm``: send each session transcript through the **framework-
+  side** LLM (same provider used for the answer prompt) with a prompt
   modelled on OpenClaw's ``buildMemoryFlushPlan`` (extensions/memory-core/
-  src/flush-plan.ts). The LLM keeps retention-worthy content; filler is
-  dropped. This is the selective-retention behaviour OpenClaw runs in
-  production when a session crosses the compaction threshold.
+  src/flush-plan.ts). This is an APPROXIMATION of OpenClaw's production
+  selective-retention behaviour, not a faithful reproduction of it:
+    - OpenClaw's real flush runs mid-turn inside the agent runner with
+      the agent's own LLM config, triggered by a token-budget heuristic.
+    - We do it once per session at ingest time with the benchmark's LLM
+      provider, and OpenClaw's own ``compaction.memoryFlush.enabled`` is
+      kept OFF so search never triggers a second flush.
+  Called ``shared_llm`` to make the divergence visible in config.
 
 Files are written as ``memory/session-<SX>-<YYYY-MM-DD>.md`` so OpenClaw's
 FTS scan picks them up, and so ``source_sessions`` projection downstream
@@ -126,7 +132,7 @@ async def render_flushed_session_markdown(
     messages: list[Message],
     llm_generate: Callable[[str, str], Awaitable[str]],
 ) -> str:
-    """native-mode renderer. Uses the LLM to distil retention-worthy bullets.
+    """shared_llm-mode renderer. Uses the framework LLM to distil bullets.
 
     llm_generate(system_prompt, user_prompt) is an awaitable that must return
     a markdown body. Callers pass their adapter's LLM provider in.
@@ -167,9 +173,9 @@ async def write_session_files(
         rel = f"memory/{filename}"
         abs_path = memory_dir / filename
 
-        if flush_mode == "native":
+        if flush_mode == "shared_llm":
             if llm_generate is None:
-                raise ValueError("native flush requires llm_generate callable")
+                raise ValueError("shared_llm flush requires llm_generate callable")
             body = await render_flushed_session_markdown(sid, messages, llm_generate)
         elif flush_mode == "disabled":
             body = render_raw_session_markdown(sid, messages)

@@ -441,7 +441,7 @@ class OpenClawAdapter(BaseAdapter):
         # Write the OpenClaw-schema config the CLI will read via
         # OPENCLAW_CONFIG_PATH.
         backend_mode = self._openclaw_cfg.get("backend_mode", "hybrid")
-        flush_mode = self._openclaw_cfg.get("flush_mode", "native")
+        flush_mode = self._openclaw_cfg.get("flush_mode", "shared_llm")
         resolved = build_openclaw_resolved_config(
             workspace_dir=paths["workspace_dir"],
             native_store_dir=paths["native_store_dir"],
@@ -504,8 +504,8 @@ class OpenClawAdapter(BaseAdapter):
         failure raises and propagates so the surrounding add() marks
         run_status=failed rather than silently producing an empty sandbox.
         """
-        flush_mode = sandbox.get("flush_mode", "native")
-        llm_generate = self._make_flush_generate() if flush_mode == "native" else None
+        flush_mode = sandbox.get("flush_mode", "shared_llm")
+        llm_generate = self._make_flush_generate() if flush_mode == "shared_llm" else None
 
         rows = await write_session_files(
             conversation=conv,

@@ -24,7 +24,7 @@ def _config(tmp_path):
             "visibility_mode": "settled",
             "backend_mode": "hybrid",
             "retrieval_route": "search_then_get",
-            "flush_mode": "native",
+            "flush_mode": "shared_llm",
         },
     }
 

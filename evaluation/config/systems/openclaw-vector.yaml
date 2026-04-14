@@ -22,7 +22,7 @@ openclaw:
   visibility_mode: "settled"
   retrieval_route: "search_then_get"
   backend_mode: "vector"
-  flush_mode: "native"
+  flush_mode: "shared_llm"
   embedding:
     provider: "${OPENCLAW_EMBED_PROVIDER:sophnet}"
     model: "${OPENCLAW_EMBED_MODEL:text-embeddings}"
@@ -32,5 +32,5 @@ openclaw:
     output_dimensionality: 1024
   prompts:
     memory_mode: "native_compiled"
-    flush_mode: "native"
+    flush_mode: "shared_llm"
     answer_mode: "shared"
