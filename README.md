@@ -22,29 +22,9 @@
 >
 > ### Project Structure Update
 >
-> We've unified EverCore, HyperMem, EverMemBench, and EvoAgentBench — along with usecases — into a single repository called EverOS.
+> We've unified [EverCore](methods/evermemos/), [HyperMem](methods/HyperMem/), [EverMemBench](benchmarks/EverMemBench/), and [EvoAgentBench](benchmarks/EvoAgentBench/) with usecases into a single repository.
 >
 > EverOS gives developers one place to build, evaluate, and integrate long-term memory into their self-evolving agents. 🎉
-
-
-<!-- <details open>
-<summary><kbd>Table of Contents</kbd></summary>
-
-<br>
-
-- [Project Structure](#project-structure)
-- [Key Results](#key-results)
-- [Use Cases](#use-cases)
-- [Quick Start](#quick-start)
-- [Evaluation & Benchmarking](#evaluation--benchmarking)
-- [Documentation](#documentation)
-- [GitHub Codespaces](#github-codespaces)
-- [Citation](#citation)
-- [Contributing](#contributing)
-
-<br>
-
-</details> -->
 
 <br>
 
@@ -52,28 +32,28 @@
 
 **EverOS** is a collection of long-term memory **methods**, **benchmarks**, and **usecases** for building self-evolving agents.
 
-### EverOS Structure
-
 ```
 EverOS/
+└── methods/
+    ├── EverCore/            # Long-term memory operating system
+    └── HyperMem/            # Hypergraph memory architecture
 ├── benchmarks/
 │   ├── EverMemBench/        # Memory quality evaluation
 │   └── EvoAgentBench/       # Agent self-evolution evaluation
-└── methods/
-    ├── EverCore/              # Long-term memory operating system
-    └── HyperMem/            # Hypergraph memory architecture
 └── usecases/                # Example applications
 ```
 
+<br>
 
+## Methods
 
-### Methods
+Our methods are production-ready memory architectures that give agents persistent, structured long-term memory. Each can be used standalone or composed together depending on your use case.
 
 <table>
 <tr>
 <td width="50%">
 
-![banner-gif](https://github.com/user-attachments/assets/55043376-d338-4844-b0bb-3c78839937b1)
+![banner-gif](https://github.com/user-attachments/assets/2d45227d-6817-48f5-83eb-8422d7cb989d)
 
 
 #### EverCore
@@ -97,11 +77,15 @@ A hypergraph-based hierarchical memory architecture that captures high-order ass
 </tr>
 </table>
 
-### Benchmarks
+<br>
+
+## Benchmarks
+
+Our benchmarks are designed as **open public standards**. Any memory architecture or agent framework can be evaluated under the same ruler.
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
 ![banner-gif](https://github.com/user-attachments/assets/06b4f598-73e6-44d8-b9cc-8b5483cc363e)
 
@@ -126,7 +110,7 @@ Agent self-evolution evaluation — not static snapshots, but longitudinal growt
 </tr>
 </table>
 
-> All benchmarks are designed as **open public standards**. Any memory architecture or agent framework can be evaluated under the same ruler.
+
 
 <br>
 <div align="right">
