@@ -58,7 +58,7 @@ On the **LoCoMo** benchmark, our approach built upon EverMemOS achieved a reason
 EverMemOS operates along two main tracks: **memory construction** and **memory perception**. Together they form a cognitive loop that continuously absorbs, consolidates, and applies past information, so every response is grounded in real context and long-term memory.
 
 <p align="center">
-  <img src="../figs/overview.png" alt="Overview" />
+  <img src="https://github.com/user-attachments/assets/bb3c1e61-016f-4f2f-9622-968422ab8806" alt="Overview" />
 </p>
 
 ### 🧩 Memory Construction
