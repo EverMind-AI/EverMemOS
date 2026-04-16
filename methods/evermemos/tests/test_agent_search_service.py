@@ -445,20 +445,16 @@ class TestFetchAgentSkillsConfidenceFilter:
         high_conf_doc = _make_skill_doc(confidence=0.8)
         high_id = str(high_conf_doc.id)
 
-        with patch(
-            "agentic_layer.search_mem_service.AgentSkillRecord"
-        ) as mock_record_cls:
-            mock_query = MagicMock()
-            mock_query.to_list = AsyncMock(return_value=[high_conf_doc])
-            mock_record_cls.find_many.return_value = mock_query
+        search_service.agent_skill_raw_repo.find_by_ids = AsyncMock(
+            return_value=[high_conf_doc]
+        )
 
-            result = await search_service._fetch_agent_skills_by_ids([high_id])
+        result = await search_service._fetch_agent_skills_by_ids([high_id])
 
-            call_args = mock_record_cls.find_many.call_args[0][0]
-            assert "confidence" in call_args
-            assert "$gte" in call_args["confidence"]
-            assert call_args["confidence"]["$gte"] == 0.1
-            assert high_id in result
+        call_kwargs = search_service.agent_skill_raw_repo.find_by_ids.call_args
+        assert call_kwargs[0][0] == [high_id]
+        assert call_kwargs[1]["min_confidence"] == pytest.approx(0.1)
+        assert high_id in result
 
     @pytest.mark.asyncio
     async def test_empty_ids_returns_empty(self, search_service):
@@ -912,7 +908,9 @@ class TestHybridEdgeCases:
             )
 
         assert len(results) == 1
-        assert results[0].score == 0.9
+        # vector_anchored_fusion: alpha*vec + (1-alpha)*sat_bm25
+        # sat_bm25 = 5.0/(5.0+5.0) = 0.5; score = 0.7*0.9 + 0.3*0.5 = 0.78
+        assert results[0].score == pytest.approx(0.78)
 
     @pytest.mark.asyncio
     async def test_hybrid_case_backfill_missing_doc(self, search_service):
@@ -1033,7 +1031,9 @@ class TestHybridEdgeCases:
             )
 
         assert len(results) == 1
-        assert results[0].score == 0.8
+        # vector_anchored_fusion: only vector hit, no keyword hit
+        # score = 0.7*0.8 + 0.3*0.0 = 0.56
+        assert results[0].score == pytest.approx(0.56)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
