@@ -109,9 +109,12 @@ class OpenAIProvider(LLMProvider):
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": temperature if temperature is not None else self.temperature,
-            "provider": self._resolve_openrouter_provider(),
-            "response_format": response_format,
         }
+        provider = self._resolve_openrouter_provider()
+        if provider is not None:
+            data["provider"] = provider
+        if response_format is not None:
+            data["response_format"] = response_format
         if max_tokens is not None:
             data["max_tokens"] = max_tokens
         elif self.max_tokens is not None:
