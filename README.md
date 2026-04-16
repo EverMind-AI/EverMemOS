@@ -238,26 +238,26 @@ Use computer-use to launch screenshot-based analysis, all stored in your memory.
 </td>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/54a7cf8f-62c4-4fbc-9d50-b214d034e051)
+[![banner-gif](https://github.com/user-attachments/assets/54a7cf8f-62c4-4fbc-9d50-b214d034e051)](use-cases/game-of-throne-demo)
 
 #### Game of Thrones Memories
 
 A demonstration of AI memory infrastructure through an interactive Q&A experience with "A Game of Thrones".
 
-[Code](https://github.com/EverMind-AI/evermem_got_demo)
+[Code](use-cases/game-of-throne-demo)
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/af37c1f6-7ba5-430c-b99d-2a7e7eac618f)
+[![banner-gif](https://github.com/user-attachments/assets/af37c1f6-7ba5-430c-b99d-2a7e7eac618f)](use-cases/claude-code-plugin)
 
 #### Claude Code Plugin
 
 Persistent memory for Claude Code. Automatically saves and recalls context from past coding sessions.
 
-[Code](https://github.com/EverMind-AI/evermem-claude-code)
+[Code](use-cases/claude-code-plugin)
 
 </td>
 <td width="50%" valign="top">
