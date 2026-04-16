@@ -161,7 +161,7 @@ docker-compose ps
 ### Start Web Service (REST API)
 
 ```bash
-# Default port 8001
+# Default port 1995
 uv run python src/run.py
 
 # Specify port
@@ -176,11 +176,11 @@ LOG_LEVEL=DEBUG uv run python src/run.py
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `--host` | Listening address | `0.0.0.0` |
-| `--port` | Port | `8001` |
+| `--port` | Port | `1995` |
 | `--env-file` | Environment variable file | `.env` |
 | `--mock` | Enable Mock mode | disabled |
 
-After startup, visit API documentation: `http://localhost:8001/docs`
+After startup, visit API documentation: `http://localhost:1995/docs`
 
 ### Start Task Worker (Optional)
 
@@ -290,7 +290,7 @@ docker-compose restart milvus
 
 ```bash
 # Check port usage
-lsof -i :8001
+lsof -i :1995
 
 # Use a different port
 uv run python src/run.py --port 8080
@@ -319,6 +319,6 @@ pip install -e .
 ## 🎯 Next Steps
 
 1. **Read Development Guide**: Check [development_guide.md](development_guide.md) for architecture and best practices
-2. **View API Documentation**: Visit `http://localhost:8001/docs` for available API endpoints
+2. **View API Documentation**: Visit `http://localhost:1995/docs` for available API endpoints
 3. **Run Demos**: Try example scripts in the `demo/` directory
 4. **Read Bootstrap Guide**: See [bootstrap_usage.md](bootstrap_usage.md) for script runner details

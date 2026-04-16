@@ -8,12 +8,12 @@ Tests:
 3. Verify LLM calls work correctly
 
 Usage:
-    # Requires running server on port 8001
+    # Requires running server on port 1995
     cd /Users/admin/Applications/cursor_project/evermemos/evermemos-opensource
     source .venv/bin/activate
 
     # Run all E2E tests
-    PYTHONPATH=src python tests/test_llm_switching_e2e.py --base-url http://localhost:8001
+    PYTHONPATH=src python tests/test_llm_switching_e2e.py --base-url http://localhost:1995
 
     # Run specific test
     PYTHONPATH=src python tests/test_llm_switching_e2e.py --test switch_provider
@@ -634,7 +634,7 @@ class WhitelistUnitTest:
 def main():
     parser = argparse.ArgumentParser(description="LLM Switching E2E Test")
     parser.add_argument(
-        "--base-url", default="http://localhost:8001", help="Base URL of the API server"
+        "--base-url", default="http://localhost:1995", help="Base URL of the API server"
     )
     parser.add_argument(
         "--test",

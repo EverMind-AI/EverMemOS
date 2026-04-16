@@ -129,7 +129,7 @@ This guide explains when and how to control metadata for optimal results.
 ```python
 # Save default config
 requests.put(
-    "http://localhost:8001/api/v1/settings",
+    "http://localhost:1995/api/v1/settings",
     json={
         "scene": "team",
         "scene_desc": {},
@@ -190,7 +190,7 @@ When storing a single message, you can include group and sender metadata:
 import requests
 
 response = requests.post(
-    "http://localhost:8001/api/v0/memories",
+    "http://localhost:1995/api/v0/memories",
     json={
         "message_id": "msg_001",
         "create_time": "2025-02-01T10:00:00+00:00",
@@ -211,7 +211,7 @@ Filter search results by user or group:
 ```python
 # Search within a specific group
 response = requests.get(
-    "http://localhost:8001/api/v0/memories/search",
+    "http://localhost:1995/api/v0/memories/search",
     json={
         "query": "What programming languages are preferred?",
         "group_id": "team_engineering",
@@ -230,7 +230,7 @@ response = requests.get(
 ```python
 # Get current settings
 response = requests.get(
-    "http://localhost:8001/api/v1/settings"
+    "http://localhost:1995/api/v1/settings"
 )
 ```
 
@@ -240,7 +240,7 @@ The V1 Settings API uses PUT for both creation and updates (upsert semantics):
 
 ```python
 response = requests.put(
-    "http://localhost:8001/api/v1/settings",
+    "http://localhost:1995/api/v1/settings",
     json={
         "scene": "team",
         "scene_desc": {
@@ -269,7 +269,7 @@ response = requests.put(
 ```python
 # Delete all memories for a specific user in a group
 response = requests.delete(
-    "http://localhost:8001/api/v0/memories",
+    "http://localhost:1995/api/v0/memories",
     json={
         "user_id": "user_123",
         "group_id": "team_engineering"

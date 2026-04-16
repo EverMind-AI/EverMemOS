@@ -204,10 +204,10 @@ For complete configuration options, see the [Configuration Guide](../usage/CONFI
 ### Start the API Server
 
 ```bash
-uv run python src/run.py --port 8001
+uv run python src/run.py --port 1995
 ```
 
-The server will start on `http://localhost:8001` by default.
+The server will start on `http://localhost:1995` by default.
 
 You should see output similar to:
 
@@ -215,12 +215,12 @@ You should see output similar to:
 INFO:     Started server process [12345]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Uvicorn running on http://0.0.0.0:1995 (Press CTRL+C to quit)
 ```
 
 ### Custom Port
 
-The default port is 8001. To use a different port:
+The default port is 1995. To use a different port:
 
 ```bash
 uv run python src/run.py --port 9000
@@ -235,7 +235,7 @@ uv run python src/run.py --port 9000
 Open a new terminal and test the API:
 
 ```bash
-curl http://localhost:8001/health
+curl http://localhost:1995/health
 ```
 
 You should receive a response indicating the service is healthy.
@@ -297,7 +297,7 @@ If this works, your installation is successful!
 - Check .env file is configured correctly
 - Verify all Docker services are running: `docker-compose ps`
 - Check logs for specific errors
-- Ensure port 8001 is not in use: `lsof -i :8001`
+- Ensure port 1995 is not in use: `lsof -i :1995`
 
 ### Connection Errors
 

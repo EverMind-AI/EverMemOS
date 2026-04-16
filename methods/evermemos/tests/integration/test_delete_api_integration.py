@@ -7,7 +7,7 @@ DB state. All fixture data uses the 'test_intg_delete_' prefix and is
 cleaned up after tests complete.
 
 Requirements:
-    - API server running on localhost:8001
+    - API server running on localhost:1995
     - MongoDB accessible (connection details from .env)
 
 Usage:
@@ -34,7 +34,7 @@ pytestmark = pytest.mark.filterwarnings(
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-API_BASE = os.getenv("TEST_API_BASE", "http://localhost:8001")
+API_BASE = os.getenv("TEST_API_BASE", "http://localhost:1995")
 DELETE_URL = f"{API_BASE}/api/v1/memories/delete"
 
 MONGO_HOST = os.getenv("MONGODB_HOST")
@@ -135,7 +135,7 @@ def _check_server(http_client):
         r = http_client.get(f"{API_BASE}/health")
         assert r.status_code == 200, f"Health check failed: {r.text}"
     except httpx.ConnectError:
-        pytest.skip("API server not running on localhost:8001")
+        pytest.skip("API server not running on localhost:1995")
 
 
 def _now():

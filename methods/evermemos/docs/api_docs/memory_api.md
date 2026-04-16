@@ -6,7 +6,7 @@
 
 The Memory API provides RESTful endpoints for storing, retrieving, searching, and managing conversational memories.
 
-**Base URL:** `http://localhost:8001/api/v0/memories`
+**Base URL:** `http://localhost:1995/api/v0/memories`
 
 ## API Endpoints
 
@@ -74,7 +74,7 @@ Providing a `group_id` enables better episodic memory extraction by giving the s
 ### Example
 
 ```bash
-curl -X POST "http://localhost:8001/api/v0/memories" \
+curl -X POST "http://localhost:1995/api/v0/memories" \
   -H "Content-Type: application/json" \
   -d '{
     "message_id": "msg_001",
@@ -149,7 +149,7 @@ Retrieve memories by type with optional filters.
 ### Example
 
 ```bash
-curl "http://localhost:8001/api/v0/memories?user_id=user_123&memory_type=episodic_memory&limit=20"
+curl "http://localhost:1995/api/v0/memories?user_id=user_123&memory_type=episodic_memory&limit=20"
 ```
 
 ### Response
@@ -244,7 +244,7 @@ Search memories using keyword, vector, or hybrid retrieval methods.
 **Search in multiple groups:**
 
 ```bash
-curl -X GET "http://localhost:8001/api/v1/memories/search" \
+curl -X GET "http://localhost:1995/api/v1/memories/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "coffee preference",
@@ -258,7 +258,7 @@ curl -X GET "http://localhost:8001/api/v1/memories/search" \
 **Search in a single group:**
 
 ```bash
-curl -X GET "http://localhost:8001/api/v1/memories/search" \
+curl -X GET "http://localhost:1995/api/v1/memories/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "coffee preference",
@@ -272,7 +272,7 @@ curl -X GET "http://localhost:8001/api/v1/memories/search" \
 **Search all groups for a user:**
 
 ```bash
-curl -X GET "http://localhost:8001/api/v0/memories/search" \
+curl -X GET "http://localhost:1995/api/v0/memories/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "coffee preference",
@@ -415,7 +415,7 @@ At least one filter must be provided (not all `__all__`).
 
 ```bash
 # Delete all memories for a user in a group
-curl -X DELETE "http://localhost:8001/api/v0/memories" \
+curl -X DELETE "http://localhost:1995/api/v0/memories" \
   -H "Content-Type: application/json" \
   -d '{"user_id": "user_123", "group_ids": "group_456"}'
 ```
@@ -444,7 +444,7 @@ For batch processing ConversationFormat JSON files:
 uv run python src/bootstrap.py src/run_memorize.py \
   --input data/team_chat.json \
   --scene team \
-  --api-url http://localhost:8001/api/v0/memories
+  --api-url http://localhost:1995/api/v0/memories
 
 # Validate format only
 uv run python src/bootstrap.py src/run_memorize.py \

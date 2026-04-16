@@ -3,7 +3,7 @@ V1 Memory GET API Test Suite
 Tests POST /api/v1/memories/get with all filter, pagination, sorting, and error scenarios.
 
 Prerequisites:
-    - Server running: uv run python src/run.py --port 8001
+    - Server running: uv run python src/run.py --port 1995
     - Seed data inserted: python my_docs/temp/seed_v1_data.py
 
 Usage:
@@ -34,7 +34,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = os.environ.get("TEST_BASE_URL", "http://localhost:8001")
+BASE_URL = os.environ.get("TEST_BASE_URL", "http://localhost:1995")
 API_URL = f"{BASE_URL}/api/v1/memories/get"
 TIMEOUT = 30
 

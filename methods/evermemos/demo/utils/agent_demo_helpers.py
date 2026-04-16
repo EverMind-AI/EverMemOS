@@ -13,7 +13,7 @@ import httpx
 from common_utils.datetime_utils import get_now_with_timezone
 
 
-DEFAULT_BASE_URL = "http://localhost:8001"
+DEFAULT_BASE_URL = "http://localhost:1995"
 
 
 # ==================== Print Helpers ====================
