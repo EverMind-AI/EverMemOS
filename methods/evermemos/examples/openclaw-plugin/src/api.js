@@ -14,7 +14,7 @@ function messageId(idSeed, role, content) {
 }
 
 export async function searchMemories(cfg, params, log = noop) {
-  const { memory_types, ...baseParams } = params;
+  const { memory_types, user_id, group_id, ...baseParams } = params;
 
   const SEARCHABLE = new Set(["episodic_memory"]);
   const searchTypes = (memory_types ?? []).filter((t) => SEARCHABLE.has(t));
@@ -23,16 +23,21 @@ export async function searchMemories(cfg, params, log = noop) {
     return { status: "ok", result: { memories: [], pending_messages: [] } };
   }
 
-  const p = { ...baseParams, memory_types: searchTypes };
-  log.info(`${TAG} GET /api/v1/memories/search`);
-  const r = await request(cfg, "GET", "/api/v1/memories/search", p);
-  log.info(`${TAG} GET response`);
+  // v1 API: user_id/group_id must be inside filters object
+  const p = {
+    ...baseParams,
+    memory_types: searchTypes,
+    filters: { user_id, group_id },
+  };
+  log.info(`${TAG} POST /api/v1/memories/search`);
+  const r = await request(cfg, "POST", "/api/v1/memories/search", p);
+  log.info(`${TAG} POST response`);
 
   return {
     status: "ok",
     result: {
-      memories: r?.result?.memories ?? [],
-      pending_messages: r?.result?.pending_messages ?? [],
+      memories: r?.data?.episodes ?? [],
+      pending_messages: [],
     },
   };
 }
@@ -41,30 +46,23 @@ export async function saveMemories(cfg, { userId, groupId, messages = [], flush 
   if (!messages.length) return;
   const stamp = Date.now();
 
-  const payloads = messages.map((msg, i) => {
-    const { role = "user", content = "" } = msg;
-    // Always use userId as sender so the backend stores a consistent user_id
-    // for both user and assistant messages. The `role` field distinguishes who spoke.
-    const sender = userId;
-    const senderName = role === "assistant" ? "assistant" : userId;
-    const isLast = i === messages.length - 1;
+  // v1 API: batch format with user_id at top level, messages in array
+  const payload = {
+    user_id: userId,
+    messages: messages.map((msg, i) => {
+      const { role = "user", content = "" } = msg;
+      return {
+        content,
+        timestamp: stamp + i,
+        role,
+        sender_name: role === "assistant" ? "assistant" : userId,
+      };
+    }),
+  };
 
-    return {
-      message_id: messageId(idSeed, role, content),
-      create_time: new Date(stamp + i).toISOString(),
-      role,
-      sender,
-      sender_name: senderName,
-      content,
-      group_id: groupId,
-      group_name: groupId,
-      scene: "assistant",
-      raw_data_type: "AgentConversation",
-      ...(flush && isLast && { flush: true }),
-    };
-  });
+  await request(cfg, "POST", "/api/v1/memories", payload);
 
-  for (const payload of payloads) {
-    await request(cfg, "POST", "/api/v1/memories", payload);
+  if (flush) {
+    await request(cfg, "POST", "/api/v1/memories/flush", { user_id: userId });
   }
 }
