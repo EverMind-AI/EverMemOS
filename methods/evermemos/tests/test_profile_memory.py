@@ -395,6 +395,140 @@ class TestProfileExtractor:
 
 
 # ============================================================================
+# _format_episodes_for_llm: tool-message filtering
+# ============================================================================
+
+
+class TestFormatEpisodesForLLM:
+    """Verify tool messages and assistant tool_calls are filtered out when
+    formatting episode original_data for the profile LLM prompt."""
+
+    def _make_extractor(self):
+        return ProfileExtractor(llm_provider=MagicMock())
+
+    def _episode(self, original_data):
+        return {
+            "id": "ep1",
+            "created_at": "2024-01-01T00:00:00Z",
+            "original_data": original_data,
+        }
+
+    def test_user_and_assistant_messages_included(self):
+        ext = self._make_extractor()
+        episodes = [self._episode([
+            {"role": "user", "sender_name": "Alice", "content": "hi", "timestamp": "t1"},
+            {"role": "assistant", "sender_name": "Bot", "content": "hello", "timestamp": "t2"},
+        ])]
+        text = ext._format_episodes_for_llm(episodes, {"ep1": "ep1"})
+        assert "【Alice】: hi" in text
+        assert "【Bot】: hello" in text
+
+    def test_tool_role_is_filtered(self):
+        ext = self._make_extractor()
+        episodes = [self._episode([
+            {"role": "user", "sender_name": "Alice", "content": "run it", "timestamp": "t1"},
+            {"role": "tool", "sender_name": "search_api", "content": "tool output", "timestamp": "t2"},
+        ])]
+        text = ext._format_episodes_for_llm(episodes, {"ep1": "ep1"})
+        assert "【Alice】: run it" in text
+        assert "tool output" not in text
+        assert "search_api" not in text
+
+    def test_assistant_with_tool_calls_is_filtered(self):
+        ext = self._make_extractor()
+        episodes = [self._episode([
+            {
+                "role": "assistant",
+                "sender_name": "Bot",
+                "content": "thinking...",
+                "tool_calls": [{"id": "tc1", "function": {"name": "search"}}],
+                "timestamp": "t1",
+            },
+            {"role": "assistant", "sender_name": "Bot", "content": "final answer", "timestamp": "t2"},
+        ])]
+        text = ext._format_episodes_for_llm(episodes, {"ep1": "ep1"})
+        assert "thinking..." not in text
+        assert "final answer" in text
+
+    def test_assistant_with_empty_tool_calls_included(self):
+        """tool_calls=[] is falsy; message should NOT be filtered."""
+        ext = self._make_extractor()
+        episodes = [self._episode([
+            {
+                "role": "assistant",
+                "sender_name": "Bot",
+                "content": "regular reply",
+                "tool_calls": [],
+                "timestamp": "t1",
+            },
+        ])]
+        text = ext._format_episodes_for_llm(episodes, {"ep1": "ep1"})
+        assert "regular reply" in text
+
+    def test_assistant_with_none_tool_calls_included(self):
+        ext = self._make_extractor()
+        episodes = [self._episode([
+            {
+                "role": "assistant",
+                "sender_name": "Bot",
+                "content": "regular reply",
+                "tool_calls": None,
+                "timestamp": "t1",
+            },
+        ])]
+        text = ext._format_episodes_for_llm(episodes, {"ep1": "ep1"})
+        assert "regular reply" in text
+
+    def test_missing_tool_calls_key_included(self):
+        ext = self._make_extractor()
+        episodes = [self._episode([
+            {"role": "assistant", "sender_name": "Bot", "content": "regular reply", "timestamp": "t1"},
+        ])]
+        text = ext._format_episodes_for_llm(episodes, {"ep1": "ep1"})
+        assert "regular reply" in text
+
+    def test_nested_message_wrapper_is_unwrapped(self):
+        ext = self._make_extractor()
+        episodes = [self._episode([
+            {"message": {
+                "role": "tool",
+                "sender_name": "search_api",
+                "content": "tool result",
+                "timestamp": "t1",
+            }},
+            {"message": {
+                "role": "user",
+                "sender_name": "Alice",
+                "content": "kept message",
+                "timestamp": "t2",
+            }},
+        ])]
+        text = ext._format_episodes_for_llm(episodes, {"ep1": "ep1"})
+        assert "tool result" not in text
+        assert "【Alice】: kept message" in text
+
+    def test_mixed_messages_preserves_only_conversational(self):
+        ext = self._make_extractor()
+        episodes = [self._episode([
+            {"role": "user", "sender_name": "Alice", "content": "question", "timestamp": "t1"},
+            {
+                "role": "assistant",
+                "sender_name": "Bot",
+                "content": "let me check",
+                "tool_calls": [{"id": "tc1"}],
+                "timestamp": "t2",
+            },
+            {"role": "tool", "sender_name": "api", "content": "{\"data\": 1}", "timestamp": "t3"},
+            {"role": "assistant", "sender_name": "Bot", "content": "the answer is 1", "timestamp": "t4"},
+        ])]
+        text = ext._format_episodes_for_llm(episodes, {"ep1": "ep1"})
+        assert "question" in text
+        assert "the answer is 1" in text
+        assert "let me check" not in text
+        assert "{\"data\": 1}" not in text
+
+
+# ============================================================================
 # Unified extraction (no SOLO/TEAM split)
 # ============================================================================
 
