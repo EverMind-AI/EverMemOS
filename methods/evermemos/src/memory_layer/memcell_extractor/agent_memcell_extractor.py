@@ -51,7 +51,7 @@ from memory_layer.memcell_extractor.base_memcell_extractor import (
     StatusResult,
 )
 from memory_layer.llm.llm_provider import LLMProvider
-from api_specs.memory_types import MemCell, RawDataType
+from api_specs.memory_types import MemCell, RawDataType, is_intermediate_agent_step
 from core.observation.logger import get_logger
 
 logger = get_logger(__name__)
@@ -92,21 +92,6 @@ class AgentMemCellExtractor(ConvMemCellExtractor):
             hard_message_limit=hard_message_limit or AGENT_DEFAULT_HARD_MESSAGE_LIMIT,
         )
         self.raw_data_type = RawDataType.AGENTCONVERSATION
-
-    @staticmethod
-    def _is_intermediate_agent_step(msg: Dict[str, Any]) -> bool:
-        """Check if a message is an intermediate agent step.
-
-        Intermediate steps are:
-        - role="tool": Tool execution results
-        - role="assistant" WITH tool_calls: Intermediate tool invocations
-        """
-        role = msg.get("role", "")
-        if role == "tool":
-            return True
-        if role == "assistant" and msg.get("tool_calls"):
-            return True
-        return False
 
     # ------------------------------------------------------------------
     # extract_memcell: single guard, then delegate to parent
@@ -156,7 +141,7 @@ class AgentMemCellExtractor(ConvMemCellExtractor):
                 last_content = request.new_raw_data_list[-1].content
                 if isinstance(
                     last_content, dict
-                ) and self._is_intermediate_agent_step(last_content):
+                ) and is_intermediate_agent_step(last_content):
                     logger.debug(
                         "[AgentMemCellExtractor] Skipping: last new message is "
                         "intermediate (role=%s)",
@@ -246,7 +231,7 @@ class AgentMemCellExtractor(ConvMemCellExtractor):
         filtered: List[Dict[str, Any]] = []
         filtered_to_orig: List[int] = []  # filtered_to_orig[i] = original index
         for orig_idx, msg in enumerate(messages):
-            if not self._is_intermediate_agent_step(msg):
+            if not is_intermediate_agent_step(msg):
                 filtered.append(msg)
                 filtered_to_orig.append(orig_idx)
 

@@ -20,7 +20,7 @@ from typing import List, Dict, Any
 
 from common_utils.datetime_utils import get_now_with_timezone
 from api_specs.dtos import RawData
-from api_specs.memory_types import RawDataType
+from api_specs.memory_types import RawDataType, is_intermediate_agent_step
 
 from memory_layer.memcell_extractor.agent_memcell_extractor import (
     AgentMemCellExtractor,
@@ -130,19 +130,19 @@ def _build_extractor_should_end() -> AgentMemCellExtractor:
 
 
 class TestHelperMethods:
-    """Test _is_intermediate_agent_step."""
+    """Test is_intermediate_agent_step."""
 
     def test_tool_response_is_intermediate(self):
-        assert AgentMemCellExtractor._is_intermediate_agent_step(_tool_response_msg()) is True
+        assert is_intermediate_agent_step(_tool_response_msg()) is True
 
     def test_tool_call_is_intermediate(self):
-        assert AgentMemCellExtractor._is_intermediate_agent_step(_tool_call_msg()) is True
+        assert is_intermediate_agent_step(_tool_call_msg()) is True
 
     def test_user_msg_not_intermediate(self):
-        assert AgentMemCellExtractor._is_intermediate_agent_step(_user_msg("hi")) is False
+        assert is_intermediate_agent_step(_user_msg("hi")) is False
 
     def test_final_assistant_not_intermediate(self):
-        assert AgentMemCellExtractor._is_intermediate_agent_step(_assistant_msg("done")) is False
+        assert is_intermediate_agent_step(_assistant_msg("done")) is False
 
 
 # ---------------------------------------------------------------------------
@@ -942,7 +942,7 @@ class TestForceSplitToolBoundary:
             first_msg = mc.original_data[0].get("message", mc.original_data[0])
             last_msg = mc.original_data[-1].get("message", mc.original_data[-1])
             # Last message in a MemCell should not be an intermediate step
-            assert not AgentMemCellExtractor._is_intermediate_agent_step(
+            assert not is_intermediate_agent_step(
                 last_msg
             ), f"MemCell ends with intermediate: {last_msg.get('role')}"
 
@@ -970,7 +970,7 @@ class TestForceSplitToolBoundary:
         assert len(memcells) > 0
         for mc in memcells:
             last_msg = mc.original_data[-1].get("message", mc.original_data[-1])
-            assert not AgentMemCellExtractor._is_intermediate_agent_step(
+            assert not is_intermediate_agent_step(
                 last_msg
             ), f"MemCell ends with intermediate: {last_msg.get('role')}"
 
@@ -1606,7 +1606,7 @@ class TestForceSplitLoopSimulation:
         for i, chunk in enumerate(chunks[:-1]):
             # Should not end at intermediate
             last = chunk[-1]
-            assert not AgentMemCellExtractor._is_intermediate_agent_step(last), (
+            assert not is_intermediate_agent_step(last), (
                 f"Chunk[{i}] ends with intermediate: role={last.get('role')}"
             )
 

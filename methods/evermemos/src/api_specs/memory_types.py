@@ -114,6 +114,21 @@ def get_text_from_content_items(content_items: Any) -> str:
     return " ".join(texts) if texts else ""
 
 
+def is_intermediate_agent_step(msg: Dict[str, Any]) -> bool:
+    """Check if a message is an intermediate agent step (tool call or tool response).
+
+    Intermediate steps are:
+    - role="tool": Tool execution results
+    - role="assistant" WITH tool_calls: Intermediate tool invocations
+    """
+    role = msg.get("role", "")
+    if role == "tool":
+        return True
+    if role == "assistant" and msg.get("tool_calls"):
+        return True
+    return False
+
+
 @dataclass
 class MemCell:
     # TODO: Name conflict - should add BO suffix (such as MemCellBO) to distinguish between business objects and document objects
@@ -152,16 +167,6 @@ class MemCell:
         if not self.original_data:
             raise ValueError("original_data is required")
 
-    @staticmethod
-    def _is_intermediate_agent_step(msg: Dict[str, Any]) -> bool:
-        """Check if a message is an intermediate agent step (tool call or tool response)."""
-        role = msg.get("role", "")
-        if role == "tool":
-            return True
-        if role == "assistant" and msg.get("tool_calls"):
-            return True
-        return False
-
     @property
     def conversation_data(self) -> List[Dict[str, Any]]:
         """Return conversation data with tool calls/responses filtered out for agent conversations.
@@ -179,7 +184,7 @@ class MemCell:
             self._conversation_data_cache = [
                 item
                 for item in self.original_data
-                if not self._is_intermediate_agent_step(
+                if not is_intermediate_agent_step(
                     item.get("message", item) if isinstance(item, dict) else item
                 )
             ]
