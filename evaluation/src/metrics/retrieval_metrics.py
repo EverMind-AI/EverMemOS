@@ -9,27 +9,45 @@ hit@k / recall@k / MRR / nDCG@k on that shared vocabulary.
 from __future__ import annotations
 
 import math
+import re
 from typing import Iterable
 
-from evaluation.src.adapters.openclaw_manifest import project_message_id_to_session_id
+from evaluation.src.adapters.openclaw.manifest import project_message_id_to_session_id
+
+
+_EVIDENCE_SPLIT = re.compile(r"[;,\s]+")
 
 
 def normalize_gold_sessions(evidence: Iterable[str]) -> list[str]:
     """Project gold evidence down to sorted unique session ids.
 
     Accepts both ``D<s>:<m>`` (LoCoMo / LongMemEval after converter) and
-    bare ``S<s>`` formats. Anything else raises ValueError - benchmark A
-    runs fail-closed so no silent evidence drops inflate recall numbers.
+    bare ``S<s>`` formats. A single evidence string may glue multiple
+    message ids with ``;`` or ``,`` (LoCoMo has a handful of these);
+    each sub-token is projected independently. Anything else raises
+    ValueError - benchmark A runs fail-closed so no silent evidence
+    drops inflate recall numbers.
     """
     out: list[str] = []
     for item in evidence:
-        s = str(item)
-        if s.startswith("S") and s[1:].isdigit():
-            out.append(s)
-        elif s.startswith("D"):
-            out.append(project_message_id_to_session_id(s))
-        else:
-            raise ValueError(f"Unsupported evidence format: {item!r}")
+        for token in _EVIDENCE_SPLIT.split(str(item)):
+            s = token.strip()
+            if not s:
+                continue
+            # Bare ``D`` is an annotator slip (conv3/qa88); drop without
+            # inflating the error stream — the same QA usually lists other
+            # well-formed ids so we can still score it.
+            if s == "D":
+                continue
+            # ``D:N:M`` is a one-off typo (conv4/qa18); treat as ``DN:M``.
+            if s.startswith("D:"):
+                s = "D" + s[2:]
+            if s.startswith("S") and s[1:].isdigit():
+                out.append(s)
+            elif s.startswith("D"):
+                out.append(project_message_id_to_session_id(s))
+            else:
+                raise ValueError(f"Unsupported evidence format: {item!r}")
     return sorted(set(out))
 
 
@@ -91,26 +109,9 @@ def evaluate_retrieval_metrics(qa_pairs, search_results, k: int = 5) -> dict:
     missing ids raise, extra ids are logged, and a length mismatch is
     reported before aggregation.
     """
-    search_by_id: dict[str, object] = {}
-    missing_meta = 0
-    for sr in search_results:
-        qid = (getattr(sr, "retrieval_metadata", {}) or {}).get("question_id")
-        if qid is None:
-            missing_meta += 1
-            continue
-        search_by_id[qid] = sr
+    from evaluation.src.metrics.pairing import pair_by_question_id
 
-    if missing_meta:
-        # Fall back to positional match for the tail that didn't carry
-        # question_id metadata (older checkpoints, tests that build
-        # SearchResult manually). We still emit a warning-worthy count
-        # in the output so the operator sees something is off.
-        leftover = [sr for sr in search_results
-                    if (getattr(sr, "retrieval_metadata", {}) or {}).get("question_id")
-                       is None]
-        unpaired = [qa for qa in qa_pairs if qa.question_id not in search_by_id]
-        for qa, sr in zip(unpaired, leftover):
-            search_by_id[qa.question_id] = sr
+    search_by_id, missing_meta = pair_by_question_id(qa_pairs, search_results)
 
     per_question = []
     unresolved: list[str] = []
@@ -119,7 +120,10 @@ def evaluate_retrieval_metrics(qa_pairs, search_results, k: int = 5) -> dict:
         if sr is None:
             unresolved.append(qa.question_id)
             continue
-        per_question.append(evaluate_retrieval_for_question(qa, sr, k=k))
+        try:
+            per_question.append(evaluate_retrieval_for_question(qa, sr, k=k))
+        except ValueError:
+            unresolved.append(qa.question_id)
 
     n = len(per_question) or 1
     return {

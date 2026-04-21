@@ -47,6 +47,22 @@ OUTCOME_QUOTA_EXCEEDED = "quota_exceeded"
 OUTCOME_FAILED_OTHER = "failed_other"
 
 
+# Single source of truth for how the pipeline-level retry_policy maps to
+# stage-level max_retries. Shared so search_stage and answer_stage cannot
+# drift from each other and so adapters with internal retry loops can
+# honor the same semantics.
+MAX_RETRIES_BY_POLICY: Dict[str, int] = {
+    "strict_no_retry": 1,
+    "retry_once": 2,
+    "realistic": 3,
+}
+
+
+def max_retries_for(retry_policy: str) -> int:
+    """Resolve retry_policy name → max_retries (default: realistic)."""
+    return MAX_RETRIES_BY_POLICY.get(retry_policy, MAX_RETRIES_BY_POLICY["realistic"])
+
+
 @dataclass(frozen=True)
 class AttemptRecord:
     """One execution attempt. A call without retries has exactly one."""

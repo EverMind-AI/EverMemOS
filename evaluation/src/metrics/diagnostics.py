@@ -24,49 +24,17 @@ from pathlib import Path
 from statistics import mean
 from typing import Iterable, Optional
 
+# Re-export under the legacy private name so existing call sites and
+# tests that import diagnostics._stats keep working; new code should
+# import summarize directly from distributions.
+from evaluation.src.metrics.distributions import summarize as _stats
+
 
 def _safe_mean(values: Iterable[float | None]) -> Optional[float]:
     valid = [v for v in values if isinstance(v, (int, float))]
     if not valid:
         return None
     return float(mean(valid))
-
-
-def _percentile(sorted_values: list[float], pct: float) -> float:
-    """Linear-interp percentile over a pre-sorted list. pct in [0, 100]."""
-    if not sorted_values:
-        return 0.0
-    if len(sorted_values) == 1:
-        return float(sorted_values[0])
-    k = (len(sorted_values) - 1) * (pct / 100.0)
-    lo = int(k)
-    hi = min(lo + 1, len(sorted_values) - 1)
-    frac = k - lo
-    return float(sorted_values[lo] + (sorted_values[hi] - sorted_values[lo]) * frac)
-
-
-def _stats(values: Iterable[float | None]) -> Optional[dict]:
-    """Return mean/p50/p95/max/n over numeric values, or None if empty.
-
-    bool is a subclass of int in Python; exclude it explicitly so a
-    field accidentally set to True/False cannot poison the distribution
-    with 1.0/0.0 datapoints.
-    """
-    valid = [
-        float(v)
-        for v in values
-        if isinstance(v, (int, float)) and not isinstance(v, bool)
-    ]
-    if not valid:
-        return None
-    valid.sort()
-    return {
-        "n": len(valid),
-        "mean": float(mean(valid)),
-        "p50": _percentile(valid, 50),
-        "p95": _percentile(valid, 95),
-        "max": float(valid[-1]),
-    }
 
 
 def _distribution(values: Iterable[str | None]) -> dict[str, int]:
@@ -134,11 +102,12 @@ def aggregate_diagnostics(
     failed_adds = 0
     add_n = 0
     for summary_path in _iter_add_summary_paths(index):
-        if not summary_path.exists():
-            continue
+        # Open directly: try/except covers both "file missing" and
+        # "malformed JSON" in one pass and avoids a TOCTOU window
+        # between the existence check and the read.
         try:
             summary = json.loads(summary_path.read_text())
-        except Exception:
+        except (FileNotFoundError, ValueError):
             continue
         add_n += 1
         lat = summary.get("add_latency_ms")

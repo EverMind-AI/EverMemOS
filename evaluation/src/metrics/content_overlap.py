@@ -76,31 +76,11 @@ def compute_content_overlap_at_k(qa, search_result, k: int) -> dict:
     }
 
 
-def _pair_search_by_question_id(qa_pairs, search_results):
-    """Same pairing semantics as retrieval_metrics.evaluate_retrieval_metrics.
-
-    Prefers question_id-based lookup, falls back positionally for
-    entries missing retrieval_metadata.question_id (older checkpoints,
-    hand-built SearchResults in tests).
-    """
-    by_id: dict[str, object] = {}
-    missing_meta: list[object] = []
-    for sr in search_results:
-        qid = (getattr(sr, "retrieval_metadata", {}) or {}).get("question_id")
-        if qid is None:
-            missing_meta.append(sr)
-        else:
-            by_id[qid] = sr
-    if missing_meta:
-        unpaired = [qa for qa in qa_pairs if qa.question_id not in by_id]
-        for qa, sr in zip(unpaired, missing_meta):
-            by_id[qa.question_id] = sr
-    return by_id
-
-
 def evaluate_content_overlap(qa_pairs, search_results, k: int = 5) -> dict:
     """Batch wrapper. Returns per-question rows plus mean aggregates."""
-    by_id = _pair_search_by_question_id(qa_pairs, search_results)
+    from evaluation.src.metrics.pairing import pair_by_question_id
+
+    by_id, _ = pair_by_question_id(qa_pairs, search_results)
 
     per_question: list[dict] = []
     unresolved: list[str] = []

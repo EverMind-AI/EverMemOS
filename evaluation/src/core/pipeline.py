@@ -101,14 +101,9 @@ class Pipeline:
         # Question category filter configuration (read from dataset config)
         self.filter_categories = filter_categories or []
 
-        # Layer-1 latency recorder (see docs/latency-alignment.md).
-        # Stages wrap every adapter.add/search/answer call in
-        # recorder.measure(); aggregate_all() produces the
-        # cross-adapter canonical four-view report at the end.
-        # retry_policy is forwarded to adapters via BenchmarkContext in
-        # Phase 2 — for now its only effect is to label the run.
-        self.retry_policy = retry_policy
-        self.deadline_ms = deadline_ms
+        # Layer-1 latency recorder (see docs/latency-alignment.md). The
+        # recorder owns retry_policy / deadline_ms so we don't cache
+        # them as separate Pipeline attributes.
         self.latency_recorder = LatencyRecorder(
             retry_policy=retry_policy,
             deadline_ms=deadline_ms,
@@ -833,7 +828,7 @@ class Pipeline:
                 self.latency_recorder.records,
                 n_conversations=n_conversations,
                 n_qa_pairs=n_qa_pairs,
-                retry_policy=self.retry_policy,
+                retry_policy=self.latency_recorder.retry_policy,
             )
             violation_report = summarize_latency_violations(violations)
             self.saver.save_json(violation_report, "latency_invariants.json")
@@ -867,7 +862,7 @@ class Pipeline:
             k=k,
             content_overlap=content_overlap,
             latency_views=latency_views,
-            retry_policy=self.retry_policy,
+            retry_policy=self.latency_recorder.retry_policy,
             latency_invariants=violation_report,
         )
         self.saver.save_json(summary, "benchmark_summary.json")

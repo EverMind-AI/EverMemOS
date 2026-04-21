@@ -26,49 +26,13 @@ retry_by_class bucketing retried attempts by outcome (http_5xx / 429
 from __future__ import annotations
 
 from collections import Counter
-from statistics import mean
-from typing import Iterable, List, Optional
+from typing import List, Optional
 
 from evaluation.src.core.benchmark_context import (
     CallRecord,
     OUTCOME_SUCCESS,
 )
-
-
-def _percentile(sorted_values: List[float], pct: float) -> float:
-    """Linear-interp percentile over a pre-sorted list. pct in [0, 100]."""
-    if not sorted_values:
-        return 0.0
-    if len(sorted_values) == 1:
-        return float(sorted_values[0])
-    k = (len(sorted_values) - 1) * (pct / 100.0)
-    lo = int(k)
-    hi = min(lo + 1, len(sorted_values) - 1)
-    frac = k - lo
-    return float(sorted_values[lo] + (sorted_values[hi] - sorted_values[lo]) * frac)
-
-
-def _percentiles(values: Iterable[float]) -> Optional[dict]:
-    """mean / p50 / p95 / max / n — or None when the view has no samples.
-
-    bool is ``int`` in Python; exclude it so a mis-typed field can't
-    silently contribute 1.0/0.0 datapoints to a latency distribution.
-    """
-    nums = [
-        float(v)
-        for v in values
-        if isinstance(v, (int, float)) and not isinstance(v, bool)
-    ]
-    if not nums:
-        return None
-    nums.sort()
-    return {
-        "n": len(nums),
-        "mean": float(mean(nums)),
-        "p50": _percentile(nums, 50),
-        "p95": _percentile(nums, 95),
-        "max": float(nums[-1]),
-    }
+from evaluation.src.metrics.distributions import summarize as _percentiles
 
 
 def aggregate_stage(records: List[CallRecord], op: str) -> Optional[dict]:
@@ -131,7 +95,9 @@ def aggregate_all(records: List[CallRecord]) -> dict:
     answer per-unit when both are present.
     """
     ops = sorted({r.op for r in records})
-    out: dict = {op: aggregate_stage(records, op) for op in ops if aggregate_stage(records, op)}
+    # Walrus avoids calling aggregate_stage twice per op (once for the
+    # filter guard, once to populate the value).
+    out: dict = {op: s for op in ops if (s := aggregate_stage(records, op))}
 
     # Derive per-question end-to-end (search + answer sum) when we have
     # matched unit_ids on both sides. This is purely a function of

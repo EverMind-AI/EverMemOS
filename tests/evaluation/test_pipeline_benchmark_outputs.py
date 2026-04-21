@@ -60,12 +60,10 @@ def _make_stub_pipeline(tmp_path):
     p.logger = logging.getLogger("stub_pipeline")
     # Phase 1: stub out the LatencyRecorder so helpers that write
     # latency_views.json don't AttributeError on Pipeline.__new__-style
-    # fixtures.
+    # fixtures. retry_policy / deadline_ms live on the recorder itself.
     from evaluation.src.core.benchmark_context import LatencyRecorder
 
     p.latency_recorder = LatencyRecorder()
-    p.retry_policy = "realistic"
-    p.deadline_ms = None
     return p
 
 

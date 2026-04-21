@@ -16,6 +16,7 @@ from evaluation.src.core.benchmark_context import (
     OUTCOME_FAILED_OTHER,
     OUTCOME_SUCCESS,
     OUTCOME_TIMEOUT,
+    max_retries_for,
 )
 
 
@@ -134,23 +135,12 @@ async def run_answer_stage(
         print(f"Remaining: {total_qa_count - processed_count} questions")
     
     # Pair qa with its search_result by question_id (stashed by
-    # search_stage in retrieval_metadata). Positional zip was previously
-    # used and would silently misalign whenever the upstream checkpoint /
-    # subset filter changed order.
-    search_by_id: dict[str, "SearchResult"] = {}
-    positional_fallback: list["SearchResult"] = []
-    for sr in search_results:
-        qid = (sr.retrieval_metadata or {}).get("question_id")
-        if qid is not None:
-            search_by_id[qid] = sr
-        else:
-            positional_fallback.append(sr)
-    if len(search_by_id) != len(search_results):
-        # Absorb checkpoint / test SearchResults that never saw search_stage
-        # into the map positionally, matched against qa_pairs with no id yet.
-        unpaired = [qa for qa in qa_pairs if qa.question_id not in search_by_id]
-        for qa, sr in zip(unpaired, positional_fallback):
-            search_by_id[qa.question_id] = sr
+    # search_stage in retrieval_metadata) with positional fallback for
+    # SearchResults that never saw search_stage. Shared helper keeps
+    # the logic in lockstep with retrieval_metrics / content_overlap.
+    from evaluation.src.metrics.pairing import pair_by_question_id
+
+    search_by_id, _ = pair_by_question_id(qa_pairs, search_results)
 
     pending_tasks = []
     for qa in qa_pairs:
@@ -195,13 +185,7 @@ async def run_answer_stage(
     start_time = time.time()
 
     recorder = latency_recorder or NULL_RECORDER
-    # Mirror search_stage retry_policy → max_retries mapping.
-    _max_retries_for_policy = {
-        "strict_no_retry": 1,
-        "retry_once": 2,
-        "realistic": 3,
-    }
-    answer_max_retries = _max_retries_for_policy.get(recorder.retry_policy, 3)
+    answer_max_retries = max_retries_for(recorder.retry_policy)
     
     # Use tqdm progress bar
     pbar = tqdm(

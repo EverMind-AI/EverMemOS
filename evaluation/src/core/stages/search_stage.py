@@ -12,9 +12,11 @@ from evaluation.src.utils.checkpoint import CheckpointManager
 from evaluation.src.core.benchmark_context import (
     LatencyRecorder,
     NULL_RECORDER,
+    OUTCOME_FAILED_OTHER,
     OUTCOME_HTTP_5XX,
     OUTCOME_SUCCESS,
     OUTCOME_TIMEOUT,
+    max_retries_for,
 )
 import time as _time
 
@@ -82,15 +84,7 @@ async def run_search_stage(
     print(f"Search concurrency: {num_workers} workers")
 
     recorder = latency_recorder or NULL_RECORDER
-    # Map harness-level retry_policy → local max_retries cap. Adapters
-    # that have their own internal retry loops also read ctx.retry_policy
-    # (Phase 2 contract) and should skip those loops in strict mode.
-    _max_retries_for_policy = {
-        "strict_no_retry": 1,
-        "retry_once": 2,
-        "realistic": 3,
-    }
-    max_retries = _max_retries_for_policy.get(recorder.retry_policy, 3)
+    max_retries = max_retries_for(recorder.retry_policy)
     
     # Create fine-grained progress bar (track by questions)
     total_questions = len(qa_pairs)
@@ -128,7 +122,6 @@ async def run_search_stage(
                             f"stopping retries for {conv_id}."
                         )
                         ctx.record_fallback()
-                        from evaluation.src.core.data_models import SearchResult
                         result = SearchResult(
                             query=qa.question,
                             conversation_id=conv_id,
@@ -166,7 +159,6 @@ async def run_search_stage(
                         else:
                             tqdm.write(f"  ❌ Search timeout after {max_retries} attempts for question in {conv_id}: {qa.question[:60]}...")
                             ctx.record_fallback()
-                            from evaluation.src.core.data_models import SearchResult
                             result = SearchResult(
                                 query=qa.question,
                                 conversation_id=conv_id,
@@ -181,7 +173,6 @@ async def run_search_stage(
                         # exception bucket is "failed_other", surfaced in
                         # reliability.retry_by_class so noise sources stay
                         # visible.
-                        from evaluation.src.core.benchmark_context import OUTCOME_FAILED_OTHER
                         ctx.record_attempt(
                             attempt + 1, attempt_ms, OUTCOME_FAILED_OTHER,
                             wait_ms_before_next=(0.0 if is_last else retry_wait_seconds * 1000.0),
@@ -192,7 +183,6 @@ async def run_search_stage(
                         else:
                             tqdm.write(f"  ❌ Search failed after {max_retries} attempts for question in {conv_id}: {str(e)}")
                             ctx.record_fallback()
-                            from evaluation.src.core.data_models import SearchResult
                             result = SearchResult(
                                 query=qa.question,
                                 conversation_id=conv_id,
