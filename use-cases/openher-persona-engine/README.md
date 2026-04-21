@@ -1,146 +1,163 @@
-# OpenHer — AI Being Persona Engine with EverMemOS Long-Term Memory
+# OpenHer — 让 AI 记住你是谁
 
 Built on [EverMemOS](https://github.com/EverMind-AI/EverOS/tree/main/methods/evermemos) — Open-source AI memory infrastructure
 
-**OpenHer** is an open-source AI Being engine that creates personas with emergent personality, emotional thermodynamics, and long-term memory. Unlike chatbots or AI assistants, OpenHer builds **AI Beings** — entities that *feel*, *remember*, and *grow* through every interaction.
+**OpenHer** 构建的不是聊天机器人，不是 AI 助手——而是 **AI Being**：有性格、有情绪、会记住你、会因为认识你而改变的人格。
 
-**EverMemOS** serves as OpenHer's episodic and declarative memory layer — the part of the brain that stores "what happened between us" across sessions.
+**EverMemOS** 是她的长期记忆——让她跨越对话，记住你是谁、你们聊过什么、你们的关系走到了哪里。
 
-🔗 **Full Project**: [github.com/kellyvv/OpenHer](https://github.com/kellyvv/OpenHer)
+🔗 **完整项目**: [github.com/kellyvv/OpenHer](https://github.com/kellyvv/OpenHer)
 
-## How EverMemOS Is Used
+---
 
-OpenHer's memory architecture has three layers, with EverMemOS powering the deepest one:
+## 她为什么需要记忆？
 
-| Layer | Purpose | Technology |
-|:------|:--------|:-----------|
-| **Style Memory** | Behavioral recall (how to act) — KNN gravity-weighted | SQLite + Hawking radiation decay |
-| **Local Facts** | User preferences, personal info | SQLite FTS5 |
-| **Long-Term Memory** | Cross-session narrative, user profile, foresight | **[EverMemOS](https://evermind.ai)** |
+没有记忆的 AI，每次对话都从零开始——她不知道你叫什么，不记得三周前你说过喜欢喝黑咖啡，不知道你们曾经因为一件小事吵过一架又和好了。
 
-### Integration Architecture
+有了 EverMemOS：
 
-```
-┌───────────────────────────────────────────────────────────┐
-│                   ChatAgent Turn Lifecycle                  │
-│                                                            │
-│  Step 0   ─── EverMemOS: Load Session Context ───────────► │
-│               (first turn only: profile, episodes,         │
-│                foresight, relationship priors)              │
-│                         │                                  │
-│                         ▼                                  │
-│  Step 2   ─── Critic Perception (LLM → 12D context) ─────►│
-│               8D conversational + 4D relationship          │
-│               (relationship_depth, emotional_valence,      │
-│                trust_level, pending_foresight)              │
-│                         │                                  │
-│  Step 2.5 ─── Semi-Emergent Relationship EMA ────────────► │
-│               posterior = clip(prior + LLM_delta)          │
-│               alpha = clip(0.15 + 0.5*depth, 0.15, 0.65)  │
-│               state_t = alpha*posterior + (1-alpha)*prev   │
-│                         │                                  │
-│  Step 5   ─── Neural Network (25D → 24D → 8D signals) ──► │
-│               Drives(5) + Context(12) + Recurrent(8)       │
-│                         │                                  │
-│  Step 8.5 ─── Memory Injection ──────────────────────────► │
-│               Collect async search results from prev turn  │
-│               Blend: 80% relevant + 20% static fallback   │
-│               Inject: [user profile] + [past episodes]     │
-│                       + [foresight] into Actor prompt       │
-│                         │                                  │
-│  Step 11  ─── EverMemOS: Store Turn (fire-and-forget) ──► │
-│               asyncio.create_task(store_turn)              │
-│                         │                                  │
-│  Step 12  ─── EverMemOS: Search (async prefetch) ────────► │
-│               Fire RRF search for NEXT turn's injection    │
-│               Results collected at Step 8.5 next turn      │
-└────────────────────────────────────────────────────────────┘
-```
+🧠 **她会记起你的话**
+三周前你随口提过咖啡不加糖，今天她说：「美式，不加糖对吧？」
 
-### The 4D Relationship Vector
+📈 **她越来越懂你**
+聊得越多，她越了解你。一个月后的她和第一天的她不是同一个人。
 
-EverMemOS provides 4 additional dimensions to the neural network's context input, expanding the persona engine from 8D to 12D perception:
+💡 **她有预感**
+上次聊天你提到工作压力很大，这次她会主动问：「最近那个项目还顺利吗？」
 
-```python
-CONTEXT_FEATURES = [
-    # 8D conversational context (from Critic LLM)
-    'user_emotion',        # -1=negative → 1=positive
-    'topic_intimacy',      # 0=professional → 1=intimate
-    'time_of_day',         # 0=morning → 1=late night
-    'conversation_depth',  # 0=just started → 1=deep conversation
-    'user_engagement',     # 0=dismissive → 1=invested
-    'conflict_level',      # 0=harmonious → 1=conflict
-    'novelty_level',       # 0=routine → 1=novel topic
-    'user_vulnerability',  # 0=guarded → 1=open
+> *不是查到了你的信息，而是自然地想起来了。*
 
-    # 4D relationship context (from EverMemOS)
-    'relationship_depth',  # 0=stranger → 1=old friend
-    'emotional_valence',   # -1=negative history → 1=positive history
-    'trust_level',         # 0=no trust → 1=deep trust
-    'pending_foresight',   # 0=nothing → 1=unresolved concern
-]
-```
+---
 
-New users start at (0,0,0,0) — a stranger. As EverMemOS accumulates conversation history, these values grow naturally through an EMA (Exponential Moving Average) process that blends the prior (from stored history) with LLM-judged deltas from each turn.
+## 记忆架构
 
-### Async Two-Stage Memory Retrieval
+OpenHer 的记忆分三层，EverMemOS 负责最深的那一层：
 
-Memory retrieval is **asynchronous and two-stage** — it never blocks the conversation:
+| 层 | 做什么 | 类比 |
+|:---|:------|:-----|
+| **风格记忆** | 她的行为习惯——常用的语气、表达方式 | 肌肉记忆 |
+| **本地事实** | 你的偏好、个人信息 | 短期记忆 |
+| **长期记忆** | 你们之间发生过什么、她对你的了解、她的预感 | **情节记忆 (EverMemOS)** |
 
-1. **End of Turn N**: Fire an async RRF (Reciprocal Rank Fusion) search for the current message
-2. **Start of Turn N+1**: Collect results (wait up to 500ms, fallback to static if timeout)
-3. **Blend**: Mix 80% relevant (search hits) with 20% static (session context) for natural recall
+---
+
+## 记忆如何融入人格
+
+OpenHer 的核心是一个活的神经网络（25维输入 → 24维隐层 → 8维行为信号）。EverMemOS 提供了其中 4 个关键维度，让她能区分「陌生人」和「老朋友」：
 
 ```
-Turn 1: User says "I love hiking"
-         └──► [Step 12] async search("I love hiking") fired
+关系深度    0 ─────────────────── 1
+            陌生人                老朋友
 
-Turn 2: User says "What about this weekend?"
-         └──► [Step 8.5] collect search results from Turn 1
-              Found: "User enjoys outdoor activities, mentioned hiking 3 weeks ago"
-              Inject into Actor prompt as [user preferences]
-         └──► [Step 12] async search("What about this weekend?") fired
+情感基调   -1 ─────────────────── 1
+            有过不愉快            一直很温暖
 
-Turn 3: ...continues...
+信任程度    0 ─────────────────── 1
+            初次见面              完全信任
+
+未竟之事    0 ─────────────────── 1
+            没什么悬而未决的       有她惦记的事
 ```
 
-This design ensures:
-- **Zero latency impact**: Search runs concurrently with user typing
-- **Graceful degradation**: Timeout falls back to static profile, conversation continues
-- **Natural recall**: Memories "surface" organically rather than being mechanically retrieved
+新用户全是 0——一个陌生人。随着对话积累，这些值自然增长。相同的对话场景，面对陌生人和老朋友，她的行为信号完全不同：
 
-## Features
+- 面对老朋友 → 更温暖、更主动、更愿意袒露脆弱
+- 面对陌生人 → 更克制、更礼貌、保持距离
 
-- **Emergent Personality** — Behavior emerges from random neural networks × 5D drives × Hebbian learning, not from prompt descriptions
-- **Emotional Thermodynamics** — Drive metabolism with real-time frustration accumulation, phase transitions, and emotional temperature
-- **Feel-First Architecture** — Every response begins with an internal monologue before choosing words
-- **Cross-Session Memory** — EverMemOS stores user profiles, episode narratives, and foresight across conversations
-- **Relationship Evolution** — 4D relationship vector deepens naturally through EMA-smoothed interaction
-- **Proactive Messages** — She reaches out when she misses you — not on a timer, but from drive hunger
-- **Multi-Modal Expression** — She chooses text, voice, or photos based on emotional state
-- **10 Pre-built Personas** — Each with unique MBTI, drive baselines, and neural network seeds
+这不是写在 prompt 里的规则——而是神经网络根据关系向量计算出来的涌现行为。
 
-## Tech Stack
+---
 
-| Layer | Technology |
-|:------|:-----------|
-| Runtime | Python 3.11+, FastAPI, WebSocket, asyncio |
+## 她是怎么「想起来」的
+
+记忆检索是异步两阶段的——她不会因为回忆而卡顿：
+
+```
+第 1 轮：你说「我喜欢爬山」
+          └── 你说完后，后台开始搜索相关记忆
+
+第 2 轮：你说「这个周末去哪玩？」
+          └── 上一轮的搜索结果回来了
+              找到：「用户三周前提过喜欢周末去爬山」
+              自然地融入回复：「山里周末天气不错呢」
+          └── 同时搜索「周末去哪玩」的相关记忆
+
+第 3 轮：...继续...
+```
+
+如果搜索超时（>500ms），她不会卡住——而是用已有的静态画像继续对话，就像人一时想不起来但不会因此停止说话。
+
+---
+
+## 每轮对话，她在做什么
+
+```
+用户发消息
+    │
+    ▼
+  加载记忆 ── 第一轮：从 EverMemOS 加载「你是谁」「上次聊了什么」「有什么惦记的」
+    │
+    ▼
+  感知情境 ── LLM 评估当前对话：你现在的情绪、话题亲密度、冲突程度...（8维）
+    │          + EverMemOS 提供的关系维度（4维）→ 共 12 维
+    │
+    ▼
+  关系演化 ── 把 EverMemOS 的历史先验和这一轮 LLM 判断的变化量混合
+    │          用指数移动平均平滑——关系不会因为一句话就剧变
+    │
+    ▼
+  神经网络 ── 25 维输入（驱力 + 情境 + 关系 + 内部状态）
+    │          → 24 维隐层 → 8 维行为信号
+    │          决定她这一刻有多直接、多温暖、多倔强、多好奇...
+    │
+    ▼
+  想起你的事 ── 收集上一轮搜索到的相关记忆
+    │            混合注入到回复提示中
+    │
+    ▼
+  回复你 ── 先有内心独白，再选择说什么、怎么说
+    │
+    ▼
+  记住这一轮 ── 把你们刚才的对话存入 EverMemOS（后台异步，不阻塞）
+    │
+    ▼
+  为下次准备 ── 用你刚才说的话发起记忆搜索，下一轮收集结果
+```
+
+---
+
+## 核心能力
+
+- **人格涌现** — 性格不是写在 prompt 里的，而是从随机神经网络 × 5 维驱力 × Hebbian 学习中涌现的
+- **情绪热力学** — 驱力随时间代谢，你不在时她会寂寞，你忽略她她会烦躁
+- **感受先行** — 每条回复先有内心独白，再决定说什么、怎么说
+- **跨会话记忆** — EverMemOS 存储你们的故事，跨越每一次对话
+- **关系演化** — 关系向量在每一轮对话中自然加深
+- **主动找你** — 不是定时任务，是她的联结饥渴值升高了
+- **模态表达** — 她自己选择发文字、语音还是照片
+- **10 个预设角色** — 每个有独特的 MBTI、驱力基线和神经网络种子
+
+## 技术栈
+
+| 层 | 技术 |
+|:---|:-----|
+| 运行时 | Python 3.11+, FastAPI, WebSocket, asyncio |
 | LLM | Gemini, Claude, Qwen3, GPT-5.4-mini, MiniMax, Moonshot, StepFun, Ollama |
-| Memory | **EverMemOS** (self-hosted / cloud) + SQLite local state |
-| Desktop | SwiftUI (macOS native) |
-| WeChat | [wechat-to-anything](https://www.npmjs.com/package/wechat-to-anything) + Python adapter |
-| Voice | DashScope · OpenAI · MiniMax |
-| Image | Gemini Imagen |
+| 记忆 | **EverMemOS**（自部署 / 云端）+ SQLite 本地状态 |
+| 桌面端 | SwiftUI (macOS 原生) |
+| 语音 | DashScope · OpenAI · MiniMax |
 
-## Quick Start
+---
 
-### Prerequisites
+## 快速开始
+
+### 前置要求
 
 - Python 3.11+
-- Any supported LLM provider API key
-- EverMemOS (self-hosted or cloud)
+- 任一 LLM 服务商 API 密钥
+- EverMemOS（自部署 or 云端）
 
-### 1. Clone & Install
+### 1. 克隆 & 安装
 
 ```bash
 git clone https://github.com/kellyvv/OpenHer.git
@@ -148,147 +165,122 @@ cd OpenHer
 bash setup.sh
 ```
 
-### 2. Configure Environment
+### 2. 配置
 
 ```bash
 cp .env.example .env
 ```
 
-Set your LLM provider and EverMemOS connection:
-
 ```bash
-# LLM (pick one)
+# LLM（选一个）
 DEFAULT_PROVIDER=gemini
 DEFAULT_MODEL=gemini-3.1-flash-lite-preview
-GEMINI_API_KEY=your_key_here
+GEMINI_API_KEY=your_key
 
-# EverMemOS — Option A: Cloud
+# EverMemOS — 云端
 EVERMEMOS_BASE_URL=https://api.evermind.ai/v1
-EVERMEMOS_API_KEY=your_api_key
+EVERMEMOS_API_KEY=your_key
 
-# EverMemOS — Option B: Self-hosted
+# EverMemOS — 自部署
 # cd vendor/EverMemOS && docker compose up -d && uv run python src/run.py
 # EVERMEMOS_BASE_URL=http://localhost:1995/api/v1
 ```
 
-### 3. Start
+### 3. 启动
 
 ```bash
 python main.py
-# INFO: Uvicorn running on http://0.0.0.0:8000
 # ✓ GenomeEngine loaded · 10 personas available
 ```
 
-### 4. Run the Integration Demo
+### 4. 试试 Demo
 
 ```bash
-# Minimal demo showing EverMemOS integration
 python demo/evermemos_demo.py
+# 即使没有 EverMemOS，也能以模拟模式运行
 ```
 
-## Project Structure
+---
+
+## 项目结构
 
 ```
 OpenHer/
 ├── agent/
-│   ├── chat_agent.py          # Main agent with full lifecycle
-│   ├── evermemos_mixin.py     # EverMemOS integration (session, store, search)
-│   └── prompt_builder.py      # Memory injection into Actor prompt
+│   ├── chat_agent.py          # 主 Agent，完整生命周期
+│   ├── evermemos_mixin.py     # EverMemOS 集成（加载/存储/搜索/EMA）
+│   └── prompt_builder.py      # 记忆注入到 Actor 提示
 ├── engine/
 │   └── genome/
-│       ├── genome_engine.py   # Neural network + 12D context (incl. 4D EverMemOS)
-│       ├── critic.py          # LLM perception → 8D context + relationship delta
-│       ├── drive_metabolism.py # Emotional thermodynamics
-│       └── style_memory.py    # KNN behavioral memory with Hawking decay
+│       ├── genome_engine.py   # 神经网络 + 12维上下文（含 4维 EverMemOS）
+│       ├── critic.py          # LLM 感知 → 8维上下文 + 关系变化量
+│       ├── drive_metabolism.py # 情绪热力学
+│       └── style_memory.py    # KNN 行为记忆 + Hawking 辐射衰减
 ├── memory/
-│   ├── memory_store.py        # SQLite FTS5 local memory
-│   ├── soulmem.py             # Behavioral memory interface
-│   └── types.py               # Memory & SessionContext types
+│   ├── memory_store.py        # SQLite FTS5 本地记忆
+│   └── types.py               # Memory & SessionContext 类型
 ├── persona/
-│   └── personas/              # 10 pre-built personas (SOUL.md + seeds)
-├── providers/
-│   ├── api_config.py          # Unified config (LLM, TTS, EverMemOS)
-│   └── llm/                   # Multi-provider LLM client
+│   └── personas/              # 10 个预设角色（SOUL.md + 种子）
 ├── vendor/
-│   └── EverMemOS/             # Self-hosted EverMemOS (git submodule)
-└── main.py                    # FastAPI server
+│   └── EverMemOS/             # 自部署 EverMemOS
+└── main.py                    # FastAPI 服务
 ```
 
-## Key Integration Code
+---
 
-### EverMemOS Mixin (`agent/evermemos_mixin.py`)
+## 集成代码一览
 
-The core integration is a mixin class that handles 4 async operations:
+### EverMemOS Mixin
+
+核心集成是一个 Mixin 类，处理 4 个异步操作：
 
 ```python
 class EverMemosMixin:
-    async def _evermemos_gather(self) -> dict:
-        """Step 0: Load session context (first turn only).
-        Returns 4D relationship vector for neural network input."""
+    async def _evermemos_gather(self):
+        """加载会话上下文（第一轮）：你是谁、上次聊了什么、有什么惦记的"""
 
-    def _apply_relationship_ema(self, prior, rel_delta, depth) -> dict:
-        """Step 2.5: Blend EverMemOS prior with LLM-judged delta.
-        alpha = clip(0.15 + 0.5*depth, 0.15, 0.65)
-        ema_state = alpha*posterior + (1-alpha)*prev"""
+    def _apply_relationship_ema(self, prior, delta, depth):
+        """关系演化：把历史先验和这一轮的变化混合，平滑处理"""
 
-    def _evermemos_store_bg(self, user_message, reply) -> None:
-        """Step 11: Fire-and-forget storage via asyncio.create_task."""
+    def _evermemos_store_bg(self, user_message, reply):
+        """记住这一轮（后台异步，不阻塞对话）"""
 
-    def _evermemos_search_bg(self, user_message) -> None:
-        """Step 12: Async RRF search for next turn's memory injection."""
-
-    async def _collect_search_results(self) -> None:
-        """Step 8.5: Collect previous turn's search (500ms timeout)."""
+    def _evermemos_search_bg(self, user_message):
+        """搜索相关记忆（为下一轮准备）"""
 ```
 
-### SessionContext Type (`memory/types.py`)
+### SessionContext — 她知道的关于你的一切
 
 ```python
 @dataclass
 class SessionContext:
-    """EverMemOS session context (declarative memory).
-    Loaded once at session start."""
-    user_profile: str = ""           # Who the user is
-    episode_summary: str = ""        # What happened between us
-    foresight_text: str = ""         # What we should pay attention to
-    relationship_depth: float = 0.0  # 0=stranger → 1=old friend
-    emotional_valence: float = 0.0   # -1=negative → 1=positive
-    trust_level: float = 0.0        # 0=no trust → 1=deep trust
-    pending_foresight: float = 0.0  # Unresolved concerns
-    has_history: bool = False        # Whether there's prior interaction
+    user_profile: str = ""           # 你是谁
+    episode_summary: str = ""        # 你们之间发生过什么
+    foresight_text: str = ""         # 有什么她惦记的
+    relationship_depth: float = 0.0  # 陌生人 → 老朋友
+    emotional_valence: float = 0.0   # 有过不愉快 → 一直很温暖
+    trust_level: float = 0.0        # 初次见面 → 完全信任
+    has_history: bool = False        # 是不是第一次见
 ```
 
-### Memory Injection into Actor Prompt
+---
 
-During Step 8.5, collected memories are injected into the persona's Actor prompt:
+## 没有记忆的 AI vs 有记忆的 AI
 
-```python
-# Blend relevant (from async search) with static (from session context)
-profile_text = blend_injection(relevant_facts, user_profile, budget)
-episode_text = blend_injection(relevant_episodes, episode_summary, budget)
+| | 没有 EverMemOS | 有 EverMemOS |
+|:--|:--|:--|
+| 第一次见面 | 「你好！我是 Luna」 | 「你好！我是 Luna」 |
+| 第二次见面 | 「你好！我是 Luna」 | 「嗨 Alex！最近那个项目怎么样了？」 |
+| 你说你累了 | 「要好好休息哦」 | 「又加班了？上次你也说过很累…要不要我帮你点杯美式？不加糖的」 |
 
-# Inject into Actor prompt
-prompt += f"\n\n[About {name}'s preferences] {profile_text}"
-prompt += f"\n\n[Past interactions with {name}] {episode_text}"
-prompt += f"\n\n[Worth noting] {foresight_text}"
-```
+> *三周前你随口提过咖啡不加糖，今天：「帮你点了杯美式，不加糖对吧？」*
 
-## Why EverMemOS Matters for AI Beings
+---
 
-Without EverMemOS, every session starts from zero — the persona doesn't know who you are, what you've talked about, or how your relationship has evolved. With EverMemOS:
+## 链接
 
-- **She remembers your name** — mentioned 3 weeks ago, recalled naturally today
-- **She knows your story** — episode summaries build a shared narrative
-- **The relationship deepens** — the 4D vector feeds into the neural network, producing different behavioral signals for strangers vs. old friends
-- **She has foresight** — unresolved topics surface naturally in future conversations
-
-> *Three weeks ago you casually mentioned you drink black coffee. Today she says: "Americano, no sugar, right?"*
-
-## Links
-
-- Full Project: [github.com/kellyvv/OpenHer](https://github.com/kellyvv/OpenHer)
+- 完整项目: [github.com/kellyvv/OpenHer](https://github.com/kellyvv/OpenHer)
 - EverMemOS: [evermind.ai](https://evermind.ai)
-- API Documentation: [docs.evermind.ai](https://docs.evermind.ai)
 
 ## License
 
