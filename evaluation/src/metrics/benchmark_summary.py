@@ -41,6 +41,7 @@ def build_benchmark_summary(
     content_overlap: Optional[dict] = None,
     latency_views: Optional[dict] = None,
     retry_policy: str = "realistic",
+    latency_invariants: Optional[dict] = None,
 ) -> dict:
     return {
         "system": system,
@@ -98,4 +99,10 @@ def build_benchmark_summary(
         # carries four views (realistic/clean/first_attempt/
         # successful_attempt) plus reliability signals.
         "latency": latency_views or {},
+        # Phase 3 self-check on the Layer-1 data. count > 0 means one
+        # of the alignment invariants (wall ≈ Σ attempts, N equals
+        # work units, strict_no_retry respected, subphases within wall)
+        # was violated; full details live in latency_invariants.json.
+        "latency_invariants": latency_invariants
+        or {"count": 0, "by_code": {}, "by_severity": {"error": 0, "warning": 0}, "items": []},
     }

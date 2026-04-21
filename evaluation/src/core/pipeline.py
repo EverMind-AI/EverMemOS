@@ -37,6 +37,10 @@ from evaluation.src.metrics.answer_aux_metrics import build_answer_aux_metrics
 from evaluation.src.metrics.diagnostics import aggregate_diagnostics
 from evaluation.src.metrics.benchmark_summary import build_benchmark_summary
 from evaluation.src.metrics.latency_views import aggregate_all, records_to_jsonl
+from evaluation.src.metrics.latency_invariants import (
+    check_all as check_latency_invariants,
+    summarize_violations as summarize_latency_violations,
+)
 from evaluation.src.core.benchmark_context import LatencyRecorder
 
 
@@ -522,6 +526,8 @@ class Pipeline:
                     answer_aux_metrics=results.get("answer_aux_metrics") or {},
                     index=results.get("index"),
                     content_overlap=results.get("content_overlap"),
+                    n_conversations=len(dataset.conversations),
+                    n_qa_pairs=len(dataset.qa_pairs),
                 )
             except Exception as err:  # noqa: BLE001
                 self.logger.warning(
@@ -793,6 +799,8 @@ class Pipeline:
         index: Optional[dict] = None,
         k: Optional[int] = None,
         content_overlap: Optional[dict] = None,
+        n_conversations: int = 0,
+        n_qa_pairs: int = 0,
     ) -> dict:
         k = k or self._benchmark_k()
         answer_metadata = [ar.metadata or {} for ar in answer_results]
@@ -815,6 +823,38 @@ class Pipeline:
             "latency_records.json",
         )
 
+        # Phase 3: invariant checks on the Layer-1 data. Errors are
+        # logged and persisted to latency_invariants.json; neither
+        # severity aborts the run because the raw data is already on
+        # disk and post-hoc inspection is usually more useful than a
+        # hard stop.
+        try:
+            violations = check_latency_invariants(
+                self.latency_recorder.records,
+                n_conversations=n_conversations,
+                n_qa_pairs=n_qa_pairs,
+                retry_policy=self.retry_policy,
+            )
+            violation_report = summarize_latency_violations(violations)
+            self.saver.save_json(violation_report, "latency_invariants.json")
+            if violation_report["by_severity"]["error"]:
+                self.logger.error(
+                    "Latency invariant errors (%d): %s",
+                    violation_report["by_severity"]["error"],
+                    violation_report["by_code"],
+                )
+            elif violation_report["by_severity"]["warning"]:
+                self.logger.warning(
+                    "Latency invariant warnings (%d): %s",
+                    violation_report["by_severity"]["warning"],
+                    violation_report["by_code"],
+                )
+        except Exception as err:  # noqa: BLE001
+            self.logger.warning(
+                "latency invariant check failed (non-fatal): %s", err
+            )
+            violation_report = None
+
         summary = build_benchmark_summary(
             system=system_name,
             dataset=dataset_name,
@@ -828,6 +868,7 @@ class Pipeline:
             content_overlap=content_overlap,
             latency_views=latency_views,
             retry_policy=self.retry_policy,
+            latency_invariants=violation_report,
         )
         self.saver.save_json(summary, "benchmark_summary.json")
         return summary
