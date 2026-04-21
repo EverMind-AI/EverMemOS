@@ -9,6 +9,14 @@ from tqdm import tqdm
 from evaluation.src.core.data_models import QAPair, SearchResult
 from evaluation.src.adapters.base import BaseAdapter
 from evaluation.src.utils.checkpoint import CheckpointManager
+from evaluation.src.core.benchmark_context import (
+    LatencyRecorder,
+    NULL_RECORDER,
+    OUTCOME_HTTP_5XX,
+    OUTCOME_SUCCESS,
+    OUTCOME_TIMEOUT,
+)
+import time as _time
 
 
 async def run_search_stage(
@@ -18,6 +26,7 @@ async def run_search_stage(
     conversations: List,
     checkpoint_manager: Optional[CheckpointManager],
     logger: Logger,
+    latency_recorder: Optional[LatencyRecorder] = None,
 ) -> List[SearchResult]:
     """
     Execute concurrent search with fine-grained checkpointing.
@@ -71,6 +80,8 @@ async def run_search_stage(
     num_workers = int(search_cfg.get("num_workers", getattr(adapter, "num_workers", 20)))
     semaphore = asyncio.Semaphore(num_workers)
     print(f"Search concurrency: {num_workers} workers")
+
+    recorder = latency_recorder or NULL_RECORDER
     
     # Create fine-grained progress bar (track by questions)
     total_questions = len(qa_pairs)
@@ -87,55 +98,80 @@ async def run_search_stage(
         async with semaphore:
             conv_id = qa.metadata.get("conversation_id", "0")
             conversation = conv_id_to_conv.get(conv_id)
-            
-            # Search with timeout and retry (similar to answer_stage.py)
+
+            # Search with timeout and retry (similar to answer_stage.py).
+            # Every attempt is recorded to the LatencyRecorder so Layer-1
+            # views can break wall_ms down into per-attempt durations.
             max_retries = 3
             timeout_seconds = 300.0  # Increased from 120s for complex agentic retrieval
             result = None
-            
-            for attempt in range(max_retries):
-                try:
-                    result = await asyncio.wait_for(
-                        adapter.search(
-                            qa.question,
-                            conv_id,
-                            index,
-                            conversation=conversation,
-                            question_id=qa.question_id,
-                        ),
-                        timeout=timeout_seconds
-                    )
-                    break  # Success, exit retry loop
-                    
-                except asyncio.TimeoutError:
-                    if attempt < max_retries - 1:
-                        tqdm.write(f"  ⏱️  Search timeout ({timeout_seconds}s) for question in {conv_id}, retry {attempt + 1}/{max_retries}...")
-                        await asyncio.sleep(2)  # Short delay before retry
-                    else:
-                        tqdm.write(f"  ❌ Search timeout after {max_retries} attempts for question in {conv_id}: {qa.question[:60]}...")
-                        # Return empty search result on timeout
-                        from evaluation.src.core.data_models import SearchResult
-                        result = SearchResult(
-                            query=qa.question,
-                            conversation_id=conv_id,
-                            results=[],
-                            retrieval_metadata={"error": "Search timeout after retries"}
+
+            async with recorder.measure("search", qa.question_id) as ctx:
+                retry_wait_seconds = 2.0
+                for attempt in range(max_retries):
+                    t_attempt = _time.perf_counter()
+                    try:
+                        result = await asyncio.wait_for(
+                            adapter.search(
+                                qa.question,
+                                conv_id,
+                                index,
+                                conversation=conversation,
+                                question_id=qa.question_id,
+                                benchmark_ctx=ctx,
+                            ),
+                            timeout=timeout_seconds
                         )
-                
-                except Exception as e:
-                    if attempt < max_retries - 1:
-                        tqdm.write(f"  ⚠️  Search failed for question in {conv_id}: {str(e)}, retry {attempt + 1}/{max_retries}...")
-                        await asyncio.sleep(2)
-                    else:
-                        tqdm.write(f"  ❌ Search failed after {max_retries} attempts for question in {conv_id}: {str(e)}")
-                        # Return empty search result on error
-                        from evaluation.src.core.data_models import SearchResult
-                        result = SearchResult(
-                            query=qa.question,
-                            conversation_id=conv_id,
-                            results=[],
-                            retrieval_metadata={"error": f"Search error: {str(e)}"}
+                        attempt_ms = (_time.perf_counter() - t_attempt) * 1000.0
+                        ctx.record_attempt(attempt + 1, attempt_ms, OUTCOME_SUCCESS)
+                        break  # Success, exit retry loop
+
+                    except asyncio.TimeoutError:
+                        attempt_ms = (_time.perf_counter() - t_attempt) * 1000.0
+                        is_last = attempt >= max_retries - 1
+                        ctx.record_attempt(
+                            attempt + 1, attempt_ms, OUTCOME_TIMEOUT,
+                            wait_ms_before_next=(0.0 if is_last else retry_wait_seconds * 1000.0),
                         )
+                        if not is_last:
+                            tqdm.write(f"  ⏱️  Search timeout ({timeout_seconds}s) for question in {conv_id}, retry {attempt + 1}/{max_retries}...")
+                            await asyncio.sleep(retry_wait_seconds)
+                        else:
+                            tqdm.write(f"  ❌ Search timeout after {max_retries} attempts for question in {conv_id}: {qa.question[:60]}...")
+                            ctx.record_fallback()
+                            from evaluation.src.core.data_models import SearchResult
+                            result = SearchResult(
+                                query=qa.question,
+                                conversation_id=conv_id,
+                                results=[],
+                                retrieval_metadata={"error": "Search timeout after retries"}
+                            )
+
+                    except Exception as e:
+                        attempt_ms = (_time.perf_counter() - t_attempt) * 1000.0
+                        is_last = attempt >= max_retries - 1
+                        # Map to closed outcome enum; any unclassified
+                        # exception bucket is "failed_other", surfaced in
+                        # reliability.retry_by_class so noise sources stay
+                        # visible.
+                        from evaluation.src.core.benchmark_context import OUTCOME_FAILED_OTHER
+                        ctx.record_attempt(
+                            attempt + 1, attempt_ms, OUTCOME_FAILED_OTHER,
+                            wait_ms_before_next=(0.0 if is_last else retry_wait_seconds * 1000.0),
+                        )
+                        if not is_last:
+                            tqdm.write(f"  ⚠️  Search failed for question in {conv_id}: {str(e)}, retry {attempt + 1}/{max_retries}...")
+                            await asyncio.sleep(retry_wait_seconds)
+                        else:
+                            tqdm.write(f"  ❌ Search failed after {max_retries} attempts for question in {conv_id}: {str(e)}")
+                            ctx.record_fallback()
+                            from evaluation.src.core.data_models import SearchResult
+                            result = SearchResult(
+                                query=qa.question,
+                                conversation_id=conv_id,
+                                results=[],
+                                retrieval_metadata={"error": f"Search error: {str(e)}"}
+                            )
             
             # Stash question_id in retrieval_metadata so downstream
             # consumers (retrieval_metrics, answer_stage) can pair by id

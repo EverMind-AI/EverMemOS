@@ -39,10 +39,13 @@ def build_benchmark_summary(
     diagnostics: Optional[dict],
     k: int = 5,
     content_overlap: Optional[dict] = None,
+    latency_views: Optional[dict] = None,
+    retry_policy: str = "realistic",
 ) -> dict:
     return {
         "system": system,
         "dataset": dataset,
+        "retry_policy": retry_policy,
         "answer_level": {
             "accuracy": _get(eval_result, "accuracy"),
             "f1_mean": _get(answer_aux_metrics, "f1_mean"),
@@ -73,6 +76,9 @@ def build_benchmark_summary(
         "diagnostics": {
             # Legacy scalar means — kept for backward compat with reports
             # that only print single numbers. p50/p95/max live in *_stats.
+            # Layer-1 canonical view lives in ``latency`` below; these
+            # fields are pre-alignment adapter-reported values and should
+            # NOT be used for cross-adapter comparison.
             "add_latency_ms_mean": _get(diagnostics, "add_latency_ms_mean"),
             "retrieval_latency_ms_mean": _get(diagnostics, "retrieval_latency_ms_mean"),
             "answer_latency_ms_mean": _get(diagnostics, "answer_latency_ms_mean"),
@@ -86,4 +92,10 @@ def build_benchmark_summary(
             "add_failed_rate": _get(diagnostics, "add_failed_rate"),
             "add_samples": _get(diagnostics, "add_samples"),
         },
+        # Layer-1 canonical latency — harness-measured at the adapter
+        # boundary, always comparable across adapters. See
+        # docs/latency-alignment.md. Each stage (add/search/answer)
+        # carries four views (realistic/clean/first_attempt/
+        # successful_attempt) plus reliability signals.
+        "latency": latency_views or {},
     }

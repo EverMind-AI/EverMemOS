@@ -36,6 +36,8 @@ from evaluation.src.metrics.content_overlap import evaluate_content_overlap
 from evaluation.src.metrics.answer_aux_metrics import build_answer_aux_metrics
 from evaluation.src.metrics.diagnostics import aggregate_diagnostics
 from evaluation.src.metrics.benchmark_summary import build_benchmark_summary
+from evaluation.src.metrics.latency_views import aggregate_all, records_to_jsonl
+from evaluation.src.core.benchmark_context import LatencyRecorder
 
 
 class Pipeline:
@@ -58,6 +60,8 @@ class Pipeline:
         run_name: str = "default",
         use_checkpoint: bool = True,
         filter_categories: Optional[List[int]] = None,
+        retry_policy: str = "realistic",
+        deadline_ms: Optional[float] = None,
     ):
         """
         Initialize Pipeline.
@@ -92,6 +96,19 @@ class Pipeline:
 
         # Question category filter configuration (read from dataset config)
         self.filter_categories = filter_categories or []
+
+        # Layer-1 latency recorder (see docs/latency-alignment.md).
+        # Stages wrap every adapter.add/search/answer call in
+        # recorder.measure(); aggregate_all() produces the
+        # cross-adapter canonical four-view report at the end.
+        # retry_policy is forwarded to adapters via BenchmarkContext in
+        # Phase 2 — for now its only effect is to label the run.
+        self.retry_policy = retry_policy
+        self.deadline_ms = deadline_ms
+        self.latency_recorder = LatencyRecorder(
+            retry_policy=retry_policy,
+            deadline_ms=deadline_ms,
+        )
 
     async def run(
         self,
@@ -253,6 +270,7 @@ class Pipeline:
                 logger=self.logger,
                 console=self.console,
                 completed_stages=self.completed_stages,
+                latency_recorder=self.latency_recorder,
             )
             results.update(stage_results)
             add_just_completed = True  # Add just completed
@@ -327,6 +345,7 @@ class Pipeline:
                 conversations=dataset.conversations,  # Pass conversations for cache rebuilding
                 checkpoint_manager=self.checkpoint,
                 logger=self.logger,
+                latency_recorder=self.latency_recorder,
             )
 
             self.saver.save_json(
@@ -408,6 +427,7 @@ class Pipeline:
                 search_results=search_results,
                 checkpoint_manager=self.checkpoint,
                 logger=self.logger,
+                latency_recorder=self.latency_recorder,
             )
 
             self.saver.save_json(
@@ -783,6 +803,18 @@ class Pipeline:
         )
         self.saver.save_json(diagnostics, "diagnostics.json")
 
+        # Phase 1: Layer-1 canonical latency views derived from the
+        # harness-owned LatencyRecorder. See docs/latency-alignment.md.
+        latency_views = aggregate_all(self.latency_recorder.records)
+        self.saver.save_json(latency_views, "latency_views.json")
+        # Raw call-record log for post-hoc analysis / debugging. Cheap
+        # to write (hundreds of rows per 1540-question run) and often
+        # worth keeping for reproducibility.
+        self.saver.save_json(
+            records_to_jsonl(self.latency_recorder.records),
+            "latency_records.json",
+        )
+
         summary = build_benchmark_summary(
             system=system_name,
             dataset=dataset_name,
@@ -794,6 +826,8 @@ class Pipeline:
             diagnostics=diagnostics,
             k=k,
             content_overlap=content_overlap,
+            latency_views=latency_views,
+            retry_policy=self.retry_policy,
         )
         self.saver.save_json(summary, "benchmark_summary.json")
         return summary
@@ -851,6 +885,46 @@ class Pipeline:
                         report_lines.append(f"  {key}: {value:.4f}")
                     else:
                         report_lines.append(f"  {key}: {value}")
+                report_lines.append("")
+
+            latency = benchmark_summary.get("latency") or {}
+            if latency:
+                report_lines.append(
+                    f"Latency (canonical, retry_policy={benchmark_summary.get('retry_policy')}):"
+                )
+                for op in ("add", "search", "answer", "e2e_query_ms"):
+                    stage = latency.get(op)
+                    if not stage:
+                        continue
+                    wall_views = stage.get("wall_ms") or {}
+                    n_calls = stage.get("n_calls")
+                    report_lines.append(f"  {op} (n={n_calls}):")
+                    for view_name, v in wall_views.items():
+                        if not v:
+                            report_lines.append(f"    {view_name}: n/a")
+                            continue
+                        parts = [
+                            f"n={v['n']}",
+                            f"mean={v['mean']:.2f}",
+                            f"p50={v['p50']:.2f}",
+                            f"p95={v['p95']:.2f}",
+                            f"max={v['max']:.2f}",
+                        ]
+                        report_lines.append(
+                            f"    {view_name}: {{{', '.join(parts)}}}"
+                        )
+                    rel = stage.get("reliability")
+                    if rel:
+                        parts = [
+                            f"retry={rel['retry_rate']:.3f}",
+                            f"fallback={rel['fallback_rate']:.3f}",
+                            f"failed={rel['failed_rate']:.3f}",
+                        ]
+                        if rel["retry_by_class"]:
+                            parts.append(f"by_class={rel['retry_by_class']}")
+                        report_lines.append(
+                            f"    reliability: {{{', '.join(parts)}}}"
+                        )
                 report_lines.append("")
 
             diag = benchmark_summary.get("diagnostics") or {}

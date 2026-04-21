@@ -58,6 +58,14 @@ def _make_stub_pipeline(tmp_path):
     import logging
 
     p.logger = logging.getLogger("stub_pipeline")
+    # Phase 1: stub out the LatencyRecorder so helpers that write
+    # latency_views.json don't AttributeError on Pipeline.__new__-style
+    # fixtures.
+    from evaluation.src.core.benchmark_context import LatencyRecorder
+
+    p.latency_recorder = LatencyRecorder()
+    p.retry_policy = "realistic"
+    p.deadline_ms = None
     return p
 
 
@@ -160,4 +168,9 @@ def test_pipeline_writes_diagnostics_and_summary(tmp_path):
     assert summary["system"] == "openclaw"
     assert summary["dataset"] == "locomo"
     assert summary["answer_level"]["f1_mean"] == 0.8
-    assert summary["retrieval_level"]["evidence_hit_at_5"] == 0.5
+    # Phase 6 moved session-level metrics under adapter_specific_retrieval.
+    assert summary["adapter_specific_retrieval"]["evidence_hit_at_5"] == 0.5
+    # Phase 1 wrote latency_views.json; the stub has no recorder events,
+    # so it should serialize as an empty dict but exist on disk.
+    assert (Path(tmp_path) / "latency_views.json").exists()
+    assert (Path(tmp_path) / "latency_records.json").exists()

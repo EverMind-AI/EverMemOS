@@ -10,6 +10,13 @@ from tqdm import tqdm
 from evaluation.src.core.data_models import QAPair, SearchResult, AnswerResult
 from evaluation.src.adapters.base import BaseAdapter
 from evaluation.src.utils.checkpoint import CheckpointManager
+from evaluation.src.core.benchmark_context import (
+    LatencyRecorder,
+    NULL_RECORDER,
+    OUTCOME_FAILED_OTHER,
+    OUTCOME_SUCCESS,
+    OUTCOME_TIMEOUT,
+)
 
 
 # Tokenizer is loaded lazily so importing answer_stage stays cheap and the
@@ -86,6 +93,7 @@ async def run_answer_stage(
     search_results: List[SearchResult],
     checkpoint_manager: Optional[CheckpointManager],
     logger: Logger,
+    latency_recorder: Optional[LatencyRecorder] = None,
 ) -> List[AnswerResult]:
     """
     Generate answers with fine-grained checkpointing.
@@ -185,6 +193,8 @@ async def run_answer_stage(
     completed = processed_count
     failed = 0
     start_time = time.time()
+
+    recorder = latency_recorder or NULL_RECORDER
     
     # Use tqdm progress bar
     pbar = tqdm(
@@ -224,34 +234,48 @@ OPTIONS:
 
 IMPORTANT: This is a multiple-choice question. You MUST analyze the context and select the BEST option. In your FINAL ANSWER, return ONLY the option letter like (a), (b), (c), or (d), nothing else."""
 
-                # Call adapter's answer method with timeout and retry
+                # Call adapter's answer method with timeout and retry.
+                # Every attempt is recorded to the LatencyRecorder so
+                # Layer-1 four-view aggregation can distinguish clean
+                # first-hit latency from retry-inflated wall time.
                 max_retries = 3
                 timeout_seconds = 120.0  # 2 minutes timeout per attempt
+                retry_wait_seconds = 2.0
 
-                for attempt in range(max_retries):
-                    t_start = time.perf_counter()
-                    try:
-                        answer = await asyncio.wait_for(
-                            adapter.answer(
-                                query=query,
-                                context=context,
-                                conversation_id=search_result.conversation_id,
-                                question_id=qa.question_id,
-                            ),
-                            timeout=timeout_seconds
-                        )
-                        answer_latency_ms = (time.perf_counter() - t_start) * 1000.0
-                        answer = answer.strip()
-                        break  # Success, exit retry loop
+                async with recorder.measure("answer", qa.question_id) as ctx:
+                    for attempt in range(max_retries):
+                        t_start = time.perf_counter()
+                        try:
+                            answer = await asyncio.wait_for(
+                                adapter.answer(
+                                    query=query,
+                                    context=context,
+                                    conversation_id=search_result.conversation_id,
+                                    question_id=qa.question_id,
+                                    benchmark_ctx=ctx,
+                                ),
+                                timeout=timeout_seconds
+                            )
+                            answer_latency_ms = (time.perf_counter() - t_start) * 1000.0
+                            ctx.record_attempt(attempt + 1, answer_latency_ms, OUTCOME_SUCCESS)
+                            answer = answer.strip()
+                            break  # Success, exit retry loop
 
-                    except asyncio.TimeoutError:
-                        if attempt < max_retries - 1:
-                            tqdm.write(f"  ⏱️  Timeout ({timeout_seconds}s) for {qa.question_id}, retry {attempt + 1}/{max_retries}...")
-                            await asyncio.sleep(2)  # Short delay before retry
-                        else:
-                            tqdm.write(f"  ❌ Timeout after {max_retries} attempts for {qa.question_id}: {qa.question[:50]}...")
-                            answer = "Error: Answer generation timeout after retries"
-                            failed += 1
+                        except asyncio.TimeoutError:
+                            attempt_ms = (time.perf_counter() - t_start) * 1000.0
+                            is_last = attempt >= max_retries - 1
+                            ctx.record_attempt(
+                                attempt + 1, attempt_ms, OUTCOME_TIMEOUT,
+                                wait_ms_before_next=(0.0 if is_last else retry_wait_seconds * 1000.0),
+                            )
+                            if not is_last:
+                                tqdm.write(f"  ⏱️  Timeout ({timeout_seconds}s) for {qa.question_id}, retry {attempt + 1}/{max_retries}...")
+                                await asyncio.sleep(retry_wait_seconds)
+                            else:
+                                tqdm.write(f"  ❌ Timeout after {max_retries} attempts for {qa.question_id}: {qa.question[:50]}...")
+                                ctx.record_fallback()
+                                answer = "Error: Answer generation timeout after retries"
+                                failed += 1
 
             except Exception as e:
                 tqdm.write(f"  ⚠️ Answer generation failed for {qa.question_id}: {e}")
