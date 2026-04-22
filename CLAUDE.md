@@ -30,3 +30,7 @@ pyright                       # Type check
 - All I/O is async - use `await`
 - Multi-tenant system - data is tenant-scoped
 - Prompts in `src/memory_layer/prompts/` (EN/ZH)
+
+## Auto-Bench Routine
+
+Sessions started by the auto-bench routine must follow `@.claude/rules/auto-bench-routine.md`. Normal interactive sessions ignore it.

@@ -1,0 +1,82 @@
+{
+  "$schema_version": "1.0",
+  "$schema_doc": "Each entry tracks one memory framework the auto-bench routine has considered. Status values: 'integrated' (adapter merged), 'candidate' (adapter being developed), 'rejected' (does not meet decision rules), 'failed' (adapter exists but smoke test failed), 'needs-revisit' (re-evaluate when upstream changes). Tier values: 'local-with-cloud-llm' (memory backend local, LLM API cloud — ACCEPTED), 'local-with-local-llm' (everything local incl. inference — REWRITE config to OpenRouter), 'saas-only' (memory operations require vendor SaaS — REJECTED).",
+  "$decision_rules_version": "2026-04-21",
+  "$decision_rules": {
+    "accept": "Memory store / search operations run in a local process or local container. LLM and embedding calls may go to cloud APIs (OpenRouter / OpenAI / etc.).",
+    "rewrite": "If the system defaults to local LLM / embedding inference, force-rewrite its config to use OpenRouter via LLM_BASE_URL + LLM_API_KEY before benchmarking.",
+    "reject": "Any system whose memory operations require calling a vendor-hosted endpoint (e.g. *.mem0.ai, api.getzep.com cloud-only mode) is rejected, even if a self-hosted version is theoretically possible but not packaged."
+  },
+  "last_updated": "2026-04-21",
+  "systems": [
+    {
+      "name": "evermemos",
+      "display_name": "EverMemOS",
+      "github": "EverMind-AI/EverMemOS",
+      "first_seen": "2025-11-26",
+      "status": "integrated",
+      "tier": "local-with-cloud-llm",
+      "memory_backend": "local",
+      "adapter_path": "evaluation/src/adapters/evermemos_adapter.py",
+      "config_path": "evaluation/config/systems/evermemos.yaml",
+      "infra_required": ["mongodb", "elasticsearch", "milvus", "redis"],
+      "estimated_ram_gb": 12,
+      "notes": "Native system. Fork target. Routine should never modify this adapter."
+    },
+    {
+      "name": "mem0",
+      "display_name": "Mem0 (upstream evaluation = SaaS)",
+      "github": "mem0ai/mem0",
+      "first_seen": "2025-11-26",
+      "status": "rejected",
+      "tier": "saas-only",
+      "memory_backend": "saas",
+      "rejection_reason": "EverOS upstream evaluates Mem0 via MemoryClient (cloud), which violates 'local memory backend' rule. The mem0 Python package does expose a local Memory() class — reconsider as 'needs-revisit' if a local-mode adapter is contributed.",
+      "notes": "If you decide to add a local-mode adapter, change status to 'candidate' and remove from routine deny-list."
+    },
+    {
+      "name": "memos",
+      "display_name": "MemOS (upstream evaluation = SaaS)",
+      "github": null,
+      "first_seen": "2025-11-26",
+      "status": "rejected",
+      "tier": "saas-only",
+      "memory_backend": "saas",
+      "rejection_reason": "Upstream evaluation uses MEMOS_KEY against vendor API. Same revisit logic as Mem0."
+    },
+    {
+      "name": "memu",
+      "display_name": "MemU (upstream evaluation = SaaS)",
+      "github": null,
+      "first_seen": "2025-11-26",
+      "status": "rejected",
+      "tier": "saas-only",
+      "memory_backend": "saas",
+      "rejection_reason": "Upstream evaluation uses MEMU_API_KEY against vendor API."
+    },
+    {
+      "name": "zep",
+      "display_name": "Zep",
+      "github": "getzep/zep",
+      "first_seen": "2025-11-26",
+      "status": "rejected",
+      "tier": "saas-only",
+      "memory_backend": "saas",
+      "rejection_reason": "Community Edition deprecated; only Graphiti engine remains open source. No clean self-hosted memory path that matches upstream evaluation conditions."
+    }
+  ],
+  "deny_keywords": [
+    "managed memory service",
+    "fully managed",
+    "cloud-only",
+    "API-only access",
+    "no self-hosted option"
+  ],
+  "must_have_keywords": [
+    "self-hosted",
+    "docker compose",
+    "open source",
+    "local deployment",
+    "pip install"
+  ]
+}

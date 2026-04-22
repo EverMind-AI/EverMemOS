@@ -206,7 +206,12 @@ src/memory_layer/memory_extractor/profile_memory_extractor keep llm merge.py
 #LLM related
 AGENTS.mk
 docs/api_docs/profile_extraction_fields.md
-.claude/
+.claude/*
+# Routine-consumed files must be tracked; per-user settings stay ignored via .claude/*.
+!.claude/skills/
+!.claude/rules/
+!.claude/setup.sh
+!.claude/ROUTINE_PROMPT.md
 .cursor/*
 
 #tmp_data
