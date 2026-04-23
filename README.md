@@ -21,7 +21,8 @@
 
 <br>
 
-## Table of Contents
+<details open>
+  <summary><kbd>Table of Contents</kbd></summary>
 
 - [Project Overview](#project-overview)
 - [Methods](#methods)
@@ -33,6 +34,8 @@
 - [Stay Tuned](#-stay-tuned)
 - [Contributing](#contributing)
 
+</details>
+
 <br>
 
 ## Project Overview
@@ -43,15 +46,15 @@ Start with the **use cases** — working templates you can clone, run, and tweak
 
 ```
 EverOS/
-└── methods/
-    ├── EverCore/            # Long-term memory operating system
-    └── HyperMem/            # Hypergraph memory architecture
-├── benchmarks/
-│   ├── EverMemBench/        # Memory quality evaluation
-│   └── EvoAgentBench/       # Agent self-evolution evaluation
-└── use-cases/               # Example use cases
-    ├── claude-code-plugin/        
-    └── game-of-throne-demo/            
+├── use-cases/              # Working templates — start here
+│   ├── claude-code-plugin/
+│   └── game-of-throne-demo/
+├── methods/                # Memory architectures
+│   ├── EverCore/           # Long-term memory operating system
+│   └── HyperMem/           # Hypergraph memory architecture
+└── benchmarks/             # Evaluation suites
+    ├── EverMemBench/       # Memory quality evaluation
+    └── EvoAgentBench/      # Agent self-evolution evaluation
 ```
 
 <br>
@@ -71,7 +74,7 @@ Methods are production-ready memory architectures that give agents persistent, s
 
 A self-organizing memory operating system inspired by biological imprinting. Extracts, structures, and retrieves long-term knowledge from conversations — enabling agents to remember, understand, and continuously evolve.
 
-[Paper](https://arxiv.org/abs/2601.02163) · [Docs](methods/evermemos/)
+[Paper](https://arxiv.org/abs/2601.02163) · [Docs](methods/EverCore/)
 
 </td>
 <td width="50%" valign="top">
@@ -171,7 +174,7 @@ Then navigate to the component you need:
 
 | | Component | Entry Point |
 | :-- | :--- | :--- |
-| **EverCore** | Build agents with long-term memory | [methods/EverCore/](methods/ever/) |
+| **EverCore** | Build agents with long-term memory | [methods/EverCore/](methods/EverCore/) |
 | **HyperMem** | Use the hypergraph memory architecture | [methods/HyperMem/](methods/HyperMem/) |
 | **EverMemBench** | Evaluate memory system quality | [benchmarks/EverMemBench/](benchmarks/EverMemBench/) |
 | **EvoAgentBench** | Measure agent self-evolution | [benchmarks/EvoAgentBench/](benchmarks/EvoAgentBench/) |
@@ -181,7 +184,7 @@ Then navigate to the component you need:
 ### EverCore
 
 ```bash
-cd methods/evermemos
+cd methods/EverCore
 
 # Start Docker services
 docker compose up -d
@@ -543,14 +546,14 @@ We love open-source energy! Whether you are squashing bugs, shipping features, s
 
 ### Contribution Guidelines
 
-Read our [Contribution Guidelines](methods/evermemos/CONTRIBUTING.md) for code standards and Git workflow.
+Read our [Contribution Guidelines](methods/EverCore/CONTRIBUTING.md) for code standards and Git workflow.
 
 ![divider](https://github.com/user-attachments/assets/2e2bbcc6-e6d8-4227-83c6-0620fc96f761#gh-light-mode-only)
 ![divider](https://github.com/user-attachments/assets/d57fad08-4f49-4a1c-bdfc-f659a5d86150#gh-dark-mode-only)
 
 ### License & Citation & Acknowledgments
 
-[Apache 2.0](https://github.com/EverMind-AI/EverOS/blob/main/LICENSE) • [Acknowledgments](methods/evermemos/docs/ACKNOWLEDGMENTS.md)
+[Apache 2.0](https://github.com/EverMind-AI/EverOS/blob/main/LICENSE) • [Acknowledgments](methods/EverCore/docs/ACKNOWLEDGMENTS.md)
 
 <br>
 

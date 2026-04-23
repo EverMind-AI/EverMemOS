@@ -1,6 +1,6 @@
 # OpenHer — Teaching AI to Remember Who You Are
 
-Built on [EverMemOS](https://github.com/EverMind-AI/EverOS/tree/main/methods/evermemos) — Open-source AI memory infrastructure
+Built on [EverMemOS](https://github.com/EverMind-AI/EverOS/tree/main/methods/EverCore) — Open-source AI memory infrastructure
 
 **OpenHer** doesn't build chatbots. It doesn't build AI assistants. It builds **AI Beings** — entities with personality, emotion, and memory that *feel*, *remember*, and *grow* through every interaction.
 

@@ -61,8 +61,8 @@ This guide covers the Docker installation method. For manual installation, see [
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/EverMind-AI/EverMemOS.git
-cd EverMemOS/methods/evermemos
+git clone https://github.com/EverMind-AI/EverOS.git
+cd EverOS/methods/EverCore
 ```
 
 ### Step 2: Start Docker Services
