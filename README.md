@@ -22,8 +22,9 @@
 <br>
 
 <details open>
-<br>
   <summary><kbd>Table of Contents</kbd></summary>
+
+<br>
 
 - [Project Overview](#project-overview)
 - [Methods](#methods)
@@ -35,9 +36,11 @@
 - [Stay Tuned](#-stay-tuned)
 - [Contributing](#contributing)
 
+<br>
+
 </details>
 
-<br>
+
 
 ## Project Overview
 
