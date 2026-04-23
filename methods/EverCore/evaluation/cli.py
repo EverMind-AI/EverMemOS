@@ -13,7 +13,7 @@ import os
 import sys
 from pathlib import Path
 
-# Environment initialization - must be done before importing EverMemOS components
+# Environment initialization - must be done before importing EverCore components
 # Reference: src/bootstrap.py initialization logic
 
 # Add project paths

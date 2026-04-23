@@ -1,5 +1,5 @@
 """
-Atomic Fact Extractor for EverMemOS
+Atomic Fact Extractor for EverCore
 
 This module extracts structured atomic facts from episode memories for optimized retrieval.
 Each extraction result contains a time and a list of atomic facts extracted from the episode.

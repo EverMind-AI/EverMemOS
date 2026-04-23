@@ -1,4 +1,4 @@
-# EverMemOS Evaluation Framework
+# EverCore Evaluation Framework
 
 A unified, modular evaluation framework for benchmarking memory systems on standard datasets.
 
@@ -6,7 +6,7 @@ A unified, modular evaluation framework for benchmarking memory systems on stand
 
 ### Evaluation Scope
 
-In addition to **EverMemOS**, this framework supports evaluation of several influential memory systems in the industry:
+In addition to **EverCore**, this framework supports evaluation of several influential memory systems in the industry:
 - **Mem0** 
 - **MemOS** 
 - **Zep** 
@@ -45,7 +45,7 @@ During our evaluation, we identified several issues in existing open-source refe
 | Zep       | 90.84      | 81.91     | 77.26    | 75.00       | 85.22   | 1411           | web API/v3 (2025.11)                       | gpt-4.1-mini    |
 | MemOS     | 85.37      | 79.43     | 75.08    | 64.58       | 80.76   | 2498           | web API/v1 (2025.11)                       | gpt-4.1-mini    |
 | MemU      | 74.91      | 72.34     | 43.61    | 54.17       | 66.67   | 3964           | web API/v1 (2025.11)                      | gpt-4.1-mini    |
-| EverMemOS | 96.08      | 91.13     | 89.72    | 70.83       | 92.32   | 2298           | open-source EverMemOS v1.0.0 companion | gpt-4.1-mini    |
+| EverCore | 96.08      | 91.13     | 89.72    | 70.83       | 92.32   | 2298           | open-source EverCore v1.0.0 companion | gpt-4.1-mini    |
 
 *Full-context: using the whole conversation as context for answering questions.
 
@@ -54,7 +54,7 @@ During our evaluation, we identified several issues in existing open-source refe
 
 | Longmemeval | Single-session-user  | Single-session-assistant  | Single-session-preference  | Multi-session  | Knowledge-update  | Temporal-reasoning  | Overall |
 |-------------|----------------------|---------------------------|----------------------------|----------------|-------------------|---------------------|---------|
-| EverMemOS   | 100.00               | 78.57                     | 96.67                      | 78.45          | 87.18             | 71.18               | 82.00   |
+| EverCore   | 100.00               | 78.57                     | 96.67                      | 78.45          | 87.18             | 71.18               | 82.00   |
 
 > **Note on Reproducibility**: To ensure the reproducibility of our evaluation, we provide full evaluation intermediate data for all methods. You can access the data at [EverMind-AI/EverMemOS_Eval_Results](https://huggingface.co/datasets/EverMind-AI/EverMemOS_Eval_Results).
 
@@ -63,7 +63,7 @@ During our evaluation, we identified several issues in existing open-source refe
 
 ### Unified & Modular Framework
 - **One codebase for all**: No need to write separate code for each dataset or system
-- **Plug-and-play systems**: Support multiple memory systems (EverMemOS, Mem0, MemOS, MemU, etc.)
+- **Plug-and-play systems**: Support multiple memory systems (EverCore, Mem0, MemOS, MemU, etc.)
 - **Multiple benchmarks**: LoCoMo, LongMemEval, PersonaMem out of the box
 - **Consistent evaluation**: All systems evaluated with the same pipeline and metrics
 
@@ -114,7 +114,7 @@ Each stage saves its output and can be resumed independently.
 ### Prerequisites
 
 - Python 3.10+
-- EverMemOS environment configured (see main project's `env.template`)
+- EverCore environment configured (see main project's `env.template`)
 
 ### Data Preparation
 
@@ -154,7 +154,7 @@ The framework will automatically detect and convert non-LoCoMo formats on first 
 Install evaluation-specific dependencies:
 
 ```bash
-# For evaluating local systems (EverMemOS)
+# For evaluating local systems (EverCore)
 uv sync --group evaluation
 
 # For evaluating online API systems (Mem0, MemOS, MemU, etc.)
@@ -163,7 +163,7 @@ uv sync --group evaluation-full
 
 ### Environment Configuration
 
-The evaluation framework reuses most environment variables from the main EverMemOS `.env` file:
+The evaluation framework reuses most environment variables from the main EverCore `.env` file:
 - `LLM_API_KEY`, `LLM_BASE_URL` (for answer generation with GPT-4.1-mini)
 - `VECTORIZE_API_KEY` and  `RERANK_API_KEY` (for embeddings/reranker)
 
@@ -171,7 +171,7 @@ The evaluation framework reuses most environment variables from the main EverMem
 1. Explicit `api_key` parameter in config
 2. `LLM_API_KEY` environment variable
 
-For testing EverMemOS, please first configure the whole .env file.
+For testing EverCore, please first configure the whole .env file.
 
 **Additional variables for online API systems** (add to `.env` if testing these systems):
 
@@ -211,10 +211,10 @@ uv run python -m evaluation.cli --dataset locomo --system evermemos_custom --fro
 Run the complete benchmark:
 
 ```bash
-# Evaluate EverMemOS on LoCoMo
+# Evaluate EverCore on LoCoMo
 uv run python -m evaluation.cli --dataset locomo --system evermemos
 
-# Evaluate EverMemOS via local API (start server first)
+# Evaluate EverCore via local API (start server first)
 uv run python src/run.py
 # Use --clean-groups to clear existing data before Add stage
 uv run python -m evaluation.cli --dataset locomo --system evermemos_local_api --clean-groups

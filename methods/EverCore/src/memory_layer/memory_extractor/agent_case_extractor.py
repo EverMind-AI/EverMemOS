@@ -1,5 +1,5 @@
 """
-Agent Experience Extractor for EverMemOS
+Agent Experience Extractor for EverCore
 
 Extracts AgentCase from agent MemCells (OpenAI chat completion format).
 

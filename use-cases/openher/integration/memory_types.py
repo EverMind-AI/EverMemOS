@@ -3,9 +3,9 @@ Memory shared types for OpenHer.
 
 These types bridge the two memory providers:
   - SoulMem (behavioral memory, always-on SQLite layer)
-  - EverMemOS (declarative memory, cross-session persistence)
+  - EverCore (declarative memory, cross-session persistence)
 
-The SessionContext is the key data structure loaded from EverMemOS
+The SessionContext is the key data structure loaded from EverCore
 at session start — it provides relationship priors, user profile,
 episode summaries, and foresight data that expand the neural
 network's perception from 8D to 12D.
@@ -35,7 +35,7 @@ class Memory:
 @dataclass
 class SessionContext:
     """
-    EverMemOS session context (declarative memory).
+    EverCore session context (declarative memory).
 
     Loaded once at session start, this contains everything the
     persona needs to know about the user from past sessions:

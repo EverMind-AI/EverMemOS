@@ -1,5 +1,5 @@
 """
-AgentSkillExtractor for EverMemOS
+AgentSkillExtractor for EverCore
 
 Incrementally extracts reusable skills from new AgentCase records
 via operation-based updates (add/update/none) on existing cluster skills.

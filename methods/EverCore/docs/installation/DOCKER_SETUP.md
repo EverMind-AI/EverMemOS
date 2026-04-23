@@ -2,7 +2,7 @@
 
 [Home](../../README.md) > [Docs](../README.md) > [Installation](.) > Docker Setup
 
-This guide provides detailed information about Docker setup and configuration for EverMemOS.
+This guide provides detailed information about Docker setup and configuration for EverCore.
 
 ---
 
@@ -22,7 +22,7 @@ This guide provides detailed information about Docker setup and configuration fo
 
 ## Overview
 
-EverMemOS uses Docker Compose to manage four essential services:
+EverCore uses Docker Compose to manage four essential services:
 - **MongoDB** - Primary database
 - **Elasticsearch** - Keyword search engine
 - **Milvus** - Vector database

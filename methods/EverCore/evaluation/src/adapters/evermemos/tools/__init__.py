@@ -1,4 +1,4 @@
-"""Evaluation tools for EverMemOS adapter."""
+"""Evaluation tools for EverCore adapter."""
 
 from evaluation.src.adapters.evermemos.tools.in_memory_cluster_storage import (
     InMemoryClusterStorage,

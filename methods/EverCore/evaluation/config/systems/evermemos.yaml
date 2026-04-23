@@ -1,8 +1,8 @@
-# EverMemOS System Configuration
+# EverCore System Configuration
 
 name: "evermemos"
 version: "1.0"
-description: "EverMemOS"
+description: "EverCore"
 
 adapter: "evermemos"
 

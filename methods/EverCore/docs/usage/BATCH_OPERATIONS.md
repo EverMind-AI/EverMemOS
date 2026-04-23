@@ -2,7 +2,7 @@
 
 [Home](../../README.md) > [Docs](../README.md) > [Usage](.) > Batch Operations
 
-This guide explains how to efficiently process multiple messages using EverMemOS's batch operations.
+This guide explains how to efficiently process multiple messages using EverCore's batch operations.
 
 ---
 
@@ -20,7 +20,7 @@ This guide explains how to efficiently process multiple messages using EverMemOS
 
 ## Overview
 
-EverMemOS supports batch processing for efficiently storing multiple messages at once. This is particularly useful for:
+EverCore supports batch processing for efficiently storing multiple messages at once. This is particularly useful for:
 
 - Processing historical conversation data
 - Importing chat logs from other platforms
@@ -31,7 +31,7 @@ EverMemOS supports batch processing for efficiently storing multiple messages at
 
 ## Conversation Format
 
-EverMemOS uses a standardized **ConversationFormat** for batch operations. This format supports:
+EverCore uses a standardized **ConversationFormat** for batch operations. This format supports:
 
 - Conversation metadata (group info, user details)
 - Multi-speaker conversations

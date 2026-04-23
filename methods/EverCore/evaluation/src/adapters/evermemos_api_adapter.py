@@ -1,7 +1,7 @@
 """
-EverMemOS HTTP Memory API adapter (evaluation side).
+EverCore HTTP Memory API adapter (evaluation side).
 
-This adapter talks to EverMemOS server endpoints:
+This adapter talks to EverCore server endpoints:
 - POST   /api/v0/memories         (ingest single message)
 - GET    /api/v0/memories/search  (retrieve memories)
 
@@ -26,9 +26,9 @@ from evaluation.src.core.data_models import Conversation, SearchResult
 
 
 @register_adapter("evermemos_api")
-class EverMemOSAPIAdapter(OnlineAPIAdapter):
+class EverCoreAPIAdapter(OnlineAPIAdapter):
     """
-    Adapter for EverMemOS Memory API.
+    Adapter for EverCore Memory API.
 
     Design:
     - Ingest each conversation once (do NOT duplicate per-speaker perspectives).
@@ -129,7 +129,7 @@ class EverMemOSAPIAdapter(OnlineAPIAdapter):
 
     # --- overrides to avoid per-speaker duplication on ingest/search ---
     def _need_dual_perspective(self, speaker_a: str, speaker_b: str) -> bool:
-        # EverMemOS Memory API stores group chat stream; do not split perspectives.
+        # EverCore Memory API stores group chat stream; do not split perspectives.
         return False
 
     def _conversation_to_messages(
@@ -167,7 +167,7 @@ class EverMemOSAPIAdapter(OnlineAPIAdapter):
         return out
 
     def _get_answer_prompt(self) -> str:
-        """Use EverMemOS CoT answer prompt (same as evermemos adapter)."""
+        """Use EverCore CoT answer prompt (same as evermemos adapter)."""
         from evaluation.src.adapters.evermemos.prompts.answer_prompts import (
             ANSWER_PROMPT,
         )

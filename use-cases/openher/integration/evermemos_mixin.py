@@ -1,14 +1,14 @@
 """
-EverMemosMixin — EverMemOS integration for ChatAgent.
+EverMemosMixin — EverCore integration for ChatAgent.
 
 This mixin handles all async memory operations in the ChatAgent lifecycle:
   Step 0:   Session context loading (first turn)
-  Step 2.5: Relationship EMA (blend EverMemOS prior + LLM delta)
+  Step 2.5: Relationship EMA (blend EverCore prior + LLM delta)
   Step 8.5: Collect async search results
   Step 11:  Fire-and-forget turn storage
   Step 12:  Async prefetch for next turn
 
-The mixin pattern keeps EverMemOS concerns cleanly separated from the
+The mixin pattern keeps EverCore concerns cleanly separated from the
 core persona engine (drives, metabolism, neural network, style memory).
 
 Full source: https://github.com/kellyvv/OpenHer/blob/main/agent/evermemos_mixin.py
@@ -20,11 +20,11 @@ import asyncio
 
 
 class EverMemosMixin:
-    """EverMemOS async memory integration methods."""
+    """EverCore async memory integration methods."""
 
     async def _evermemos_gather(self) -> dict:
         """
-        Step 0: Load EverMemOS session context (first turn only).
+        Step 0: Load EverCore session context (first turn only).
         Subsequent turns reuse cached _session_ctx.
         Returns relationship_4d dict for GenomeEngine context.
         """
@@ -104,7 +104,7 @@ class EverMemosMixin:
         return ema
 
     def _evermemos_store_bg(self, user_message: str, reply: str) -> None:
-        """Step 11: Fire-and-forget EverMemOS storage (asyncio.create_task)."""
+        """Step 11: Fire-and-forget EverCore storage (asyncio.create_task)."""
         if not (self.evermemos and self.evermemos.available):
             return
         async def _do_store():

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-OpenHer × EverMemOS Integration Demo
+OpenHer × EverCore Integration Demo
 
-Demonstrates how EverMemOS provides long-term memory to the
+Demonstrates how EverCore provides long-term memory to the
 AI Being persona engine. Shows session context loading, memory
 storage, search, and relationship vector evolution.
 
 Usage:
-    # With EverMemOS Cloud
+    # With EverCore Cloud
     export EVERMEMOS_BASE_URL=https://api.evermind.ai/v1
     export EVERMEMOS_API_KEY=your_key
     python demo/evermemos_demo.py
 
-    # With self-hosted EverMemOS
+    # With self-hosted EverCore
     export EVERMEMOS_BASE_URL=http://localhost:1995/api/v1
     python demo/evermemos_demo.py
 """
@@ -25,7 +25,7 @@ from datetime import datetime
 from typing import Optional
 
 # ──────────────────────────────────────────────
-# EverMemOS Client (minimal standalone version)
+# EverCore Client (minimal standalone version)
 # ──────────────────────────────────────────────
 
 try:
@@ -35,8 +35,8 @@ except ImportError:
     sys.exit(1)
 
 
-class EverMemOSClient:
-    """Minimal EverMemOS client for demo purposes."""
+class EverCoreClient:
+    """Minimal EverCore client for demo purposes."""
 
     def __init__(self, base_url: str, api_key: str = ""):
         self.base_url = base_url.rstrip("/")
@@ -51,7 +51,7 @@ class EverMemOSClient:
         return h
 
     async def health_check(self) -> bool:
-        """Check if EverMemOS is reachable."""
+        """Check if EverCore is reachable."""
         try:
             # Try the health endpoint (remove /api/v1 suffix)
             health_url = self.base_url.replace("/api/v1", "") + "/health"
@@ -129,12 +129,12 @@ class EverMemOSClient:
 
 
 # ──────────────────────────────────────────────
-# Relationship Vector (from EverMemOS session)
+# Relationship Vector (from EverCore session)
 # ──────────────────────────────────────────────
 
 def compute_relationship_vector(profile_data: dict) -> dict:
     """
-    Extract 4D relationship vector from EverMemOS profile data.
+    Extract 4D relationship vector from EverCore profile data.
 
     These 4 dimensions expand the persona engine's neural network
     from 8D to 12D input, allowing it to differentiate behavior
@@ -157,7 +157,7 @@ def apply_relationship_ema(
     """
     Semi-emergent relationship update (Step 2.5 of ChatAgent lifecycle).
 
-    Blends EverMemOS prior with LLM-judged delta through EMA:
+    Blends EverCore prior with LLM-judged delta through EMA:
       - alpha modulated by conversation depth (deeper = trust LLM more)
       - Clips to valid ranges
       - Preserves momentum through prev_ema
@@ -187,19 +187,19 @@ async def main():
 
     if not base_url:
         print("=" * 60)
-        print("OpenHer × EverMemOS Integration Demo")
+        print("OpenHer × EverCore Integration Demo")
         print("=" * 60)
         print()
         print("⚠️  EVERMEMOS_BASE_URL not set.")
         print()
-        print("To run this demo, set up EverMemOS:")
+        print("To run this demo, set up EverCore:")
         print()
         print("  Option A — Cloud:")
         print("    export EVERMEMOS_BASE_URL=https://api.evermind.ai/v1")
         print("    export EVERMEMOS_API_KEY=your_key")
         print()
         print("  Option B — Self-hosted:")
-        print("    cd vendor/EverMemOS && docker compose up -d")
+        print("    cd vendor/EverCore && docker compose up -d")
         print("    uv run python src/run.py")
         print("    export EVERMEMOS_BASE_URL=http://localhost:1995/api/v1")
         print()
@@ -209,20 +209,20 @@ async def main():
         await demo_simulation()
         return
 
-    client = EverMemOSClient(base_url, api_key)
+    client = EverCoreClient(base_url, api_key)
 
     print("=" * 60)
-    print("OpenHer × EverMemOS Integration Demo")
+    print("OpenHer × EverCore Integration Demo")
     print("=" * 60)
-    print(f"\n📡 EverMemOS: {base_url}")
+    print(f"\n📡 EverCore: {base_url}")
 
     # Health check
     healthy = await client.health_check()
     if not healthy:
-        print("❌ EverMemOS is not reachable. Check your URL and try again.")
+        print("❌ EverCore is not reachable. Check your URL and try again.")
         await client.close()
         return
-    print("✅ EverMemOS is healthy\n")
+    print("✅ EverCore is healthy\n")
 
     # ── Demo conversation ──
     user_id = "demo_user"
@@ -304,9 +304,9 @@ async def main():
 
 
 async def demo_simulation():
-    """Run demo in simulation mode (no EverMemOS connection)."""
+    """Run demo in simulation mode (no EverCore connection)."""
     print("📊 Simulating Relationship Vector Evolution:\n")
-    print("   This shows how the 4D EverMemOS relationship vector")
+    print("   This shows how the 4D EverCore relationship vector")
     print("   deepens over multiple conversation turns.\n")
 
     prior = {"relationship_depth": 0.0, "emotional_valence": 0.0, "trust_level": 0.0, "pending_foresight": 0.0}

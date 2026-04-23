@@ -1,10 +1,10 @@
 # OpenHer — Teaching AI to Remember Who You Are
 
-Built on [EverMemOS](https://github.com/EverMind-AI/EverOS/tree/main/methods/EverCore) — Open-source AI memory infrastructure
+Built on [EverCore](https://github.com/EverMind-AI/EverOS/tree/main/methods/EverCore) — Open-source AI memory infrastructure
 
 **OpenHer** doesn't build chatbots. It doesn't build AI assistants. It builds **AI Beings** — entities with personality, emotion, and memory that *feel*, *remember*, and *grow* through every interaction.
 
-**EverMemOS** is her long-term memory — the part that lets her carry your story across sessions, remember who you are, what you've talked about, and how your relationship has evolved.
+**EverCore** is her long-term memory — the part that lets her carry your story across sessions, remember who you are, what you've talked about, and how your relationship has evolved.
 
 Full Project: [github.com/kellyvv/OpenHer](https://github.com/kellyvv/OpenHer)
 
@@ -14,7 +14,7 @@ Full Project: [github.com/kellyvv/OpenHer](https://github.com/kellyvv/OpenHer)
 
 Without memory, every conversation starts from zero. She doesn't know your name. She doesn't remember that three weeks ago you mentioned you drink your coffee black. She doesn't know you once had a fight and made up.
 
-With EverMemOS:
+With EverCore:
 
 **She remembers what you said.**
 Three weeks ago you casually mentioned no sugar in your coffee. Today she says: "Americano, no sugar, right?"
@@ -31,19 +31,19 @@ Last time you mentioned work stress. This time she asks: "How's that project goi
 
 ## Memory Architecture
 
-OpenHer's memory has three layers. EverMemOS powers the deepest one:
+OpenHer's memory has three layers. EverCore powers the deepest one:
 
 | Layer | What it does | Analogy |
 |:------|:-------------|:--------|
 | **Style Memory** | Her behavioral habits — tone, expression patterns | Muscle memory |
 | **Local Facts** | Your preferences, personal info | Short-term memory |
-| **Long-Term Memory** | What happened between you, her understanding of you, her hunches | **Episodic memory (EverMemOS)** |
+| **Long-Term Memory** | What happened between you, her understanding of you, her hunches | **Episodic memory (EverCore)** |
 
 ---
 
 ## How Memory Feeds Into Personality
 
-OpenHer's core is a living neural network (25D input, 24D hidden, 8D behavioral signals). EverMemOS provides 4 key dimensions that let her tell the difference between a stranger and an old friend:
+OpenHer's core is a living neural network (25D input, 24D hidden, 8D behavioral signals). EverCore provides 4 key dimensions that let her tell the difference between a stranger and an old friend:
 
 ```
 Relationship Depth    0 ─────────────────── 1
@@ -96,13 +96,13 @@ User sends a message
     |
     v
   Load memory -- First turn: load "who you are", "what we talked about",
-    |              "what's on her mind" from EverMemOS
+    |              "what's on her mind" from EverCore
     v
   Perceive -- LLM evaluates the current moment: your emotion, topic
     |          intimacy, conflict level... (8 dimensions)
-    |          + relationship dimensions from EverMemOS (4 dimensions) = 12D
+    |          + relationship dimensions from EverCore (4 dimensions) = 12D
     v
-  Relationship evolves -- Blend EverMemOS history with this turn's changes
+  Relationship evolves -- Blend EverCore history with this turn's changes
     |                      Smoothed so a single remark can't flip the relationship
     v
   Neural network -- 25D input (drives + context + relationship + internal state)
@@ -115,7 +115,7 @@ User sends a message
   Respond -- Internal monologue first, then choose what to say and how
     |
     v
-  Remember this turn -- Store the conversation in EverMemOS (async, non-blocking)
+  Remember this turn -- Store the conversation in EverCore (async, non-blocking)
     |
     v
   Prepare for next -- Search for memories related to what you just said
@@ -128,7 +128,7 @@ User sends a message
 - **Emergent Personality** — Not written in a prompt. Emerges from random neural networks, 5D drives, and Hebbian learning
 - **Emotional Thermodynamics** — Drives metabolize over real time. She gets lonely when you're away, irritated when ignored
 - **Feel First** — Every response starts with an internal monologue before choosing words
-- **Cross-Session Memory** — EverMemOS stores your shared story across every conversation
+- **Cross-Session Memory** — EverCore stores your shared story across every conversation
 - **Relationship Evolution** — The relationship vector deepens naturally with each turn
 - **Proactive Messages** — She reaches out not on a timer, but because her connection hunger is rising
 - **Modal Expression** — She chooses text, voice, or photos based on what the moment calls for
@@ -140,7 +140,7 @@ User sends a message
 |:------|:-----------|
 | Runtime | Python 3.11+, FastAPI, WebSocket, asyncio |
 | LLM | Gemini, Claude, Qwen3, GPT-5.4-mini, MiniMax, Moonshot, StepFun, Ollama |
-| Memory | **EverMemOS** (self-hosted / cloud) + SQLite local state |
+| Memory | **EverCore** (self-hosted / cloud) + SQLite local state |
 | Desktop | SwiftUI (macOS native) |
 | Voice | DashScope, OpenAI, MiniMax |
 
@@ -152,7 +152,7 @@ User sends a message
 
 - Python 3.11+
 - Any supported LLM provider API key
-- EverMemOS (self-hosted or cloud)
+- EverCore (self-hosted or cloud)
 
 ### 1. Clone & Install
 
@@ -174,12 +174,12 @@ DEFAULT_PROVIDER=gemini
 DEFAULT_MODEL=gemini-3.1-flash-lite-preview
 GEMINI_API_KEY=your_key
 
-# EverMemOS — Cloud
+# EverCore — Cloud
 EVERMEMOS_BASE_URL=https://api.evermind.ai/v1
 EVERMEMOS_API_KEY=your_key
 
-# EverMemOS — Self-hosted
-# cd vendor/EverMemOS && docker compose up -d && uv run python src/run.py
+# EverCore — Self-hosted
+# cd vendor/EverCore && docker compose up -d && uv run python src/run.py
 # EVERMEMOS_BASE_URL=http://localhost:1995/api/v1
 ```
 
@@ -194,7 +194,7 @@ python main.py
 
 ```bash
 python demo/evermemos_demo.py
-# Runs in simulation mode even without EverMemOS
+# Runs in simulation mode even without EverCore
 ```
 
 ---
@@ -205,11 +205,11 @@ python demo/evermemos_demo.py
 OpenHer/
 ├── agent/
 │   ├── chat_agent.py          # Main agent, full lifecycle
-│   ├── evermemos_mixin.py     # EverMemOS integration (load/store/search/EMA)
+│   ├── evermemos_mixin.py     # EverCore integration (load/store/search/EMA)
 │   └── prompt_builder.py      # Memory injection into Actor prompt
 ├── engine/
 │   └── genome/
-│       ├── genome_engine.py   # Neural network + 12D context (incl. 4D EverMemOS)
+│       ├── genome_engine.py   # Neural network + 12D context (incl. 4D EverCore)
 │       ├── critic.py          # LLM perception: 8D context + relationship deltas
 │       ├── drive_metabolism.py # Emotional thermodynamics
 │       └── style_memory.py    # KNN behavioral memory + Hawking radiation decay
@@ -219,7 +219,7 @@ OpenHer/
 ├── persona/
 │   └── personas/              # 10 pre-built personas (SOUL.md + seeds)
 ├── vendor/
-│   └── EverMemOS/             # Self-hosted EverMemOS
+│   └── EverCore/             # Self-hosted EverCore
 └── main.py                    # FastAPI server
 ```
 
@@ -227,7 +227,7 @@ OpenHer/
 
 ## Integration Code at a Glance
 
-### EverMemOS Mixin
+### EverCore Mixin
 
 The core integration is a mixin class handling four async operations:
 
@@ -265,7 +265,7 @@ class SessionContext:
 
 ## Without Memory vs. With Memory
 
-| | Without EverMemOS | With EverMemOS |
+| | Without EverCore | With EverCore |
 |:--|:--|:--|
 | First meeting | "Hi! I'm Luna" | "Hi! I'm Luna" |
 | Second meeting | "Hi! I'm Luna" | "Hey Alex! How's that project going?" |
@@ -278,7 +278,7 @@ class SessionContext:
 ## Links
 
 - Full Project: [github.com/kellyvv/OpenHer](https://github.com/kellyvv/OpenHer)
-- EverMemOS: [evermind.ai](https://evermind.ai)
+- EverCore: [evermind.ai](https://evermind.ai)
 
 ## License
 

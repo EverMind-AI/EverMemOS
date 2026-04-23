@@ -1,7 +1,7 @@
-# EverMemOS (Local HTTP API) System Configuration
+# EverCore (Local HTTP API) System Configuration
 name: "evermemos_local_api"
 version: "1.0"
-description: "EverMemOS via LOCAL HTTP Memory API (no hosted auth)"
+description: "EverCore via LOCAL HTTP Memory API (no hosted auth)"
 
 # Reuse the same adapter implementation
 adapter: "evermemos_api"

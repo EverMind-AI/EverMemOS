@@ -1,4 +1,4 @@
-# EverMemOS Memory Types: Episode / Foresight / AtomicFact
+# EverCore Memory Types: Episode / Foresight / AtomicFact
 
 ---
 

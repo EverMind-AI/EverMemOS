@@ -1,6 +1,6 @@
 import os
 
-PROJECT_NAME = "EverMemOS"
+PROJECT_NAME = "EverCore"
 PROJECT_VERSION = "1.0.0"
 
 

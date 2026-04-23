@@ -1,11 +1,11 @@
-# EverMemOS (HTTP API) System Configuration
+# EverCore (HTTP API) System Configuration
 name: "evermemos_api"
 version: "1.0"
-description: "EverMemOS via HTTP Memory API"
+description: "EverCore via HTTP Memory API"
 
 adapter: "evermemos_api"
 
-# EverMemOS API configuration
+# EverCore API configuration
 # base_url can be either host base (https://api.evermind.ai) or full endpoint (.../api/v0/memories)
 base_url: "${EVERMEMOS_API_URL:https://api.evermind.ai/api/v0/memories}"
 # Hosted API requires Bearer token in Authorization header.

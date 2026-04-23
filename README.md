@@ -287,7 +287,7 @@ EverCore achieves **93% overall accuracy** on the LoCoMo benchmark, outperformin
 
 ### Benchmark Results
 
-![EverOS Benchmark Results](https://github.com/user-attachments/assets/824ac1a6-4bf2-4019-9316-ea7ba7d03142)
+![EverOS Benchmark Results](https://github.com/user-attachments/assets/41b656e7-6f82-41b7-891d-d6079d10dd39)
 
 ### Supported Benchmarks
 

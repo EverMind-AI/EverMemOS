@@ -34,7 +34,7 @@ def register_adapter(name: str):
     
     Usage:
         @register_adapter("evermemos")
-        class EverMemOSAdapter(BaseAdapter):
+        class EverCoreAdapter(BaseAdapter):
             ...
     """
     def decorator(cls: Type[BaseAdapter]):

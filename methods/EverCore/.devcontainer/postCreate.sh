@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "=== EverMemOS Dev Container Setup ==="
+echo "=== EverCore Dev Container Setup ==="
 
 # Install system dependencies
 echo "Installing system dependencies..."

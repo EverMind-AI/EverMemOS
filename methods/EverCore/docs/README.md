@@ -1,12 +1,12 @@
-# EverMemOS Documentation
+# EverCore Documentation
 
 [Home](../README.md) > Documentation
 
-Welcome to the EverMemOS documentation! This page serves as a comprehensive index to all available documentation.
+Welcome to the EverCore documentation! This page serves as a comprehensive index to all available documentation.
 
 ## Getting Started
 
-- **[Overview & Vision](OVERVIEW.md)** - Learn about EverMemOS's vision, unique advantages, and core concepts
+- **[Overview & Vision](OVERVIEW.md)** - Learn about EverCore's vision, unique advantages, and core concepts
 - **[Quick Setup Guide](installation/SETUP.md)** - Complete installation and configuration instructions
 - **[Basic Usage Examples](usage/USAGE_EXAMPLES.md)** - Get started with common usage patterns
 
@@ -58,14 +58,14 @@ Welcome to the EverMemOS documentation! This page serves as a comprehensive inde
 
 ## Contributing
 
-- **[Contributing Guide](../CONTRIBUTING.md)** - How to contribute to EverMemOS
+- **[Contributing Guide](../CONTRIBUTING.md)** - How to contribute to EverCore
 - **[Bug Report Template](ISSUE_TEMPLATE_BUG.md)** - Report bugs
 - **[Feature Request Template](ISSUE_TEMPLATE_FEATURE.md)** - Suggest new features
 
 ## Additional Resources
 
 - **[Changelog](CHANGELOG.md)** - Release notes and version history
-- **[Citation](CITATION.md)** - How to cite EverMemOS in your research
+- **[Citation](CITATION.md)** - How to cite EverCore in your research
 - **[Acknowledgments](ACKNOWLEDGMENTS.md)** - Credits and thanks
 
 ---
@@ -73,4 +73,4 @@ Welcome to the EverMemOS documentation! This page serves as a comprehensive inde
 **Legend:**
 - 🚧 = Coming Soon (placeholder documentation)
 
-**Need help?** Open an issue on [GitHub](https://github.com/EverMind-AI/EverMemOS/issues) or check our [community channels](../README.md#contributing).
+**Need help?** Open an issue on [GitHub](https://github.com/EverMind-AI/EverOS/issues) or check our [community channels](../README.md#contributing).

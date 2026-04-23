@@ -2,7 +2,7 @@
 
 [Home](../../README.md) > [Docs](../README.md) > [Usage](.) > Usage Examples
 
-This guide provides comprehensive examples of how to use EverMemOS in different scenarios.
+This guide provides comprehensive examples of how to use EverCore in different scenarios.
 
 ---
 
@@ -32,7 +32,7 @@ Before using these examples, ensure you have:
 
 ## 1. Simple Demo - Quick Start
 
-The fastest way to experience EverMemOS! Just 2 steps to see memory storage and retrieval in action.
+The fastest way to experience EverCore! Just 2 steps to see memory storage and retrieval in action.
 
 ### What It Does
 
@@ -74,7 +74,7 @@ See the complete code at [`demo/simple_demo.py`](../../demo/simple_demo.py)
 
 ## 2. Full Demo - Memory Extraction & Chat
 
-Experience the complete EverMemOS workflow: memory extraction from conversations followed by interactive chat with memory retrieval.
+Experience the complete EverCore workflow: memory extraction from conversations followed by interactive chat with memory retrieval.
 
 ### Prerequisites
 
@@ -218,7 +218,7 @@ The evaluation pipeline consists of 4 stages with automatic checkpointing and re
 
 ## 4. Direct API Usage
 
-Use the Memory API to integrate EverMemOS into your application.
+Use the Memory API to integrate EverCore into your application.
 
 ### Prerequisites
 
@@ -280,7 +280,7 @@ For complete API documentation, see [Memory API Documentation](../api_docs/memor
 
 ### Retrieve Memories
 
-EverMemOS provides two retrieval modes: **Lightweight** (fast) and **Agentic** (intelligent).
+EverCore provides two retrieval modes: **Lightweight** (fast) and **Agentic** (intelligent).
 
 #### Lightweight Retrieval
 
@@ -372,12 +372,12 @@ For complete details, see:
 
 ### Python SDK Usage
 
-Use EverMemOS in your Python applications:
+Use EverCore in your Python applications:
 
 ```python
 import requests
 
-class EverMemOSClient:
+class EverCoreClient:
     def __init__(self, base_url="http://localhost:1995"):
         self.base_url = base_url
 
@@ -400,7 +400,7 @@ class EverMemOSClient:
         return response.json()
 
 # Usage
-client = EverMemOSClient()
+client = EverCoreClient()
 
 # Store memory
 client.store_memory({

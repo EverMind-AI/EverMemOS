@@ -1,5 +1,5 @@
 """
-Agent MemCell Extractor for EverMemOS
+Agent MemCell Extractor for EverCore
 
 Extends ConvMemCellExtractor for agent conversations in OpenAI chat completion format.
 
