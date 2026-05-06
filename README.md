@@ -55,16 +55,16 @@ At the center of EverOS is **EverCore**, a long-term memory operating system for
 
 ```
 EverOS/
-├── methods/                   # Memory architectures
-│   ├── EverCore/              # Long-term memory operating system
-│   └── HyperMem/              # Hypergraph memory architecture
-├── benchmarks/                # Evaluation suites and standards
-│   ├── EverMemBench/          # Memory quality evaluation
-│   └── EvoAgentBench/         # Agent self-evolution evaluation
-└── use-cases/                 # Apps, demos, and integrations
-    ├── claude-code-plugin/    # Persistent memory for Claude Code
-    ├── game-of-throne-demo/   # Game of Thrones Demo — a memory-enabled game
-    ├── openher/               # AI companion memory integration
+├── benchmarks/                
+│   ├── EverMemBench/    
+│   └── EvoAgentBench/         
+├── methods/                   
+│   ├── EverCore/              
+│   └── HyperMem/              
+└── use-cases/                 
+    ├── claude-code-plugin/    
+    ├── game-of-throne-demo/   
+    ├── openher/            
     ├── ...
     └── ...
 ```
