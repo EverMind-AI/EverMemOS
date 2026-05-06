@@ -23,10 +23,23 @@ README:
   architecture methods, benchmarks, evaluation, citations, community.
 - Avoid repeating the three-part project framing after the overview. Later
   sections should act as catalogues or action paths.
-- Use root-relative links in the README, and verify that active relative links
-  resolve before finishing.
+- Use repository-relative links in the README, and verify that active relative
+  links resolve before finishing.
 - Keep commented-out README blocks out unless they are intentionally preserved
   for a near-term restoration.
+
+## Open-Source DX Guidance
+
+- Keep root community files current: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
+  `SECURITY.md`, `CITATION.cff`, issue templates, and the pull request
+  template.
+- Favor clear run paths, small examples, and explicit verification commands.
+- Make contribution paths obvious for architecture methods, benchmarks, docs,
+  and use cases.
+- Treat broken links, stale setup commands, missing `.env.example` files, and
+  unclear issue templates as developer-experience bugs.
+- Keep `.github/workflows/docs.yml` lightweight and dependency-free so docs
+  hygiene is easy to trust.
 
 ## Quick Commands
 

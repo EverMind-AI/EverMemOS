@@ -3,9 +3,9 @@
 ![banner-gif](https://github.com/user-attachments/assets/0bf97efd-580f-4a53-a2a2-58d6daea7290)
 
 <p align="center">
-  <!-- <a href="https://arxiv.org/abs/2601.02163"><img src="https://img.shields.io/badge/arXiv-EverOS-F5C842?labelColor=gray&style=flat-square&logo=arxiv&logoColor=white" alt="arXiv: EverOS"></a> -->
-  <!-- <a href="https://arxiv.org/abs/2604.08256"><img src="https://img.shields.io/badge/arXiv-HyperMem-F5C842?labelColor=gray&style=flat-square&logo=arxiv&logoColor=white" alt="arXiv: HyperMem"></a> -->
-  <!-- <a href="https://arxiv.org/abs/2602.01313"><img src="https://img.shields.io/badge/arXiv-EverMemBench-F5C842?labelColor=gray&style=flat-square&logo=arxiv&logoColor=white" alt="arXiv: EverMemBench"></a> -->
+  <!-- <a href="https://arxiv.org/abs/2601.02163"><img src="https://img.shields.io/badge/arXiv-EverMemOS-F5C842?labelColor=gray&style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv: EverMemOS"></a> -->
+  <!-- <a href="https://arxiv.org/abs/2604.08256"><img src="https://img.shields.io/badge/arXiv-HyperMem-F5C842?labelColor=gray&style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv: HyperMem"></a> -->
+  <!-- <a href="https://arxiv.org/abs/2602.01313"><img src="https://img.shields.io/badge/arXiv-EverMemBench-F5C842?labelColor=gray&style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv: EverMemBench"></a> -->
   <!-- <a href="https://github.com/EverMind-AI/MSA"><img src="https://img.shields.io/badge/arXiv-Memory%20Sparse%20Attention-F5C842?labelColor=gray&style=flat-square&logo=arxiv&logoColor=white" alt="arXiv: Memory Sparse Attention"></a> -->
   <a href="https://x.com/evermind"><img src="https://img.shields.io/badge/EverMind-000000?labelColor=gray&style=for-the-badge&logo=x&logoColor=white" alt="X"></a>
   <a href="https://huggingface.co/EverMind-AI"><img src="https://img.shields.io/badge/🤗_HuggingFace-EverMind-F5C842?labelColor=gray&style=for-the-badge" alt="HuggingFace"></a>
@@ -410,7 +410,7 @@ cat evaluation/results/locomo-everos/report.txt
 
 ## Citations
 
-If EverOS helps your research, please cite:
+If EverOS helps your research, please cite the relevant paper. GitHub citation metadata is also available in [CITATION.cff](CITATION.cff).
 
 ```bibtex
 @article{hu2026evermemos,
@@ -481,14 +481,14 @@ Contributions are welcome across the whole repository: architecture methods, ben
 
 ### Contribution Guidelines
 
-Read our [Contribution Guidelines](methods/EverCore/CONTRIBUTING.md) for code standards and Git workflow.
+Read the [Contribution Guidelines](CONTRIBUTING.md) for setup, pull request expectations, and use-case submission notes. For responsible disclosure, see the [Security Policy](SECURITY.md).
 
 ![divider](https://github.com/user-attachments/assets/2e2bbcc6-e6d8-4227-83c6-0620fc96f761#gh-light-mode-only)
 ![divider](https://github.com/user-attachments/assets/d57fad08-4f49-4a1c-bdfc-f659a5d86150#gh-dark-mode-only)
 
-### License, Citation, and Acknowledgments
+### License, Conduct, and Acknowledgments
 
-[Apache 2.0](https://github.com/EverMind-AI/EverOS/blob/main/LICENSE) • [Acknowledgments](methods/EverCore/docs/ACKNOWLEDGMENTS.md)
+[Apache 2.0](https://github.com/EverMind-AI/EverOS/blob/main/LICENSE) • [Code of Conduct](CODE_OF_CONDUCT.md) • [Acknowledgments](methods/EverCore/docs/ACKNOWLEDGMENTS.md)
 
 <br>
 
