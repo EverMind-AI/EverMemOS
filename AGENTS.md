@@ -30,9 +30,11 @@ README:
 
 ## Open-Source DX Guidance
 
-- Keep root community files current: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
-  `SECURITY.md`, `CITATION.cff`, issue templates, and the pull request
-  template.
+- Keep root uncluttered. Prefer community files in `.github/`:
+  `.github/CONTRIBUTING.md`, `.github/CODE_OF_CONDUCT.md`,
+  `.github/SECURITY.md`, issue templates, and the pull request template.
+- Treat `CITATION.cff` as optional. Add it only if the project wants GitHub's
+  "Cite this repository" affordance at the cost of one extra root file.
 - Favor clear run paths, small examples, and explicit verification commands.
 - Make contribution paths obvious for architecture methods, benchmarks, docs,
   and use cases.

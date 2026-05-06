@@ -4,7 +4,6 @@ on:
   pull_request:
     paths:
       - "**/*.md"
-      - "CITATION.cff"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE.md"
       - ".github/workflows/docs.yml"
@@ -12,7 +11,6 @@ on:
     branches: [main]
     paths:
       - "**/*.md"
-      - "CITATION.cff"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE.md"
       - ".github/workflows/docs.yml"
@@ -35,10 +33,10 @@ jobs:
 
           files = [
               Path("README.md"),
-              Path("CONTRIBUTING.md"),
               Path("AGENTS.md"),
-              Path("CODE_OF_CONDUCT.md"),
-              Path("SECURITY.md"),
+              Path(".github/CONTRIBUTING.md"),
+              Path(".github/CODE_OF_CONDUCT.md"),
+              Path(".github/SECURITY.md"),
           ]
 
           missing = []

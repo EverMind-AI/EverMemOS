@@ -410,7 +410,7 @@ cat evaluation/results/locomo-everos/report.txt
 
 ## Citations
 
-If EverOS helps your research, please cite the relevant paper. GitHub citation metadata is also available in [CITATION.cff](CITATION.cff).
+If EverOS helps your research, please cite the relevant paper:
 
 ```bibtex
 @article{hu2026evermemos,
@@ -481,14 +481,14 @@ Contributions are welcome across the whole repository: architecture methods, ben
 
 ### Contribution Guidelines
 
-Read the [Contribution Guidelines](CONTRIBUTING.md) for setup, pull request expectations, and use-case submission notes. For responsible disclosure, see the [Security Policy](SECURITY.md).
+Read the [Contribution Guidelines](.github/CONTRIBUTING.md) for setup, pull request expectations, and use-case submission notes. For responsible disclosure, see the [Security Policy](.github/SECURITY.md).
 
 ![divider](https://github.com/user-attachments/assets/2e2bbcc6-e6d8-4227-83c6-0620fc96f761#gh-light-mode-only)
 ![divider](https://github.com/user-attachments/assets/d57fad08-4f49-4a1c-bdfc-f659a5d86150#gh-dark-mode-only)
 
 ### License, Conduct, and Acknowledgments
 
-[Apache 2.0](https://github.com/EverMind-AI/EverOS/blob/main/LICENSE) • [Code of Conduct](CODE_OF_CONDUCT.md) • [Acknowledgments](methods/EverCore/docs/ACKNOWLEDGMENTS.md)
+[Apache 2.0](https://github.com/EverMind-AI/EverOS/blob/main/LICENSE) • [Code of Conduct](.github/CODE_OF_CONDUCT.md) • [Acknowledgments](methods/EverCore/docs/ACKNOWLEDGMENTS.md)
 
 <br>
 
