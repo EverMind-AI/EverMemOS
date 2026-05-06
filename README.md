@@ -79,7 +79,7 @@ Use cases show what persistent memory makes possible in real products and workfl
 <tr>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/9dcb3dd4-4402-45fa-ae13-e6782f42c7ea)
+<!-- ![banner-gif](https://github.com/user-attachments/assets/9dcb3dd4-4402-45fa-ae13-e6782f42c7ea) -->
 
 #### Earth Online Memory Game
 
@@ -90,7 +90,7 @@ Earth Online is a memory-aware productivity game that turns everyday planning in
 </td>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/57d8cda7-35a5-4561-b794-5520dffc917b)
+<!-- ![banner-gif](https://github.com/user-attachments/assets/57d8cda7-35a5-4561-b794-5520dffc917b) -->
 
 #### Multi-Agent Orchestration Platform
 
@@ -101,7 +101,7 @@ Golutra presents a multi-agent workforce for engineering teams, extending the ID
 <tr>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/e6eaf308-a874-483f-8874-6934bf95a78f)
+<!-- ![banner-gif](https://github.com/user-attachments/assets/e6eaf308-a874-483f-8874-6934bf95a78f) -->
 
 #### Mobi Companion
 
@@ -110,7 +110,7 @@ An iOS app where users create, nurture, and live with a personalized AI companio
 </td>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/9aabcaa9-f97a-49d2-9109-0b5bb696ed41)
+<!-- ![banner-gif](https://github.com/user-attachments/assets/9aabcaa9-f97a-49d2-9109-0b5bb696ed41) -->
 
 #### AI Wearable with Memory
 
@@ -121,7 +121,7 @@ A context-native AI wearable that listens to everyday life and converts conversa
 <tr>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/df9677ec-386f-4c56-a428-08bca25c54dc)
+<!-- ![banner-gif](https://github.com/user-attachments/assets/df9677ec-386f-4c56-a428-08bca25c54dc) -->
 
 #### OpenClaw Agent Memory
 
@@ -132,7 +132,7 @@ A 24/7 agent workflow with continuous learning memory across sessions.
 </td>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/3a2357a1-c0c3-464a-8979-0d1cdfc9b0d4)
+<!-- ![banner-gif](https://github.com/user-attachments/assets/3a2357a1-c0c3-464a-8979-0d1cdfc9b0d4) -->
 
 #### Live2D Character with Memory
 
@@ -145,7 +145,7 @@ Add long-term memory to a real-time Live2D character, powered by [TEN Framework]
 <tr>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/c36bdc04-97d3-4fe9-97d9-4b93b475595a)
+<!-- ![banner-gif](https://github.com/user-attachments/assets/c36bdc04-97d3-4fe9-97d9-4b93b475595a) -->
 
 #### Computer-Use with Memory
 
@@ -156,7 +156,7 @@ Run screenshot-based analysis with computer-use and store the results in memory.
 </td>
 <td width="50%" valign="top">
 
-[![banner-gif](https://github.com/user-attachments/assets/54a7cf8f-62c4-4fbc-9d50-b214d034e051)](use-cases/game-of-throne-demo)
+<!-- [![banner-gif](https://github.com/user-attachments/assets/54a7cf8f-62c4-4fbc-9d50-b214d034e051)](use-cases/game-of-throne-demo) -->
 
 #### Game of Thrones Memories
 
@@ -169,7 +169,7 @@ A demonstration of AI memory infrastructure through an interactive Q&A experienc
 <tr>
 <td width="50%" valign="top">
 
-[![banner-gif](https://github.com/user-attachments/assets/af37c1f6-7ba5-430c-b99d-2a7e7eac618f)](use-cases/claude-code-plugin)
+<!-- [![banner-gif](https://github.com/user-attachments/assets/af37c1f6-7ba5-430c-b99d-2a7e7eac618f)](use-cases/claude-code-plugin) -->
 
 #### Claude Code Plugin
 
@@ -180,7 +180,7 @@ Persistent memory for Claude Code. Automatically saves and recalls context from 
 </td>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/d521d28c-0ccd-44ff-aecc-828245e2f973)
+<!-- ![banner-gif](https://github.com/user-attachments/assets/d521d28c-0ccd-44ff-aecc-828245e2f973) -->
 
 #### Memory Graph Visualization
 
