@@ -63,23 +63,127 @@ Use cases show what persistent memory makes possible in real products and workfl
 <tr>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/9dcb3dd4-4402-45fa-ae13-e6782f42c7ea)
+[![banner-gif](https://github.com/user-attachments/assets/f30617a1-adc0-4271-bc0e-c3a0b28cb903)](https://github.com/xunyud/Earth-Online)
 
 #### Earth Online Memory Game
 
 Earth Online is a memory-aware productivity game that turns everyday planning into a living quest log.
 
+[Code](https://github.com/xunyud/Earth-Online)
+
 </td>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/57d8cda7-35a5-4561-b794-5520dffc917b)
+[![banner-gif](https://github.com/user-attachments/assets/57d8cda7-35a5-4561-b794-5520dffc917b)](https://github.com/golutra/golutra) 
 
 #### Multi-Agent Orchestration Platform
 
 Golutra presents a multi-agent workforce for engineering teams, extending the IDE model from a single assistant to coordinated agents.
 
+[Code](https://github.com/golutra/golutra)
+
 </td>
 </tr>
+<tr>
+<td width="50%" valign="top">
+
+[![banner-gif](https://github.com/user-attachments/assets/75f19db5-30f6-4eed-9b1e-c9c6a0e6b7de)](https://github.com/Yangtze-Seventh/taste-verse)
+
+#### Your Personal Tasting Universe
+
+Record, visualize, and explore your tasting journey through an immersive 3D star map.
+
+[Code](https://github.com/Yangtze-Seventh/taste-verse)
+
+</td>
+<td width="50%" valign="top">
+
+[![banner-gif](https://github.com/user-attachments/assets/93ac2a68-4f18-4fcb-8d87-80aeb00a9d7c)](https://github.com/kellyvv/OpenHer) 
+
+#### EverOS Open Her
+
+Build AI that feels. Open-source persona engine — personality emerges from neural drives, not prompts. Inspired by Her.
+
+[Code](https://github.com/kellyvv/OpenHer)
+
+</td>
+</tr>
+
+<tr>
+<td width="50%" valign="top">
+
+[![banner-gif](https://github.com/user-attachments/assets/550071c1-dc39-4964-9f67-ffdfad792345)](https://chromewebstore.google.com/detail/ruminer-browser-agent/lbccjohfpdpimbhpckljimgolndfmfif)
+
+#### Browser Agent for Personal Memory
+
+Earth Online is a memory-aware productivity game that turns everyday planning into a living quest log.
+
+[Plugin](https://chromewebstore.google.com/detail/ruminer-browser-agent/lbccjohfpdpimbhpckljimgolndfmfif)
+
+</td>
+<td width="50%" valign="top">
+
+[![banner-gif](https://github.com/user-attachments/assets/c258a6c4-fe70-497a-98d1-3dade4a932f6)](https://github.com/nanxingw/EverMem) 
+
+#### EverMem Sync with EverOS
+
+One command to connect any AI coding CLI to EverMemOS long-term memory.
+
+[Code](https://github.com/nanxingw/EverMem)
+
+</td>
+</tr>
+
+<tr>
+<td width="50%" valign="top">
+
+[![banner-gif](https://github.com/user-attachments/assets/39274473-ceb3-48fb-a031-e22230decbe2)](https://github.com/mco-org/mco)
+
+#### MCO - Orchestrate AI Coding Agents
+
+MCO equips your primary agent with an agent team that can work together to solve complex tasks.
+
+[Code](https://github.com/mco-org/mco)
+
+</td>
+<td width="50%" valign="top">
+
+[![banner-gif](https://github.com/user-attachments/assets/314c9126-8e08-4688-bbbb-8555ad58cf67)](https://github.com/onenewborn/StudyBuddy-public) 
+
+#### Study Buddy with Self-Evolving Memory
+
+Study proactively with an agent that has self-evolving memory.
+
+[Code](https://github.com/onenewborn/StudyBuddy-public)
+
+</td>
+</tr>
+
+<tr>
+<td width="50%" valign="top">
+
+[![banner-gif](https://github.com/user-attachments/assets/21da76aa-9a8b-48e0-9134-42429d7390e7)](https://github.com/TonyLiangDesign/MemoCare)
+
+#### Alzheimer’s Memory Assistant
+
+Empowering individuals with advanced memory support and daily assistance.
+
+[Code](https://github.com/TonyLiangDesign/MemoCare)
+
+</td>
+<td width="50%" valign="top">
+
+[![banner-gif](https://github.com/user-attachments/assets/e2428df3-ea11-4e88-8f9c-dad437dd8998)](https://github.com/AlexL1024/NeuralConnect) 
+
+#### Memory-Driven Multi-Agent NPC Experience
+
+An iOS sci-fi mystery game where players explore and uncover the truth.
+
+[Code](https://github.com/AlexL1024/NeuralConnect)
+
+</td>
+</tr>
+
 <tr>
 <td width="50%" valign="top">
 
@@ -336,7 +440,7 @@ Three-layer memory quality evaluation: factual recall, applied reasoning, and pe
 
 Agent self-evolution evaluation through longitudinal growth curves, transfer efficiency, error avoidance, and skill-hit quality.
 
-[Docs](benchmarks/EvoAgentBench/)
+[Dataset](https://huggingface.co/datasets/EverMind-AI/EvoAgentBench) · [Docs](benchmarks/EvoAgentBench/)
 
 </td>
 </tr>
