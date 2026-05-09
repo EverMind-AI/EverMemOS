@@ -187,38 +187,42 @@ An iOS sci-fi mystery game where players explore and uncover the truth.
 <tr>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/e6eaf308-a874-483f-8874-6934bf95a78f)
+[![banner-gif](https://github.com/user-attachments/assets/e6eaf308-a874-483f-8874-6934bf95a78f)](https://github.com/elontusk5219-prog/Mobi)
 
 #### Mobi Companion
 
 An iOS app where users create, nurture, and live with a personalized AI companion called Mobi.
 
+[Code](https://github.com/elontusk5219-prog/Mobi)
+
 </td>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/9aabcaa9-f97a-49d2-9109-0b5bb696ed41)
+[![banner-gif](https://github.com/user-attachments/assets/9aabcaa9-f97a-49d2-9109-0b5bb696ed41)](https://github.com/JaMesLiMers/EvermemCompetition-Spiro)
 
 #### AI Wearable with Memory
 
 A context-native AI wearable that listens to everyday life and converts conversations into memory.
+
+[Code](https://github.com/JaMesLiMers/EvermemCompetition-Spiro)
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/df9677ec-386f-4c56-a428-08bca25c54dc)
+[![banner-gif](https://github.com/user-attachments/assets/df9677ec-386f-4c56-a428-08bca25c54dc)](https://github.com/EverMind-AI/everos/tree/agent_memory/everos-openclaw-plugin)
 
 #### OpenClaw Agent Memory
 
 A 24/7 agent workflow with continuous learning memory across sessions.
 
-[Agent Memory](https://github.com/EverMind-AI/everos/tree/agent_memory) · [Plugin](https://github.com/EverMind-AI/everos/tree/agent_memory/everos-openclaw-plugin)
+[Plugin](https://github.com/EverMind-AI/everos/tree/agent_memory/everos-openclaw-plugin)
 
 </td>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/3a2357a1-c0c3-464a-8979-0d1cdfc9b0d4)
+[![banner-gif](https://github.com/user-attachments/assets/3a2357a1-c0c3-464a-8979-0d1cdfc9b0d4)](https://github.com/TEN-framework/ten-framework/tree/main/ai_agents/agents/examples/voice-assistant-with-everos)
 
 #### Live2D Character with Memory
 
@@ -231,7 +235,7 @@ Add long-term memory to a real-time Live2D character, powered by [TEN Framework]
 <tr>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/c36bdc04-97d3-4fe9-97d9-4b93b475595a)
+[![banner-gif](https://github.com/user-attachments/assets/c36bdc04-97d3-4fe9-97d9-4b93b475595a)](https://screenshot-analysis-vercel.vercel.app/)
 
 #### Computer-Use with Memory
 
@@ -242,7 +246,7 @@ Run screenshot-based analysis with computer-use and store the results in memory.
 </td>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/54a7cf8f-62c4-4fbc-9d50-b214d034e051)
+[![banner-gif](https://github.com/user-attachments/assets/54a7cf8f-62c4-4fbc-9d50-b214d034e051)](use-cases/game-of-throne-demo)
 
 #### Game of Thrones Memories
 
@@ -255,7 +259,7 @@ A demonstration of AI memory infrastructure through an interactive Q&A experienc
 <tr>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/af37c1f6-7ba5-430c-b99d-2a7e7eac618f)
+[![banner-gif](https://github.com/user-attachments/assets/af37c1f6-7ba5-430c-b99d-2a7e7eac618f)](use-cases/claude-code-plugin)
 
 #### Claude Code Plugin
 
@@ -266,7 +270,7 @@ Persistent memory for Claude Code. Automatically saves and recalls context from 
 </td>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/d521d28c-0ccd-44ff-aecc-828245e2f973)
+[![banner-gif](https://github.com/user-attachments/assets/d521d28c-0ccd-44ff-aecc-828245e2f973)](https://main.d2j21qxnymu6wl.amplifyapp.com/graph.html)
 
 #### Memory Graph Visualization
 
