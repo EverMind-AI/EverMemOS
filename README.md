@@ -53,22 +53,6 @@
 
 At the center of EverOS is **EverCore**, a long-term memory operating system for agents. If you are new to the project, scan the use cases first to see what memory enables, then follow the [Quick Start](#quick-start) to run EverCore locally. The architecture and benchmark sections below give you the deeper reference material when you are ready to compare systems or reproduce results.
 
-```
-EverOS/
-├── benchmarks/                
-│   ├── EverMemBench/    
-│   └── EvoAgentBench/         
-├── methods/                   
-│   ├── EverCore/              
-│   └── HyperMem/              
-└── use-cases/                 
-    ├── claude-code-plugin/    
-    ├── game-of-throne-demo/   
-    ├── openher/            
-    ├── ...
-    └── ...
-```
-
 <br>
 
 ## Use Cases

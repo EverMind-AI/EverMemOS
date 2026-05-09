@@ -1,6 +1,16 @@
 # Use Cases
 
-Community-contributed examples demonstrating EverMem integrations and applications.
+This folder contains apps, demos, and integrations that show what persistent memory enables in real products and workflows. Some examples are complete local projects; others are focused integrations that can be adapted into your own agent stack.
+
+## Included Use Cases
+
+| Use case | What it shows | Start here |
+| :--- | :--- | :--- |
+| **Claude Code Plugin** | Persistent memory for Claude Code, including hooks, commands, local services, and memory recall. | [claude-code-plugin/](claude-code-plugin/) |
+| **Game of Thrones Memories** | An interactive Q&A demo over long-form story memory. | [game-of-throne-demo/](game-of-throne-demo/) |
+| **OpenHER** | Memory-oriented app and integration examples. | [openher/](openher/) |
+
+Use the top-level [Use Cases](../README.md#use-cases) section for the visual catalogue of demos and external integrations.
 
 ## Contributing Guidelines
 
