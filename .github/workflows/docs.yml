@@ -33,6 +33,9 @@ jobs:
 
           files = [
               Path("README.md"),
+              Path("use-cases/README.md"),
+              Path("methods/README.md"),
+              Path("benchmarks/README.md"),
               Path("AGENTS.md"),
               Path(".github/CONTRIBUTING.md"),
               Path(".github/CODE_OF_CONDUCT.md"),
@@ -64,6 +67,57 @@ jobs:
               sys.exit(1)
 
           print("Active relative Markdown links resolve.")
+          PY
+
+      - name: Validate use-case banner links
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          files = {
+              Path("README.md"): "## Use Cases",
+              Path("use-cases/README.md"): "## Use Case Catalogue",
+          }
+
+          failures = []
+          for path, heading in files.items():
+              text = path.read_text()
+              start = text.find(heading)
+              if start == -1:
+                  failures.append(f"{path}: missing {heading}")
+                  continue
+
+              table_start = text.find("<table>", start)
+              table_end = text.find("</table>", table_start)
+              if table_start == -1 or table_end == -1:
+                  failures.append(f"{path}: missing use-case table")
+                  continue
+
+              table = text[table_start:table_end]
+              cells = re.findall(r"<td[^>]*>(.*?)</td>", table, flags=re.S)
+              for index, cell in enumerate(cells, start=1):
+                  title_match = re.search(r"####\s+(.+)", cell)
+                  title = title_match.group(1).strip() if title_match else f"use case {index}"
+                  banner_match = re.search(r"\[!\[[^\]]*\]\([^)]+\)\]\(([^)]+)\)", cell)
+                  primary_match = re.search(r"^\[(?:Code|Plugin|Live Demo)\]\(([^)]+)\)", cell, flags=re.M)
+
+                  if not banner_match:
+                      failures.append(f"{path}: {title}: missing linked banner")
+                  elif not primary_match:
+                      failures.append(f"{path}: {title}: missing primary link")
+                  elif banner_match.group(1) != primary_match.group(1):
+                      failures.append(
+                          f"{path}: {title}: banner link {banner_match.group(1)} "
+                          f"does not match primary link {primary_match.group(1)}"
+                      )
+
+          if failures:
+              print("\n".join(failures))
+              sys.exit(1)
+
+          print("Use-case banner links match primary links.")
           PY
 
       - name: Validate issue template YAML

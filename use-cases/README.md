@@ -60,7 +60,7 @@ Build AI that feels. Open-source persona engine — personality emerges from neu
 
 #### Browser Agent for Personal Memory
 
-Earth Online is a memory-aware productivity game that turns everyday planning into a living quest log.
+Ruminer brings persistent memory to a browser agent so it can carry personal context across web tasks.
 
 [Plugin](https://chromewebstore.google.com/detail/ruminer-browser-agent/lbccjohfpdpimbhpckljimgolndfmfif)
 
