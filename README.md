@@ -59,6 +59,30 @@ Use cases show what persistent memory makes possible in real products and workfl
 <tr>
 <td width="50%" valign="top">
 
+![banner-gif](https://github.com/user-attachments/assets/650b901b-c9ba-4001-bac7-626b009df830)
+
+#### Rokid AI Assistant with EverOS
+
+Connect to EverOS within Rokid Glasses enabling long-term memory for all of your smart activities.
+
+Coming soon
+
+</td>
+<td width="50%" valign="top">
+
+![banner-gif](https://github.com/user-attachments/assets/85b338b2-e48e-4a65-9f30-0bc6998df872)
+
+#### Creative Assistant with Memory
+
+Creative assistant with long-term memory, never forget your crativites anymore.
+
+Coming soon
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
 [![banner-gif](https://github.com/user-attachments/assets/f30617a1-adc0-4271-bc0e-c3a0b28cb903)](https://github.com/xunyud/Earth-Online)
 
 #### Earth Online Memory Game
