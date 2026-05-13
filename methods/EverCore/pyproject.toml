@@ -55,6 +55,7 @@ dependencies = [
     "elastic-transport>=8.17.0,<9",  # ES transport layer (pin major, transport API stability)
     # Milvus
     "pymilvus>=2.5.0,<2.6",  # Pin minor: 2.6.x may change Collection/search API
+    "qdrant-client>=1.12,<2",  # Qdrant Python client (Milvus->Qdrant migration, feature/qdrant-adapter)
     # Tokenization
     "jieba==0.42.1",
     # Graph Processing

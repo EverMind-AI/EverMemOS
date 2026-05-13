@@ -1,3 +1,51 @@
+> [!NOTE]
+> ## Fork — Qdrant Migration
+>
+> This fork of [`EverMind-AI/EverOS`](https://github.com/EverMind-AI/EverOS) focuses on
+> **migrating the vector backend from Milvus to Qdrant**.
+>
+> ### Why
+>
+> Milvus standalone with embedded etcd showed repeated startup races
+> (`panic: etcdserver: leader changed`) leading to crash-loops and RAM
+> exhaustion in our deployment. Rather than stacking more etcd workarounds, we
+> migrate to Qdrant — whose architecture has no separate coordinator service.
+>
+> ### Status
+>
+> - `main` — tracks upstream `EverMind-AI/EverOS`.
+> - `qdrant/rebase-evercore` — full Milvus parity. Phase 1: ``QdrantCollectionBase`` + tenant-aware naming. Phase 2: 6 collections + 6 converters (EpisodicMemory, AtomicFact, Foresight, AgentCase, AgentSkill, UserProfile). Phase 2.5: 6 ``@repository``-decorated adapters with two-stage score gating and tz-aware epoch helpers. Phase 3: standalone re-embed CLI (Mongo → OpenRouter → Qdrant) + sweep wrapper across tenants.
+>
+> ### Approach
+>
+> EverOS' `src/infra_layer/adapters/out/search/` already supports multiple
+> backends (Milvus + Elasticsearch). We add a Qdrant adapter split across:
+>
+> - `src/core/oxm/qdrant/` — base classes (`QdrantCollectionBase`,
+>   `BaseQdrantConverter`, `BaseQdrantRepository`) and tenant-aware naming.
+> - `src/infra_layer/adapters/out/search/qdrant/` — the concrete collections
+>   and converters per memory type (episodic, atomic_fact, foresight,
+>   agent_case, agent_skill, user_profile).
+> - `src/infra_layer/adapters/out/search/repository/` — the
+>   `@repository`-decorated adapters that EverOS routes to.
+>
+> Routing is gated by `VECTOR_STORE_BACKEND=qdrant`. The Milvus adapter
+> stays untouched until cutover.
+>
+> ### Concept Mapping
+>
+> | Milvus               | Qdrant                            |
+> | -------------------- | --------------------------------- |
+> | Collection           | Collection (1:1)                  |
+> | FieldSchema (vector) | `VectorParams(size, distance)`    |
+> | FieldSchema (scalar) | Payload field (schema-flexible)   |
+> | HNSW + COSINE        | `HnswConfig` + `Distance.Cosine`  |
+> | Partition            | Payload field OR separate coll.   |
+>
+> Reference: [Qdrant Migration Guide — From Milvus](https://qdrant.tech/documentation/migrate-to-qdrant/from-milvus/).
+
+---
+
 <div align="center" id="readme-top">
 
 ![banner-gif](https://github.com/user-attachments/assets/0bf97efd-580f-4a53-a2a2-58d6daea7290)
@@ -59,24 +107,24 @@ Use cases show what persistent memory makes possible in real products and workfl
 <tr>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/650b901b-c9ba-4001-bac7-626b009df830)
+[![banner-gif](https://github.com/user-attachments/assets/650b901b-c9ba-4001-bac7-626b009df830)](#rokid-ai-assistant-with-everos)
 
 #### Rokid AI Assistant with EverOS
 
 Connect to EverOS within Rokid Glasses enabling long-term memory for all of your smart activities.
 
-Coming soon
+[Live Demo](#rokid-ai-assistant-with-everos)
 
 </td>
 <td width="50%" valign="top">
 
-![banner-gif](https://github.com/user-attachments/assets/85b338b2-e48e-4a65-9f30-0bc6998df872)
+[![banner-gif](https://github.com/user-attachments/assets/85b338b2-e48e-4a65-9f30-0bc6998df872)](#creative-assistant-with-memory)
 
 #### Creative Assistant with Memory
 
 Creative assistant with long-term memory, never forget your crativites anymore.
 
-Coming soon
+[Live Demo](#creative-assistant-with-memory)
 
 </td>
 </tr>
