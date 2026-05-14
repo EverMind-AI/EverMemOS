@@ -1,0 +1,90 @@
+name: Guard Protected Branches
+
+# Detects direct pushes to long-lived branches that did not come from a PR merge.
+# Since GitHub Free does not allow Branch Protection on private repos, this
+# acts as a post-hoc alert instead of a hard block. DerAuctor is allowed to
+# bypass the guard (admin override).
+#
+# Verification (not regex on commit message — robust against rebase/squash/title-spoof):
+#   1. Push-event is allowed if the head commit is the head of at least one merged PR
+#      that targeted this branch (`/repos/{owner}/{repo}/commits/{sha}/pulls`).
+#   2. DerAuctor bypass via github.actor check.
+#   3. Branch-creation is treated as a violation unless the actor is DerAuctor.
+
+on:
+  push:
+    branches:
+      - main
+      - prod
+      - prod_node1
+      - prod_bootstrap
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  verify-pr-merge:
+    runs-on: ubuntu-latest
+    # DerAuctor bypass — admin override per project policy.
+    if: github.actor != 'DerAuctor'
+    steps:
+      - name: Verify push was a merged PR (or fail loudly)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+          PUSHER: ${{ github.event.pusher.name }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.event.head_commit.id }}
+          FORCED: ${{ github.event.forced }}
+          CREATED: ${{ github.event.created }}
+          DELETED: ${{ github.event.deleted }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          BRANCH="${REF#refs/heads/}"
+
+          # Branch deletions are not pushes that need verification.
+          if [ "$DELETED" = "true" ]; then
+            echo "::notice::Branch deletion of $BRANCH by $ACTOR — out of scope."
+            exit 0
+          fi
+
+          # Branch creation is a privileged operation. Only DerAuctor (handled by
+          # the `if:` filter above) is allowed; reaching here = violation.
+          if [ "$CREATED" = "true" ]; then
+            echo "::error::Branch creation of protected $BRANCH by non-bypass actor $ACTOR — refused."
+            echo "Branch (re)creation of $BRANCH bypasses prior history. Bypass reserved for @DerAuctor."
+            exit 1
+          fi
+
+          # Force-push: violation. Force-rewrites history without review.
+          if [ "$FORCED" = "true" ]; then
+            echo "::error::Force-push to $BRANCH by $ACTOR — refused."
+            exit 1
+          fi
+
+          # Authoritative check: is this commit the head of a merged PR targeting this branch?
+          PRS_JSON=$(gh api -H "Accept: application/vnd.github+json" \
+            "/repos/${REPO}/commits/${SHA}/pulls" \
+            --jq '[ .[] | {number, merged_at: .merged_at, base: .base.ref, merge_commit: .merge_commit_sha} ]')
+
+          MATCH_COUNT=$(echo "$PRS_JSON" | jq --arg b "$BRANCH" --arg sha "$SHA" \
+            '[ .[] | select(.merged_at != null and .base == $b and .merge_commit == $sha) ] | length')
+
+          if [ "$MATCH_COUNT" -ge 1 ]; then
+            PR_NUM=$(echo "$PRS_JSON" | jq -r --arg b "$BRANCH" --arg sha "$SHA" \
+              '[ .[] | select(.merged_at != null and .base == $b and .merge_commit == $sha) ][0].number')
+            echo "::notice::PR #${PR_NUM} merge to $BRANCH confirmed ($SHA)."
+            exit 0
+          fi
+
+          # No matching merged PR — direct push.
+          echo "::error::Direct push to protected branch $BRANCH by $ACTOR (sha $SHA) — no matching merged PR found."
+          echo "Pusher: $PUSHER"
+          echo "GitHub /commits/$SHA/pulls returned: $PRS_JSON"
+          echo ""
+          echo "Required workflow: branch from main, open PR via 'gh pr create', squash-merge after bot review."
+          echo "Bypass is reserved for @DerAuctor."
+          echo "If this push was unintentional, revert with: git revert $SHA && git push"
+          exit 1

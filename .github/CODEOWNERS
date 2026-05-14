@@ -1,0 +1,5 @@
+# Code Owners — fallback reviewer for everything is DerAuctor.
+# CodeRabbit, Claude, and Codex apps review automatically on every PR.
+# Branch strategy: main is integration, prod (or prod_node1/prod_bootstrap) is deployed.
+
+*  @DerAuctor

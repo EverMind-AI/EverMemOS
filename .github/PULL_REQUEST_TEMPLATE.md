@@ -1,37 +1,39 @@
+# Pull Request
+
+<!-- Branching strategy: feature/* and fix/* branch from main. PRs target main.
+     Long-lived branches: main, prod (or prod_node1 / prod_bootstrap on NQR).
+     Auto-delete on merge is enabled — your branch will be removed automatically.
+-->
+
 ## Summary
 
-<!-- What changed, and why? -->
+<!-- One paragraph: what changes, why now. -->
 
-## Area
+## Subsystem
 
-<!-- Mark the relevant option with an x. -->
+<!-- Which subsystem does this touch? e.g. EWM, Bewusstsein-Agenten, infra, ct-agents, web, signing -->
 
-- [ ] Architecture method
-- [ ] Benchmark
-- [ ] Use case
-- [ ] Documentation
-- [ ] Developer experience
-- [ ] CI, build, or release
+## Risk
 
-## Verification
+- [ ] Touches PQC-signing / Briefbogen / Anchor
+- [ ] Changes runtime state (agents/*/state/, memory files, conversations)
+- [ ] Modifies deployment surface (systemd unit, host config, port binding)
+- [ ] Crosses host boundary (node1 ↔ bootstrap)
+- [ ] Changes a public surface (DNS, robots.txt, llms.txt, well-known)
+- [ ] None of the above
 
-<!-- List commands run, manual checks, screenshots, or reasons verification was not needed. -->
+## Test plan
 
-```text
+- [ ] Unit / integration tests pass locally
+- [ ] Logs verified after deployment (not just `is-active`)
+- [ ] Happy-path request triggered against the changed surface
 
-```
+## Rollout
 
-## Checklist
+- [ ] main → prod (or per-host prod_node1 / prod_bootstrap)
+- [ ] EWM updated under `/xinfty/docs/ewm/` if infra changed
+- [ ] Memory updated if a non-obvious lesson emerged
 
-- [ ] I kept the change scoped to the relevant area.
-- [ ] I updated docs, examples, or setup notes when behavior changed.
-- [ ] I added or updated tests when the change affects behavior.
-- [ ] I did not commit secrets, `.env` files, dependency folders, or generated output.
-- [ ] Active relative links in Markdown files resolve.
+## Reviewers
 
-## Notes for Reviewers
-
-<!-- Anything reviewers should pay special attention to? -->
-
-By submitting this pull request, I agree that my contribution is licensed under
-the Apache License 2.0.
+CodeRabbit, Claude, and Codex review automatically. Human override: @DerAuctor.
