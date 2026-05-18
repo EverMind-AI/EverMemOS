@@ -370,6 +370,8 @@ Please evaluate this work according to the rubric above. Output your evaluation 
                     {"role": "user", "content": content},
                 ],
             )
+            if not resp.choices or resp.choices[0].message is None:
+                raise ValueError("LLM returned empty or filtered response")
             eval_text = resp.choices[0].message.content
         except Exception as e:
             raise RuntimeError(f"LLM evaluation failed: {e}") from e
