@@ -118,6 +118,8 @@ def call_judge(question: str, response: str, correct_answer: str,
             temperature=temperature,
             extra_body=extra_body if extra_body else None,
         )
+        if not resp.choices or resp.choices[0].message is None:
+            raise ValueError("LLM returned empty or filtered response")
         judge_text = resp.choices[0].message.content or ""
     except Exception as e:
         log.error(f"Judge API error: {e}")

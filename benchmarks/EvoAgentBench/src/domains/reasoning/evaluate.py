@@ -149,6 +149,8 @@ def _llm_verify(expected: str, actual: str, problem: str,
                 temperature=0.0,
                 extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
+            if not response.choices or response.choices[0].message is None:
+                raise ValueError("LLM returned empty or filtered response")
             text = (response.choices[0].message.content or "").strip()
             if not text:
                 raise ValueError("Empty response from judge model")
