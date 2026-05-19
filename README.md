@@ -231,7 +231,7 @@ A context-native AI wearable that listens to everyday life and converts conversa
 <tr>
 <td width="50%" valign="top">
 
-[![banner-gif](https://github.com/user-attachments/assets/df9677ec-386f-4c56-a428-08bca25c54dc)](https://github.com/EverMind-AI/everos/tree/agent_memory/everos-openclaw-plugin)
+[![banner-gif](https://github.com/user-attachments/assets/df9677ec-386f-4c56-a428-08bca25c54dc)](https://github.com/EverMind-AI/EverOS/tree/0f49826ba0f9a94e1974c97614a46a68e0a08b52/evermemos-openclaw-plugin)
 
 #### OpenClaw Agent Memory
 
