@@ -237,7 +237,7 @@ A context-native AI wearable that listens to everyday life and converts conversa
 
 A 24/7 agent workflow with continuous learning memory across sessions.
 
-[Plugin](https://github.com/EverMind-AI/everos/tree/agent_memory/everos-openclaw-plugin)
+[Plugin](https://github.com/EverMind-AI/EverOS/tree/0f49826ba0f9a94e1974c97614a46a68e0a08b52/evermemos-openclaw-plugin)
 
 </td>
 <td width="50%" valign="top">
