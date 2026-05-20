@@ -69,6 +69,12 @@ from infra_layer.adapters.out.search.repository.episodic_memory_milvus_repositor
 from infra_layer.adapters.out.search.repository.episodic_memory_es_repository import (
     EpisodicMemoryEsRepository,
 )
+from infra_layer.adapters.out.search.repository.atomic_fact_es_repository import (
+    AtomicFactEsRepository,
+)
+from infra_layer.adapters.out.search.repository.atomic_fact_milvus_repository import (
+    AtomicFactMilvusRepository,
+)
 from biz_layer.mem_sync import MemorySyncService
 
 logger = get_logger(__name__)
@@ -1537,6 +1543,19 @@ async def save_memory_docs(
         saved_episodic: List[Any] = []
 
         for doc in episodic_docs:
+            # Deduplicate: remove any existing records from the same source MemCell
+            # for this specific user before inserting the new one.
+            # Key is (parent_id, user_id) because one MemCell produces one episode
+            # per participant (personal) plus one group episode (user_id=None/"").
+            parent_id = getattr(doc, "parent_id", None)
+            user_id = getattr(doc, "user_id", None)
+            if parent_id:
+                await asyncio.gather(
+                    episodic_repo.delete_by_parent_id(parent_id, user_id=user_id),
+                    episodic_es_repo.delete_by_parent_id(parent_id, user_id=user_id),
+                    episodic_milvus_repo.delete_by_parent_id(parent_id, user_id=user_id),
+                )
+
             saved_doc = await episodic_repo.append_episodic_memory(doc)
             saved_episodic.append(saved_doc)
 
@@ -1573,6 +1592,24 @@ async def save_memory_docs(
     atomic_fact_docs = grouped_docs.get(MemoryType.ATOMIC_FACT, [])
     if atomic_fact_docs:
         atomic_fact_repo = get_bean_by_type(AtomicFactRecordRawRepository)
+        atomic_fact_es_repo = get_bean_by_type(AtomicFactEsRepository)
+        atomic_fact_milvus_repo = get_bean_by_type(AtomicFactMilvusRepository)
+
+        # Deduplicate: collect unique (parent_id, user_id) pairs and delete old records
+        # before batch-inserting the new ones.
+        seen_parent_keys: set = set()
+        for doc in atomic_fact_docs:
+            parent_id = getattr(doc, "parent_id", None)
+            user_id = getattr(doc, "user_id", None)
+            key = (parent_id, user_id)
+            if parent_id and key not in seen_parent_keys:
+                seen_parent_keys.add(key)
+                await asyncio.gather(
+                    atomic_fact_repo.delete_by_filters(parent_id=parent_id),
+                    atomic_fact_es_repo.delete_by_parent_id(parent_id, user_id=user_id),
+                    atomic_fact_milvus_repo.delete_by_parent_id(parent_id, user_id=user_id),
+                )
+
         saved_atomic_facts = await atomic_fact_repo.create_batch(atomic_fact_docs)
         saved_result[MemoryType.ATOMIC_FACT] = saved_atomic_facts
 
